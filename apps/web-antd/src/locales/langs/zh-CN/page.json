@@ -1,0 +1,32 @@
+{
+  "auth": {
+    "login": "登录",
+    "register": "注册",
+    "codeLogin": "验证码登录",
+    "qrcodeLogin": "二维码登录",
+    "forgetPassword": "忘记密码"
+  },
+  "dashboard": {
+    "title": "概览",
+    "analytics": "分析页",
+    "workspace": "工作台"
+  },
+  "DPP": {
+    "title": "数据处理(DPP)"
+  },
+  "MTP": {
+    "title": "模型训练(MTP)",
+    "modelalgorithm": "算法",
+    "modeltrain": "任务",
+    "modeloutput": "输出"
+  },
+  "MRP": {
+    "title": "模型推理(MRP)"
+  },
+  "RMP": {
+    "title": "权限管理(RMP)"
+  },
+  "SMP": {
+    "title": "系统管理(SMP)"
+  }
+}
