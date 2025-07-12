@@ -1,5 +1,5 @@
 {
-  "name": "XnetMLops-web",
+  "name": "synap-mlops-web",
   "version": "1.0.0",
   "private": true,
   "keywords": [
@@ -14,14 +14,14 @@
     "vue vben admin pro",
     "vue3"
   ],
-  "homepage": "https://github.com/vbenjs/vue-vben-admin",
-  "bugs": "https://github.com/vbenjs/vue-vben-admin/issues",
-  "repository": "vbenjs/vue-vben-admin.git",
+  "homepage": "https://gitee.com/synap-xnet/xnet-mlops-web",
+  "bugs": "https://gitee.com/synap-xnet/xnet-mlops-web/issues",
+  "repository": "synap-xnet/xnet-mlops-web.git",
   "license": "MIT",
   "author": {
-    "name": "vben",
-    "email": "ann.vben@gmail.com",
-    "url": "https://github.com/anncwb"
+    "name": "synap-xnet",
+    "email": "2867937123@qq.com",
+    "url": "https://gitee.com/synap-xnet"
   },
   "type": "module",
   "scripts": {

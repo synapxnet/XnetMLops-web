@@ -8,8 +8,7 @@ import { useAccessStore } from '@vben/stores';
 
 import { VbenFullScreen, VbenIconButton } from '@vben-core/shadcn-ui';
 
-import { Cascader } from 'ant-design-vue';
-
+// import { Cascader } from 'ant-design-vue';
 import {
   GlobalSearch,
   LanguageToggle,
@@ -171,13 +170,13 @@ function handleDepartmentChange(value: string[]) {
     <slot name="menu"></slot>
   </div>
   <div class="flex h-full min-w-0 flex-shrink-0 items-center">
-    <Cascader
+    <!-- <Cascader
       :value="props.selectedOrgPath"
       :options="props.treeData"
       @change="handleDepartmentChange"
       change-on-select
       expand-trigger="hover"
-    />
+    /> -->
     <template v-for="slot in rightSlots" :key="slot.name">
       <slot :name="slot.name">
         <template v-if="slot.name === 'global-search'">
