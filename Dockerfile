@@ -7,6 +7,8 @@ RUN rm -rf /usr/share/nginx/html/*
 # 复制 dist 文件夹到 NGINX 默认服务目录，调整路径
 COPY apps/web-antd/dist /usr/share/nginx/html
 
+RUN chown -R nginx:nginx /usr/share/nginx/html
+
 # 暴露 80 端口
 EXPOSE 80
 
