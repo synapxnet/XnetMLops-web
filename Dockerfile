@@ -1,6 +1,7 @@
 # 使用 NGINX 1.24 镜像
 FROM 192.168.10.132/library/nginx:1.24
 
+RUN mkdir -p /usr/share/nginx/html
 # 删除默认的 NGINX 配置文件和静态文件
 RUN rm -rf /usr/share/nginx/html/*
 
