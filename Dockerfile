@@ -8,7 +8,7 @@ WORKDIR /usr/share/nginx/html
 RUN rm -rf ./*
 
 # 复制编译后的 dist 文件到 Nginx 的默认静态文件目录
-COPY apps/web-antd/dist .
+COPY /apps/web-antd/dist .
 
 
 # 暴露 Nginx 默认端口
