@@ -5,7 +5,7 @@ FROM 192.168.10.132/library/nginx:1.24
 RUN rm -rf /usr/share/nginx/html/*
 
 # 复制 /apps/web-antd/dist 文件夹到 /usr/share/nginx/dist/
-COPY dist /usr/share/nginx/html
+COPY apps/web-antd/dist /usr/share/nginx/html
 
 
 # 调整 /usr/share/nginx/html 权限
