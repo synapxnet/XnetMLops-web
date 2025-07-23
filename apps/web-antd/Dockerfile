@@ -2,13 +2,11 @@
 FROM 192.168.10.132/library/nginx:1.24
 
 # 删除 /usr/share/nginx/html 目录
-RUN rm -rf /usr/share/nginx/html
+RUN rm -rf /usr/share/nginx/html/*
 
 # 复制 /apps/web-antd/dist 文件夹到 /usr/share/nginx/dist/
-COPY dist /usr/share/nginx/
+COPY dist /usr/share/nginx/html
 
-# 重命名 /usr/share/nginx/dist 为 /usr/share/nginx/html
-RUN mv /usr/share/nginx/dist /usr/share/nginx/html
 
 # 调整 /usr/share/nginx/html 权限
 RUN chown -R nginx:nginx /usr/share/nginx/html
