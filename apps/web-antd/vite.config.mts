@@ -9,7 +9,7 @@ export default defineConfig(async () => {
           '/api': {
             changeOrigin: true, // 开启跨域
             rewrite: (path) => path.replace(/^\/api/, ''),
-            target: 'http://192.168.10.102:8181/api',
+            target: 'http://192.168.10.42:30813/api',
 
             // mock代理目标地址
             // http://localhost:5320/api
@@ -20,7 +20,7 @@ export default defineConfig(async () => {
           '/dpp': {
             changeOrigin: true, // 开启跨域
             rewrite: (path) => path.replace(/^\/dpp/, ''),
-            target: 'http://192.168.10.102:8182/api',
+            target: 'http://192.168.10.42:32461/api',
 
             // mock代理目标地址
             // http://localhost:5320/api
@@ -31,7 +31,7 @@ export default defineConfig(async () => {
           '/mtp': {
             changeOrigin: true, // 开启跨域
             rewrite: (path) => path.replace(/^\/mtp/, ''),
-            target: 'http://192.168.10.102:8183/api',
+            target: 'http://192.168.10.43:31545/api',
 
             // mock代理目标地址
             // http://localhost:5320/api
@@ -42,7 +42,7 @@ export default defineConfig(async () => {
           '/smp': {
             changeOrigin: true, // 开启跨域
             rewrite: (path) => path.replace(/^\/smp/, ''),
-            target: 'http://192.168.10.102:8185/api',
+            target: 'http://192.168.10.43:32576/api',
 
             // mock代理目标地址
             // http://localhost:5320/api
