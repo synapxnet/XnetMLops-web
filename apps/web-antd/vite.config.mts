@@ -9,44 +9,44 @@ export default defineConfig(async () => {
           '/api': {
             changeOrigin: true, // 开启跨域
             rewrite: (path) => path.replace(/^\/api/, ''),
-            target: 'http://192.168.31.81:8181/api',
+            target: 'http://192.168.10.102:8181/api',
 
             // mock代理目标地址
             // http://localhost:5320/api
-            // http://192.168.31.81:8181/api
+            // http://192.168.10.102:8181/api
 
             ws: true,
           },
           '/dpp': {
             changeOrigin: true, // 开启跨域
             rewrite: (path) => path.replace(/^\/dpp/, ''),
-            target: 'http://192.168.31.81:8182/api',
+            target: 'http://192.168.10.102:8182/api',
 
             // mock代理目标地址
             // http://localhost:5320/api
-            // http://192.168.31.81:8181/api
+            // http://192.168.10.102:8181/api
 
             ws: true,
           },
           '/mtp': {
             changeOrigin: true, // 开启跨域
             rewrite: (path) => path.replace(/^\/mtp/, ''),
-            target: 'http://192.168.31.81:8183/api',
+            target: 'http://192.168.10.102:8183/api',
 
             // mock代理目标地址
             // http://localhost:5320/api
-            // http://192.168.31.81:8181/api
+            // http://192.168.10.102:8181/api
 
             ws: true,
           },
           '/smp': {
             changeOrigin: true, // 开启跨域
             rewrite: (path) => path.replace(/^\/smp/, ''),
-            target: 'http://192.168.31.81:8185/api',
+            target: 'http://192.168.10.102:8185/api',
 
             // mock代理目标地址
             // http://localhost:5320/api
-            // http://192.168.31.81:8181/api
+            // http://192.168.10.102:8181/api
 
             ws: true,
           },
