@@ -13,6 +13,8 @@ RUN mv /usr/share/nginx/dist /usr/share/nginx/html
 # 调整 /usr/share/nginx/html 权限
 RUN chown -R nginx:nginx /usr/share/nginx/html
 
+COPY xnet.conf /etc/nginx/conf.d/default.conf
+
 # 暴露 80 端口
 EXPOSE 80
 
