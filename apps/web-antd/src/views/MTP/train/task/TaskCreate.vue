@@ -40,11 +40,6 @@ const steps = ref([
 
 const AButton = Button;
 
-// 添加步骤组件引用
-const step1Ref = ref<ComponentPublicInstance>();
-const step2Ref = ref<ComponentPublicInstance>();
-const step3Ref = ref<ComponentPublicInstance>();
-const step4Ref = ref<ComponentPublicInstance>();
 // 动态组件配置
 const stepComponents = [Step1, Step2, Step3, Step4];
 const stepRefs = [
@@ -86,10 +81,13 @@ const formState = ref<TaskFormState>({
     podType: '',
     resources: '',
     trainType: '',
+    imageUid: '',
     image: '',
     describe: '',
   },
   taskStep2: {
+    // 算法UID
+    algorithmUID: '',
     algorithmName: '',
     algorithmVersion: '',
     datasets: [],
@@ -161,16 +159,23 @@ const loadTaskData = async (id: string) => {
         podType: taskData.pod_type,
         resources: taskData.resources,
         trainType: taskData.train_type,
+        imageUid: taskData.image_uid,
         image: taskData.image,
         describe: taskData.description,
       },
       taskStep2: {
+        // 算法UID
+        algorithmUID: taskData.algorithm_uid,
         algorithmName: taskData.algorithm_name,
         algorithmVersion: taskData.algorithm_version,
         datasets: taskData.datasets.map((ds) => ({
           id: ds.dataset_id,
+          selectedId: ds.dataset_id,
           name: '', // 需要额外获取名称
           selectedName: '', // 需要额外获取
+          selectedUID: ds.dataset_uid,
+          bucketIdentifier: ds.bucket_identifier,
+          datasetName: ds.dataset_name,
         })),
         taskroute: taskData.task_route,
       },

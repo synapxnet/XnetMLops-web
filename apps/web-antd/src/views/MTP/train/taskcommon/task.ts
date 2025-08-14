@@ -7,16 +7,28 @@ export interface TaskFormStep1 {
   podType: string;
   resources: string;
   trainType: string;
+  imageUid: string;
   image: string;
   describe: string;
 }
 
 export interface TaskFormStep2 {
+  // 算法UID
+  algorithmUID?: string;
+  // 算法名称
   algorithmName?: string;
   // 算法版本
   algorithmVersion?: string;
   // 数据集
-  datasets?: Array<{ id?: string; name: string; selectedName: string }>;
+  datasets?: Array<{
+    bucketIdentifier: string;
+    datasetName: string;
+    id?: string;
+    name: string;
+    selectedId: string;
+    selectedName: string;
+    selectedUID: string;
+  }>;
 
   // 任务路由
   taskroute?: string;

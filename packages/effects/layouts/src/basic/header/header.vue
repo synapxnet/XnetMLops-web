@@ -8,7 +8,8 @@ import { useAccessStore } from '@vben/stores';
 
 import { VbenFullScreen, VbenIconButton } from '@vben-core/shadcn-ui';
 
-// import { Cascader } from 'ant-design-vue';
+import { Cascader } from 'ant-design-vue';
+
 import {
   GlobalSearch,
   LanguageToggle,
@@ -169,14 +170,19 @@ function handleDepartmentChange(value: string[]) {
   >
     <slot name="menu"></slot>
   </div>
+  <span
+    class="mr-2 whitespace-nowrap font-medium text-gray-700 dark:text-gray-200"
+  >
+    请选择：部门/租户/团队
+  </span>
   <div class="flex h-full min-w-0 flex-shrink-0 items-center">
-    <!-- <Cascader
+    <Cascader
       :value="props.selectedOrgPath"
       :options="props.treeData"
       @change="handleDepartmentChange"
       change-on-select
       expand-trigger="hover"
-    /> -->
+    />
     <template v-for="slot in rightSlots" :key="slot.name">
       <slot :name="slot.name">
         <template v-if="slot.name === 'global-search'">

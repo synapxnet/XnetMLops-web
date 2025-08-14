@@ -121,16 +121,28 @@ export interface TaskFormStep1 {
   podType: string;
   resources: string;
   trainType: string;
+  imageUid: string;
   image: string;
   describe: string;
 }
 
 export interface TaskFormStep2 {
+  // 算法UID
+  algorithmUID: string;
+  // 算法名称
   algorithmName?: string;
   // 算法版本
   algorithmVersion?: string;
   // 数据集
-  datasets?: Array<{ id?: string; name: string; selectedName: string }>;
+  datasets?: Array<{
+    bucketIdentifier: string;
+    datasetName: string;
+    id?: string;
+    name: string;
+    selectedId: string;
+    selectedName: string;
+    selectedUID: string;
+  }>;
 
   // 任务路由
   taskroute?: string;
@@ -191,4 +203,100 @@ export interface TaskFormState {
   taskStep2: TaskFormStep2;
   taskStep3: TaskFormStep3;
   taskStep4: TaskFormStep4;
+}
+
+// Jenkins 流水线配置参数
+export interface PipelineConfigParams {
+  description: string;
+  defaultBranch?: string;
+  defaultEnvironment?: string;
+  gitRepoUrl: string;
+  buildCommand?: string;
+  testCommand?: string;
+  deployCommand?: string;
+}
+
+// Jenkins 作业信息
+export interface JenkinsJobInfo {
+  name: string;
+  url: string;
+  buildable: boolean;
+  inQueue?: boolean;
+  lastBuild?: {
+    building?: boolean;
+    estimatedDuration?: number;
+    number: number;
+    result?: string;
+    timestamp?: number;
+    url: string;
+  };
+  nextBuildNumber?: number;
+  property?: Array<{
+    parameterDefinitions?: Array<{
+      defaultValue?: string;
+      description?: string;
+      name: string;
+      type: string;
+    }>;
+  }>;
+}
+
+// Jenkins 构建状态
+export interface JenkinsBuildStatus {
+  building: boolean;
+  result: string;
+  duration: number;
+  timestamp: number;
+  fullDisplayName: string;
+  actions: Array<{
+    parameters?: Array<{
+      name: string;
+      value: string;
+    }>;
+  }>;
+}
+
+export interface Pagination {
+  total: number; // 数据总条数
+  page: number; // 当前页码
+  size: number; // 每页数据条数
+  totalPages: number; // 总页数
+}
+
+export type DockerFilePushStatus = 'FAILED' | 'PENDING' | 'PUSHED' | 'PUSHING';
+
+export interface DockerFile {
+  id: number;
+  uid: string;
+  name: string;
+  content: string;
+  tags: string; // 逗号分隔的标签
+  push_status: DockerFilePushStatus;
+  harbor_uid: string; // 关联的Harbor仓库UID
+  push_history: string; // JSON格式的推送历史
+  created_by: string;
+  updated_by: null | string;
+  created_at: string;
+  updated_at: null | string;
+}
+
+export interface HarborRepository {
+  id: number;
+  uid: string;
+  name: string;
+  url: string;
+  username: string;
+  password: string;
+  created_by: string;
+  updated_by: null | string;
+  created_at: string;
+  updated_at: null | string;
+}
+
+// 推送历史项
+export interface PushHistoryItem {
+  timestamp: string;
+  status: DockerFilePushStatus;
+  harborName: string;
+  message: string;
 }

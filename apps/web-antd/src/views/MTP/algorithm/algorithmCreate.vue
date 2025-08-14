@@ -29,6 +29,7 @@ import {
 import { mtpRequestClient } from '#/api/request';
 
 import { createAlgorithm } from '../../SMP/api/algorithm';
+import { getAlgorithmConfig } from '../../SMP/api/algorithmConfig'; // 引入算法仓接口
 import { getbucketConfig } from '../../SMP/api/bucketConfig';
 import { fetchConfig } from '../../SMP/api/datasetConfig';
 
@@ -533,6 +534,7 @@ const beforeUpload = (file: File) => {
 };
 
 // 处理文件上传
+// 处理文件上传
 const handleFileChange = (info: any) => {
   const file = info.file;
 
@@ -567,10 +569,12 @@ const handleFileChange = (info: any) => {
   // 判断是否需要分片上传 (大于500MB)
   isChunkedUpload.value = rawFile.size > 500 * 1024 * 1024;
 
-  // 切换为文件上传模式
-  formState.value.is_CAS = 0;
-  formState.value.cloudAlgorithmId = null;
-  formState.value.cloudAlgorithm = undefined;
+  // 只有在没有选择云仓算法时才切换为文件上传模式
+  if (!formState.value.cloudAlgorithmId) {
+    formState.value.is_CAS = 0;
+    formState.value.cloudAlgorithmId = null;
+    formState.value.cloudAlgorithm = undefined;
+  }
 };
 
 // 取消上传
@@ -755,7 +759,7 @@ const onSubmit = async (values: Record<string, any>) => {
       dept_uid: selectedOrg.value.deptUid || null,
       level: selectedOrg.value.level,
       userId: currentUserInfo?.value?.userId || '',
-      is_CAS: values.is_CAS,
+      is_CAS: values.is_CAS === 1,
       cloud_algorithm_id: values.cloudAlgorithmId,
       tempFilePath, // 添加文件路径
     };
@@ -804,46 +808,75 @@ const resetOrgSelection = () => {
 // 云仓算法包相关状态
 const modalVisible = ref(false);
 const selectedAlgorithm = ref<null | Record<string, any>>(null);
-const searchParams = ref({
-  organization: undefined,
-  domain: undefined,
-  module: undefined,
+const searchKeyword = ref(''); // 搜索关键词
+
+// 公共算法列表
+const publicAlgorithms = ref<
+  {
+    description: string;
+    id: string;
+    name: string;
+    uid: string;
+    version: string;
+  }[]
+>([]);
+
+// 获取公共算法列表
+const fetchPublicAlgorithms = async () => {
+  try {
+    const response = await getAlgorithmConfig();
+    publicAlgorithms.value = response.map((item) => ({
+      id: item.id,
+      uid: item.uid,
+      name: item.algorithm,
+      version: item.algorithm_version,
+      description: item.description,
+    }));
+  } catch (error) {
+    console.error('获取公共算法失败:', error);
+    message.error('获取公共算法失败');
+    publicAlgorithms.value = [];
+  }
+};
+
+// 过滤后的算法列表
+const filteredAlgorithms = computed(() => {
+  if (!searchKeyword.value) {
+    return publicAlgorithms.value;
+  }
+  const keyword = searchKeyword.value.toLowerCase();
+  return publicAlgorithms.value.filter(
+    (item) =>
+      (item.name && item.name.toLowerCase().includes(keyword)) ||
+      (item.version && item.version.toLowerCase().includes(keyword)) ||
+      (item.description && item.description.toLowerCase().includes(keyword)),
+  );
 });
 
-// 模拟算法数据
-const algorithmOptions = [
+// 表格列定义（只显示名称、版本、描述）
+const columns = [
   {
-    id: '1',
-    name: '人脸识别算法',
-    version: 'v1.2.0',
-    description: '基于深度学习的人脸识别解决方案',
-    organization: 'AI实验室',
-    domain: '计算机视觉',
-    module: '识别模块',
+    title: '算法名称',
+    dataIndex: 'name',
+    key: 'name',
   },
   {
-    id: '2',
-    name: '目标检测算法',
-    version: 'v2.0.1',
-    description: '实时目标检测算法',
-    organization: '视觉科技',
-    domain: '计算机视觉',
-    module: '检测模块',
+    title: '版本',
+    dataIndex: 'version',
+    key: 'version',
   },
   {
-    id: '3',
-    name: '语音识别算法',
-    version: 'v3.1.5',
-    description: '高精度语音识别引擎',
-    organization: '语音科技',
-    domain: '语音处理',
-    module: '识别模块',
+    title: '描述',
+    dataIndex: 'description',
+    key: 'description',
   },
 ];
 
 // 弹窗相关方法
 const openModal = () => {
+  fetchPublicAlgorithms(); // 打开弹窗时获取
   modalVisible.value = true;
+  searchKeyword.value = '';
 };
 
 const closeModal = () => {
@@ -854,7 +887,7 @@ const confirmSelection = () => {
   if (selectedAlgorithm.value) {
     formState.value.cloudAlgorithm = `${selectedAlgorithm.value.name}@${selectedAlgorithm.value.version}`;
     formState.value.selectedAlgorithmData = selectedAlgorithm.value;
-    formState.value.cloudAlgorithmId = selectedAlgorithm.value.id;
+    formState.value.cloudAlgorithmId = selectedAlgorithm.value.uid;
 
     // 切换为云仓模式
     formState.value.is_CAS = 1;
@@ -874,49 +907,6 @@ const removeAlgorithm = () => {
 
   // 重置为文件上传模式
   formState.value.is_CAS = 0;
-};
-
-// 表格列定义
-const columns = [
-  {
-    title: '算法名称',
-    dataIndex: 'name',
-    key: 'name',
-  },
-  {
-    title: '版本',
-    dataIndex: 'version',
-    key: 'version',
-  },
-  {
-    title: '描述',
-    dataIndex: 'description',
-    key: 'description',
-  },
-  {
-    title: '组织',
-    dataIndex: 'organization',
-    key: 'organization',
-  },
-  {
-    title: '领域',
-    dataIndex: 'domain',
-    key: 'domain',
-  },
-  {
-    title: '模块',
-    dataIndex: 'module',
-    key: 'module',
-  },
-];
-
-// 筛选项数据
-const filterOptions = {
-  organizations: [
-    ...new Set(algorithmOptions.map((item) => item.organization)),
-  ],
-  domains: [...new Set(algorithmOptions.map((item) => item.domain))],
-  modules: [...new Set(algorithmOptions.map((item) => item.module))],
 };
 </script>
 
@@ -1087,58 +1077,24 @@ const filterOptions = {
                   :mask-closable="false"
                 >
                   <div class="algorithm-modal">
-                    <!-- 筛选项 -->
-                    <div class="filters mb-4">
-                      <ASelect
-                        v-model:value="searchParams.organization"
-                        placeholder="选择组织"
+                    <!-- 搜索框 -->
+                    <div class="mb-4">
+                      <AInput
+                        v-model:value="searchKeyword"
+                        placeholder="搜索算法名称、版本或描述"
                         allow-clear
-                        class="filter-select"
+                        style="width: 100%"
                       >
-                        <ASelect.option
-                          v-for="org in filterOptions.organizations"
-                          :key="org"
-                          :value="org"
-                        >
-                          {{ org }}
-                        </ASelect.option>
-                      </ASelect>
-
-                      <ASelect
-                        v-model:value="searchParams.domain"
-                        placeholder="选择领域"
-                        allow-clear
-                        class="filter-select"
-                      >
-                        <ASelect.option
-                          v-for="domain in filterOptions.domains"
-                          :key="domain"
-                          :value="domain"
-                        >
-                          {{ domain }}
-                        </ASelect.option>
-                      </ASelect>
-
-                      <ASelect
-                        v-model:value="searchParams.module"
-                        placeholder="选择模块"
-                        allow-clear
-                        class="filter-select"
-                      >
-                        <ASelect.option
-                          v-for="module in filterOptions.modules"
-                          :key="module"
-                          :value="module"
-                        >
-                          {{ module }}
-                        </ASelect.option>
-                      </ASelect>
+                        <template #prefix>
+                          <SearchOutlined class="text-gray-400" />
+                        </template>
+                      </AInput>
                     </div>
 
                     <!-- 算法列表 -->
                     <Table
                       :columns="columns"
-                      :data-source="algorithmOptions"
+                      :data-source="filteredAlgorithms"
                       :row-selection="{
                         type: 'radio',
                         selectedRowKeys: selectedAlgorithm
@@ -1520,14 +1476,6 @@ const filterOptions = {
 
 .algorithm-modal {
   @apply p-4;
-}
-
-.filters {
-  @apply flex gap-3;
-}
-
-.filter-select {
-  @apply flex-1;
 }
 
 .algorithm-table {

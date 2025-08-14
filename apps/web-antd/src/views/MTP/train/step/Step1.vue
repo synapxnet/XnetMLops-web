@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import type { DockerFile } from '../../../SMP/api/types';
 import type { TaskFormState, TaskFormStep1 } from '../taskcommon/task';
 
 import { computed, defineProps, h, nextTick, ref, watch } from 'vue';
@@ -12,8 +13,12 @@ import {
   Radio,
   Select,
   Table,
+  Tag,
   Tooltip,
 } from 'ant-design-vue';
+
+// 新增API导入
+import { getDockerFiles } from '../../../SMP/api/dockerFileManager';
 
 // 修改props定义
 const props = defineProps<{
@@ -46,7 +51,8 @@ const localFormState = ref<TaskFormStep1>({
   podType: '',
   resources: '',
   trainType: '',
-  image: '',
+  image: '', // 存储用于显示的镜像名称
+  imageUid: '', // 新增：存储镜像UID
   describe: '',
 });
 const current = ref(0);
@@ -63,6 +69,7 @@ watch(
       resources: newVal?.resources || '',
       trainType: newVal?.trainType || '',
       image: newVal?.image || '',
+      imageUid: newVal?.imageUid || '', // 新增
       describe: newVal?.describe || '',
     };
   },
@@ -81,7 +88,8 @@ const validate = async () => {
         podType: localFormState.value.podType,
         resources: localFormState.value.resources,
         trainType: localFormState.value.trainType,
-        image: localFormState.value.image,
+        image: localFormState.value.image, // 显示名称
+        imageUid: localFormState.value.imageUid, // 新增：UID
         describe: localFormState.value.describe,
       },
     };
@@ -105,74 +113,70 @@ const resourceOptions = ref([
 
 // 镜像选择相关状态
 const showImageDialog = ref(false);
-const showPackageDialog = ref(false);
 const searchImageKey = ref('');
-const selectedPackages = ref<Record<string, string>>({});
-const selectedImageId = ref<number>();
+const selectedImageUid = ref<string>('');
 
-const imageOptions = ref([
-  {
-    id: 1,
-    name: 'TensorFlow 2.9',
-    version: 'v2.9.0',
-    size: '1.2GB',
-    updated: '2023-03-15',
-    packages: {
-      numpy: '1.23.5',
-      tensorflow: '2.9.0',
-      keras: '2.9.0',
-    },
-  },
-  {
-    id: 2,
-    name: 'PyTorch 1.12',
-    version: 'v1.12.1',
-    size: '890MB',
-    updated: '2023-04-20',
-    packages: {
-      torch: '1.12.1',
-      numpy: '1.22.4',
-      cuda: '11.6',
-    },
-  },
-  {
-    id: 3,
-    name: 'Ubuntu 20.04',
-    version: '20.04.4',
-    size: '2.1GB',
-    updated: '2023-05-10',
-    packages: {
-      bash: '5.0.17',
-      coreutils: '8.30',
-      apt: '2.0.9',
-    },
-  },
-]);
+// Docker镜像列表
+const dockerImages = ref<DockerFile[]>([]);
+const loadingImages = ref(false);
 
+// 镜像表格列定义
 const imageColumns = ref([
   {
     title: '',
     dataIndex: 'selection',
     width: 40,
   },
-  { title: '镜像名称', dataIndex: 'name' },
-  { title: '版本', dataIndex: 'version' },
-  { title: '大小', dataIndex: 'size' },
-  { title: '更新时间', dataIndex: 'updated' },
   {
-    title: '库列表',
-    dataIndex: 'packages',
-    customRender: ({ record }: { record: any }) =>
+    title: '镜像名称',
+    dataIndex: 'name',
+    customRender: ({ text }: { text: string }) =>
+      h('div', { class: 'font-medium' }, text),
+  },
+  {
+    title: '标签',
+    dataIndex: 'tags',
+    customRender: ({ text }: { text: string }) => {
+      const tags = text ? text.split(',').slice(0, 3) : [];
+      return h(
+        'div',
+        { class: 'flex flex-wrap gap-1' },
+        tags.map((tag) => h(Tag, { color: 'blue' }, tag)),
+      );
+    },
+  },
+  {
+    title: '创建时间',
+    dataIndex: 'created_at',
+    customRender: ({ text }: { text: string }) =>
+      new Date(text).toLocaleDateString(),
+  },
+  {
+    title: '操作',
+    dataIndex: 'action',
+    customRender: ({ record }: { record: DockerFile }) =>
       h(
-        'a',
+        Button,
         {
+          type: 'link',
+          size: 'small',
           onClick: (e: Event) => {
             e.stopPropagation();
-            selectedPackages.value = record.packages;
-            showPackageDialog.value = true;
+            Modal.info({
+              title: 'Dockerfile 内容',
+              width: '60%',
+              content: h(
+                'pre',
+                {
+                  class:
+                    'bg-gray-100 p-4 rounded overflow-auto max-h-96 font-mono text-sm',
+                },
+                record.content,
+              ),
+            });
           },
         },
-        '查看详细',
+        '查看内容',
       ),
   },
 ]);
@@ -275,13 +279,32 @@ const schemas = ref([
         class: 'w-full',
         readonly: true,
       },
-      fieldName: 'image',
+      fieldName: 'image', // 注意：这里绑定的是显示名称字段
       label: '镜像：',
       rules: [requiredRule('请选择镜像')],
     },
   ],
 ]);
+
+// 加载Docker镜像
+const loadDockerImages = async () => {
+  try {
+    loadingImages.value = true;
+    const response = await getDockerFiles();
+    dockerImages.value = response || [];
+  } catch (error) {
+    message.error('加载镜像失败');
+    console.error('加载镜像错误:', error);
+  } finally {
+    loadingImages.value = false;
+  }
+};
+
+// 打开镜像选择器
 const openImageSelector = () => {
+  if (dockerImages.value.length === 0) {
+    loadDockerImages();
+  }
   showImageDialog.value = true;
 };
 
@@ -315,30 +338,49 @@ const selectResource = (resource: any) => {
     formRef.value?.validateFields(['resources']);
   });
 };
+
+// 过滤镜像
 const filteredImages = computed(() => {
-  return imageOptions.value.filter((img) =>
-    img.name.toLowerCase().includes(searchImageKey.value.toLowerCase()),
+  return dockerImages.value.filter(
+    (img) =>
+      img.name.toLowerCase().includes(searchImageKey.value.toLowerCase()) ||
+      (img.tags &&
+        img.tags.toLowerCase().includes(searchImageKey.value.toLowerCase())),
   );
 });
-const handleRowClick = (record: any) => {
-  selectedImageId.value = record.id;
+
+// 处理行点击
+const handleRowClick = (record: DockerFile) => {
+  selectedImageUid.value = record.uid;
 };
+
+// 处理镜像确认
 const handleImageConfirm = () => {
-  if (selectedImageId.value) {
+  if (selectedImageUid.value) {
     selectImage();
   } else {
     message.warning('请先选择一个镜像');
   }
 };
+
+// 选择镜像 - 修改：存储UID并显示名称
 const selectImage = () => {
-  if (selectedImageId.value) {
-    const record = imageOptions.value.find(
-      (img) => img.id === selectedImageId.value,
+  if (selectedImageUid.value) {
+    const record = dockerImages.value.find(
+      (img) => img.uid === selectedImageUid.value,
     );
     if (record) {
-      localFormState.value.image = `${record.name}@${record.version}`;
+      // 使用更友好的显示格式：名称@标签
+      const primaryTag = record.tags ? record.tags.split(',')[0] : 'latest';
+
+      // 设置显示名称
+      localFormState.value.image = `${record.name}@${primaryTag}`;
+
+      // 存储镜像UID（向后端传递）
+      localFormState.value.imageUid = record.uid;
+
       showImageDialog.value = false;
-      selectedImageId.value = undefined;
+      selectedImageUid.value = record.uid;
       searchImageKey.value = '';
 
       // 主动触发镜像字段验证
@@ -438,64 +480,123 @@ const selectImage = () => {
     v-model:open="showImageDialog"
     title="选择镜像"
     width="800px"
-    @cancel="selectedImageId = undefined"
+    @cancel="selectedImageUid = ''"
+    :after-close="() => (searchImageKey = '')"
   >
     <div class="image-selector">
-      <AInput.Search
-        v-model:value="searchImageKey"
-        placeholder="输入镜像名称搜索..."
-        class="mb-4 w-64"
-      />
+      <div class="mb-4 flex justify-between">
+        <AInput.Search
+          v-model:value="searchImageKey"
+          placeholder="输入镜像名称或标签搜索..."
+          class="w-64"
+        />
+        <Button
+          type="primary"
+          @click="loadDockerImages"
+          :loading="loadingImages"
+        >
+          <SyncOutlined :spin="loadingImages" />
+          刷新镜像
+        </Button>
+      </div>
 
       <ATable
         :columns="imageColumns"
         :data-source="filteredImages"
         :pagination="{ pageSize: 5 }"
-        row-key="id"
+        row-key="uid"
+        :loading="loadingImages"
         :custom-row="(record) => ({ onClick: () => handleRowClick(record) })"
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.dataIndex === 'selection'">
             <ARadio
-              :checked="selectedImageId === record.id"
-              @click.stop="selectedImageId = record.id"
+              :checked="selectedImageUid === record.uid"
+              @click.stop="selectedImageUid = record.uid"
             />
           </template>
           <template v-if="column.dataIndex === 'name'">
             <div class="font-medium">{{ record.name }}</div>
           </template>
         </template>
+
+        <template #emptyText>
+          <div v-if="loadingImages" class="py-8 text-center">
+            <SyncOutlined spin class="mb-2 text-xl text-blue-500" />
+            <p>正在加载镜像列表...</p>
+          </div>
+          <div v-else class="py-8 text-center text-gray-500">
+            <ExclamationCircleOutlined class="mb-2 text-xl" />
+            <p>暂无镜像数据</p>
+            <Button type="link" @click="loadDockerImages">重新加载</Button>
+          </div>
+        </template>
       </ATable>
     </div>
 
     <template #footer>
       <AButton @click="showImageDialog = false">取消</AButton>
-      <AButton type="primary" @click="handleImageConfirm">确定</AButton>
+      <AButton
+        type="primary"
+        @click="handleImageConfirm"
+        :disabled="!selectedImageUid"
+      >
+        确定
+      </AButton>
     </template>
   </Modal>
-
-  <!-- 库详情弹窗 -->
-  <Modal
-    v-model:open="showPackageDialog"
-    title="库详细信息"
-    width="600px"
-    :footer="null"
-  >
-    <div class="package-detail">
-      <div
-        v-for="(version, name) in selectedPackages"
-        :key="name"
-        class="package-item"
-      >
-        <span class="package-name">{{ name }}</span>
-        <span class="package-version">{{ version }}</span>
-      </div>
-    </div>
-    <div class="dialog-footer">
-      <AButton type="primary" @click="showPackageDialog = false">关闭</AButton>
-    </div>
-  </Modal>
 </template>
+
 <style lang="scss" scoped>
 @use '../taskcommon/form-styles.scss' as *;
+
+.resource-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.resource-card {
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.3s;
+
+  &:hover {
+    border-color: #40a9ff;
+    box-shadow: 0 2px 8px rgba(24, 144, 255, 0.2);
+  }
+
+  &.selected {
+    border-color: #1890ff;
+    background-color: #e6f7ff;
+  }
+
+  h3 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    color: #262626;
+  }
+
+  .specs {
+    color: #595959;
+    margin-bottom: 0;
+  }
+}
+
+.image-selector {
+  .ant-table-row {
+    cursor: pointer;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background-color: #f0f7ff;
+    }
+
+    &.selected {
+      background-color: #e6f7ff;
+    }
+  }
+}
 </style>

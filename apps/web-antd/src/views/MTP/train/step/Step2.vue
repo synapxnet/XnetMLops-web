@@ -14,8 +14,8 @@ import {
   Table,
 } from 'ant-design-vue';
 
-import { fetchAlgorithmList } from '../../../SMP/api/algorithm'; // 导入算法API
-import { fetchDatasetList } from '../../../SMP/api/dataset'; // 导入数据集API
+import { fetchAlgorithmList } from '../../../SMP/api/algorithm';
+import { fetchDatasetList } from '../../../SMP/api/dataset';
 
 // 定义组件Props和Emits
 const props = defineProps<{
@@ -38,10 +38,15 @@ interface Dataset {
   id: string;
   name: string;
   selectedName: string;
+  selectedId: string;
+  selectedUID: string;
+  bucketIdentifier: string;
+  datasetName: string;
 }
 
 // 本地表单状态
 const localFormState = ref<TaskFormStep2>({
+  algorithmUID: '',
   algorithmName: '',
   algorithmVersion: '',
   datasets: [],
@@ -53,6 +58,7 @@ watch(
   () => props.modelValue.taskStep2,
   (newVal) => {
     localFormState.value = {
+      algorithmUID: newVal.algorithmUID || '',
       algorithmName: newVal.algorithmName || '',
       algorithmVersion: newVal.algorithmVersion || '',
       datasets: newVal.datasets?.length ? [...newVal.datasets] : [],
@@ -72,6 +78,7 @@ const validate = async () => {
     emit('update:modelValue', {
       ...props.modelValue,
       taskStep2: {
+        algorithmUID: localFormState.value.algorithmUID,
         algorithmName: localFormState.value.algorithmName,
         algorithmVersion: localFormState.value.algorithmVersion,
         datasets: localFormState.value.datasets,
@@ -132,7 +139,7 @@ const removeDataset = (index: number) => {
 };
 
 // 选择算法
-const selectedAlgorithmId = ref<number>();
+const selectedAlgorithmId = ref<string>(''); // 修复：使用字符串类型
 
 // 获取组件类型
 const getComponent = (componentType: string) => {
@@ -152,26 +159,33 @@ const getComponent = (componentType: string) => {
   }
 };
 
-// 确认选择的算法
+// 确认选择的算法 - 修复：使用正确的字段名
 const handleAlgorithmConfirm = () => {
   if (selectedAlgorithmId.value) {
     const record = algorithmOptions.value.find(
       (a) => a.id === selectedAlgorithmId.value,
     );
     if (record) {
+      // 使用后端返回的正确字段名
+      localFormState.value.algorithmUID = record.uid;
       localFormState.value.algorithmName = record.algorithm_name;
       localFormState.value.algorithmVersion = record.version;
       showAlgorithmDialog.value = false;
-      selectedAlgorithmId.value = undefined;
+      selectedAlgorithmId.value = '';
     }
   } else {
     message.warning('请先选择一个算法');
   }
 };
 
-// 处理算法行点击
+// 处理算法行点击 - 修复：直接设置表单值
 const handleAlgorithmRowClick = (record: any) => {
   selectedAlgorithmId.value = record.id;
+
+  // 直接更新表单状态，避免需要点击确定按钮
+  localFormState.value.algorithmName = record.algorithm_name;
+  localFormState.value.algorithmUID = record.uid;
+  localFormState.value.algorithmVersion = record.version;
 };
 
 // 处理数据集选择
@@ -182,6 +196,14 @@ const handleDatasetSelect = (record: any) => {
   ) {
     localFormState.value.datasets[currentDatasetIndex.value].selectedName =
       record.dataset_file;
+    localFormState.value.datasets[currentDatasetIndex.value].selectedId =
+      record.id;
+    localFormState.value.datasets[currentDatasetIndex.value].selectedUID =
+      record.uid;
+    localFormState.value.datasets[currentDatasetIndex.value].bucketIdentifier =
+      record.bucket_identifier;
+    localFormState.value.datasets[currentDatasetIndex.value].datasetName =
+      record.dataset_name;
     showDatasetDialog.value = false;
     currentDatasetIndex.value = -1;
   } else {
@@ -197,8 +219,9 @@ const fetchAlgorithms = async () => {
     const data = await fetchAlgorithmList();
     algorithmOptions.value = data.map((item) => ({
       ...item,
-      id: item.id,
-      name: item.algorithm_name,
+      id: item.id.toString(), // 确保ID是字符串类型
+      uid: item.uid,
+      algorithm_name: item.algorithm_name,
       version: item.version,
       updated: item.updated_at || '未知',
       creationdate: item.created_at || '未知',
@@ -218,8 +241,11 @@ const fetchDatasets = async () => {
     const data = await fetchDatasetList();
     datasetOptions.value = data.map((item) => ({
       ...item,
-      id: item.id,
+      id: item.id.toString(), // 确保ID是字符串类型
       name: item.dataset_file,
+      bucket_identifier: item.bucket_identifier,
+      dataset_name: item.dataset_file,
+      dataset_uid: item.uid,
       type: getTypeLabel(item.type),
       version: `${Math.floor(Math.random() * 100)}.${Math.floor(Math.random() * 10)} MB`,
     }));
@@ -408,7 +434,7 @@ const schemas = ref([
     v-model:open="showAlgorithmDialog"
     title="选择算法"
     width="800px"
-    @cancel="selectedAlgorithmId = undefined"
+    @cancel="selectedAlgorithmId = ''"
   >
     <div class="algorithm-selector">
       <ATable
@@ -424,7 +450,7 @@ const schemas = ref([
           <template v-if="column.dataIndex === 'selection'">
             <ARadio
               :checked="selectedAlgorithmId === record.id"
-              @click.stop="selectedAlgorithmId = record.id"
+              @click.stop="handleAlgorithmRowClick(record)"
             />
           </template>
         </template>

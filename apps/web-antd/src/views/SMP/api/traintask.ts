@@ -18,8 +18,11 @@ interface TrainTaskResponse {
   pod_type: string;
   resources: string;
   train_type: string;
+  image_uid: string;
   image: string;
   description: string;
+  // 算法UID
+  algorithm_uid: string;
   algorithm_name: string;
   algorithm_version: string;
   task_route: string;
@@ -28,7 +31,13 @@ interface TrainTaskResponse {
   notification_config: string;
   output_config: string;
   schedule_config: string;
-  datasets: Array<{ dataset_id: string }>;
+  datasets: Array<{
+    bucket_identifier: string;
+    dataset_id: string;
+    dataset_name: string;
+    dataset_uid: string;
+    id: string;
+  }>;
   custom_variables: Array<{ name: string; value: string }>;
   created_at: string;
   updated_at: string;
@@ -46,8 +55,11 @@ const convertFormToRequest = (formState: TaskFormState) => {
     pod_type: formState.taskStep1.podType,
     resources: formState.taskStep1.resources,
     train_type: formState.taskStep1.trainType,
+    image_uid: formState.taskStep1.imageUid,
     image: formState.taskStep1.image,
     description: formState.taskStep1.describe,
+    // 算法UID
+    algorithm_uid: formState.taskStep2.algorithmUID,
     algorithm_name: formState.taskStep2.algorithmName,
     algorithm_version: formState.taskStep2.algorithmVersion,
     task_route: formState.taskStep2.taskroute,
@@ -57,7 +69,11 @@ const convertFormToRequest = (formState: TaskFormState) => {
     output_config: JSON.stringify(formState.taskStep4.outputConfig),
     schedule_config: JSON.stringify(formState.taskStep4.scheduleConfig),
     datasets: formState.taskStep2.datasets.map((ds) => ({
-      dataset_id: ds.id,
+      dataset_uid: ds.selectedUID,
+      bucket_identifier: ds.bucketIdentifier,
+      dataset_id: ds.selectedId,
+      dataset_name: ds.datasetName,
+      id: ds.id,
     })),
     custom_variables: formState.taskStep3.customVariables.map((cv) => ({
       name: cv.name,
@@ -107,7 +123,7 @@ export const updateTrainTask = async (
       uid, // 确保包含UID
       ...convertFormToRequest(formState),
     };
-
+    console.log(payload);
     const response = await mtpRequestClient.put<TrainTaskResponse>(
       `/mtp/tasks/${uid}`,
       payload,
@@ -181,28 +197,29 @@ export const fetchAllTrainTasks = async (tenantUid: string) => {
   }
 };
 
-/**
- * 执行任务
- */
 export const TrainTaskStart = async (
   uid: string,
   tenantUid: string,
   userId: string,
 ) => {
   try {
-    const response = await mtpRequestClient.post<TrainTaskResponse>(
-      `/mtp/tasks-train/${uid}`,
-      {},
+    const response = await mtpRequestClient.post(
+      '/mtp/pipeline', // 创建流水线接口
+      {}, // 空请求体
       {
+        params: {
+          jobUID: `${uid}`, // 使用任务UID作为作业名称
+        },
         headers: {
           'X-Tenant-Uid': tenantUid,
           'X-User-Id': userId,
         },
       },
     );
+
     return response;
   } catch (error) {
-    message.error('获取任务详情失败');
+    message.error('启动训练任务失败');
     throw error;
   }
 };

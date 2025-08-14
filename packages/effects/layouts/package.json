@@ -37,6 +37,7 @@
     "@vben/types": "workspace:*",
     "@vben/utils": "workspace:*",
     "@vueuse/core": "catalog:",
+    "ant-design-vue": "catalog:",
     "vue": "catalog:",
     "vue-router": "catalog:"
   }
