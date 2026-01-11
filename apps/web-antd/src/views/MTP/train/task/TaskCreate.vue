@@ -23,7 +23,8 @@ import Step4 from '../step/Step4.vue';
 
 // 添加租户和用户信息（从 store 获取）
 const currentUserInfo = inject<Ref<any>>('currentUserInfo', ref(null));
-const tenantUid = computed(() => currentUserInfo.value?.tenantUid || '');
+const currentTenantInfo = inject<Ref<any>>('selectedOrganization', ref(null));
+const tenantUid = computed(() => currentTenantInfo.value?.tenantUid || '');
 const userId = computed(() => currentUserInfo.value?.userId || '');
 
 const route = useRoute();
@@ -171,8 +172,8 @@ const loadTaskData = async (id: string) => {
         datasets: taskData.datasets.map((ds) => ({
           id: ds.dataset_id,
           selectedId: ds.dataset_id,
-          name: '', // 需要额外获取名称
-          selectedName: '', // 需要额外获取
+          name: ds.dataset_file, // 需要额外获取名称
+          selectedName: ds.dataset_name, // 需要额外获取
           selectedUID: ds.dataset_uid,
           bucketIdentifier: ds.bucket_identifier,
           datasetName: ds.dataset_name,

@@ -1,4 +1,4 @@
-// src/traintask.ts
+// src/SMP/api/traintask.ts
 import type { TaskFormState } from './types';
 
 import { message } from 'ant-design-vue';
@@ -43,6 +43,89 @@ interface TrainTaskResponse {
   updated_at: string;
 }
 
+// 新增接口类型定义
+export interface PipelineStage {
+  stageName: string;
+  status: string; // "SUCCESS", "FAILED", "IN_PROGRESS", "QUEUED"
+  durationMillis: number;
+  startTime: Date;
+}
+
+export interface PipelineBuildStatus {
+  jobName: string;
+  buildUrl: string;
+  queueUrl: string;
+  overallStatus: string;
+  stages: PipelineStage[];
+  consoleOutput?: string;
+  startTime: Date;
+  endTime?: Date;
+}
+
+// 新增作业信息接口类型
+export interface JobInfo {
+  jobUid: string;
+  jobStatus: string;
+  jobContent: string;
+  startAt: Date;
+  endAt?: Date;
+}
+
+// 调度接口类型定义
+export interface ScheduleConfig {
+  intervalType: string;
+  cronExpression?: string;
+  dailyTime?: string;
+  dateRange?: string[];
+  hourlyMinute?: string;
+  intervalDuration?: number;
+  intervalUnit?: string;
+  offsetTime?: string;
+  weeklyDays?: string[];
+  weeklyTime?: string;
+  isActive: boolean;
+}
+
+export interface ScheduleStartResponse {
+  code: number;
+  data: {
+    cronExpression: string;
+    jobName: string;
+    queueUrl: string;
+    scheduleActive: boolean;
+  };
+  message: string;
+  error: null | string;
+}
+
+export interface ScheduleStopResponse {
+  code: number;
+  data: {
+    buildsStopped: boolean;
+    jobDeleted?: boolean;
+    scheduleConfigDeleted: boolean;
+  };
+  message: string;
+  error: null | string;
+}
+
+export interface ScheduleStatusResponse {
+  code: number;
+  data: {
+    jobName: string;
+    lastBuild?: {
+      buildUrl: string;
+      endTime: string;
+      startTime: string;
+      status: string;
+    };
+    nextExecution?: string;
+    scheduleConfig: any;
+  };
+  message: string;
+  error: null | string;
+}
+
 /**
  * 转换前端表单状态为后端需要的请求体
  */
@@ -70,6 +153,7 @@ const convertFormToRequest = (formState: TaskFormState) => {
     schedule_config: JSON.stringify(formState.taskStep4.scheduleConfig),
     datasets: formState.taskStep2.datasets.map((ds) => ({
       dataset_uid: ds.selectedUID,
+      dataset_file: ds.name,
       bucket_identifier: ds.bucketIdentifier,
       dataset_id: ds.selectedId,
       dataset_name: ds.datasetName,
@@ -197,18 +281,21 @@ export const fetchAllTrainTasks = async (tenantUid: string) => {
   }
 };
 
+/**
+ * 启动训练任务
+ */
 export const TrainTaskStart = async (
   uid: string,
   tenantUid: string,
   userId: string,
-) => {
+): Promise<PipelineBuildStatus> => {
   try {
     const response = await mtpRequestClient.post(
       '/mtp/pipeline', // 创建流水线接口
       {}, // 空请求体
       {
         params: {
-          jobUID: `${uid}`, // 使用任务UID作为作业名称
+          taskUID: `${uid}`, // 使用任务UID作为作业名称
         },
         headers: {
           'X-Tenant-Uid': tenantUid,
@@ -217,9 +304,286 @@ export const TrainTaskStart = async (
       },
     );
 
-    return response;
+    // 返回流水线创建信息
+    return {
+      jobName: uid,
+      queueUrl: response.queueUrl,
+      buildUrl: response.buildUrl || '',
+      overallStatus: 'QUEUED',
+      stages: [],
+      startTime: new Date(),
+      ...response,
+    };
   } catch (error) {
     message.error('启动训练任务失败');
+    throw error;
+  }
+};
+
+/**
+ * 获取流水线构建状态
+ */
+export const fetchPipelineStatus = async (
+  jobName: string,
+  tenantUid: string,
+  includeConsole = false,
+): Promise<PipelineBuildStatus> => {
+  try {
+    const response = await mtpRequestClient.get(
+      `/mtp/build/status/${encodeURIComponent(jobName)}`,
+      {
+        params: { includeConsole },
+        headers: { 'X-Tenant-Uid': tenantUid },
+      },
+    );
+    return response;
+  } catch (error) {
+    message.error('获取流水线状态失败');
+    throw error;
+  }
+};
+
+/**
+ * 获取任务下的所有作业
+ */
+export const fetchJobsByTaskUid = async (
+  taskUid: string,
+  tenantUid: string,
+): Promise<JobInfo[]> => {
+  try {
+    const response = await mtpRequestClient.get(`/mtp/task/${taskUid}/jobs`, {
+      headers: { 'X-Tenant-Uid': tenantUid },
+    });
+    return response || [];
+  } catch (error) {
+    message.error('获取作业列表失败');
+    throw error;
+  }
+};
+
+/**
+ * 获取单个作业详情
+ */
+export const fetchJobByJobUid = async (
+  jobUid: string,
+  tenantUid: string,
+): Promise<JobInfo> => {
+  try {
+    const response = await mtpRequestClient.get(`/mtp/job/${jobUid}`, {
+      headers: { 'X-Tenant-Uid': tenantUid },
+    });
+    return response;
+  } catch (error) {
+    message.error('获取作业详情失败');
+    throw error;
+  }
+};
+
+/**
+ * 获取任务的所有流水线执行记录
+ */
+export const fetchPipelineRecords = async (
+  taskUid: string,
+  tenantUid: string,
+): Promise<PipelineBuildStatus[]> => {
+  try {
+    // 1. 获取任务下的所有作业
+    const jobs = await fetchJobsByTaskUid(taskUid, tenantUid);
+
+    // 2. 并行获取每个作业的详情和流水线状态
+    const records = await Promise.all(
+      jobs.map(async (job) => {
+        try {
+          // 获取作业的流水线状态
+          const pipelineStatus = await fetchPipelineStatus(
+            job.jobUid,
+            tenantUid,
+          );
+
+          // 返回合并后的记录
+          return {
+            jobUid: job.jobUid,
+            jobStatus: job.jobStatus,
+            startAt: job.startAt,
+            endAt: job.endAt,
+            // 流水线状态
+            ...pipelineStatus,
+          } as PipelineBuildStatus;
+        } catch (error) {
+          console.error(`获取作业 ${job.jobUid} 的流水线状态失败:`, error);
+          return null;
+        }
+      }),
+    );
+
+    // 3. 过滤掉失败的请求
+    return records.filter((record) => record !== null) as PipelineBuildStatus[];
+  } catch (error) {
+    console.error('获取执行记录失败:', error);
+    return [];
+  }
+};
+/**
+ * 删除 Jenkins 作业
+ * @param jobUid 作业UID
+ * @param forceStop 是否强制停止构建
+ * @returns 删除结果
+ */
+export const deleteJenkinsJob = async (
+  jobUid: string,
+  forceStop: boolean = false,
+) => {
+  try {
+    const response = await mtpRequestClient.delete<{
+      code: number;
+      data: {
+        dbDeleted: boolean;
+        forceStop?: boolean;
+        jenkinsDeleted: boolean;
+        jobUid: string;
+      };
+      error: null | string;
+      message: string;
+    }>(`/mtp/job/${encodeURIComponent(jobUid)}`, {
+      params: { forceStop },
+    });
+    return response;
+  } catch (error) {
+    message.error('删除作业失败');
+    throw error;
+  }
+};
+
+/**
+ * 批量删除作业（根据taskUid）
+ * @param taskUid 任务UID
+ * @returns 批量删除结果
+ */
+export const deleteJobsByTaskUid = async (taskUid: string) => {
+  try {
+    const response = await mtpRequestClient.delete<{
+      code: number;
+      data: {
+        details: Array<{
+          error?: string;
+          jobUid: string;
+          status: string;
+        }>;
+        failedToDelete: number;
+        successfullyDeleted: number;
+        taskUid: string;
+        totalJobs: number;
+      };
+      error: null | string;
+      message: string;
+    }>(`/mtp/task/${encodeURIComponent(taskUid)}/jobs`);
+    return response;
+  } catch (error) {
+    message.error('批量删除作业失败');
+    throw error;
+  }
+};
+
+// 调度接口函数
+/**
+ * 开始调度任务
+ */
+export const startSchedule = async (
+  taskUID: string,
+  tenantUid: string,
+  userId: string,
+  scheduleConfig: ScheduleConfig,
+): Promise<ScheduleStartResponse> => {
+  try {
+    const response = await mtpRequestClient.post<ScheduleStartResponse>(
+      '/mtp/schedule/start',
+      { scheduleConfig },
+      {
+        params: { taskUID },
+        headers: {
+          'X-Tenant-Uid': tenantUid,
+          'X-User-Id': userId,
+        },
+      },
+    );
+    return response;
+  } catch (error) {
+    message.error('开始调度失败');
+    throw error;
+  }
+};
+
+/**
+ * 结束调度任务
+ */
+export const stopSchedule = async (
+  jobName: string,
+  tenantUid: string,
+  userId: string,
+  deleteJob: boolean = false,
+): Promise<ScheduleStopResponse> => {
+  try {
+    const response = await mtpRequestClient.delete<ScheduleStopResponse>(
+      `/mtp/schedule/stop/${jobName}`,
+      {
+        params: { deleteJob },
+        headers: {
+          'X-Tenant-Uid': tenantUid,
+          'X-User-Id': userId,
+        },
+      },
+    );
+    return response;
+  } catch (error) {
+    message.error('结束调度失败');
+    throw error;
+  }
+};
+
+/**
+ * 获取调度状态
+ */
+export const getScheduleStatus = async (
+  jobName: string,
+  tenantUid: string,
+): Promise<ScheduleStatusResponse> => {
+  try {
+    const response = await mtpRequestClient.get<ScheduleStatusResponse>(
+      `/mtp/schedule/status/${jobName}`,
+      {
+        headers: {
+          'X-Tenant-Uid': tenantUid,
+        },
+      },
+    );
+    return response;
+  } catch (error) {
+    message.error('获取调度状态失败');
+    throw error;
+  }
+};
+
+/**
+ * 更新调度配置
+ */
+export const updateSchedule = async (
+  jobName: string,
+  tenantUid: string,
+  scheduleConfig: any,
+): Promise<any> => {
+  try {
+    const response = await mtpRequestClient.put(
+      `/mtp/schedule/update/${jobName}`,
+      scheduleConfig,
+      {
+        headers: {
+          'X-Tenant-Uid': tenantUid,
+        },
+      },
+    );
+    return response;
+  } catch (error) {
+    message.error('更新调度配置失败');
     throw error;
   }
 };

@@ -37,7 +37,7 @@ export const createJenkinsPipeline = async (
         params: { jobName },
       },
     );
-    return response.data;
+    return response;
   } catch (error) {
     message.error('创建 Jenkins 流水线失败');
     throw error;
@@ -54,7 +54,7 @@ export const triggerJenkinsBuild = async (jobName: string) => {
     const response = await mtpRequestClient.post<string>(
       `/api/mtp/build/${encodeURIComponent(jobName)}`,
     );
-    return response.data;
+    return response;
   } catch (error) {
     message.error('触发 Jenkins 构建失败');
     throw error;
@@ -71,7 +71,7 @@ export const getJenkinsJobInfo = async (jobName: string) => {
     const response = await mtpRequestClient.get<JenkinsJobInfo>(
       `/api/mtp/job/${encodeURIComponent(jobName)}`,
     );
-    return response.data;
+    return response;
   } catch (error) {
     message.error('获取 Jenkins 作业信息失败');
     throw error;
@@ -92,7 +92,7 @@ export const getJenkinsConsoleOutput = async (
     const response = await mtpRequestClient.get<string>(
       `/api/mtp/build/${encodeURIComponent(jobName)}/${buildNumber}/console`,
     );
-    return response.data;
+    return response;
   } catch (error) {
     message.error('获取构建控制台输出失败');
     throw error;
@@ -113,7 +113,7 @@ export const stopJenkinsBuild = async (
     const response = await mtpRequestClient.post<string>(
       `/api/mtp/build/${encodeURIComponent(jobName)}/${buildNumber}/stop`,
     );
-    return response.data;
+    return response;
   } catch (error) {
     message.error('停止构建失败');
     throw error;
@@ -137,7 +137,7 @@ export const getJenkinsBuildStatus = async (
       result: string;
       timestamp: number;
     }>(`/api/mtp/build/${encodeURIComponent(jobName)}/${buildNumber}/status`);
-    return response.data;
+    return response;
   } catch (error) {
     message.error('获取构建状态失败');
     throw error;

@@ -102,6 +102,20 @@ const routes: RouteRecordRaw[] = [
         // @ts-ignore 忽略报错
         component: () => import('#/views/MTP/algorithm/algorithmModify.vue'),
       },
+      {
+        // 二级级主页设置
+        meta: {
+          icon: '',
+          // hideInMenu: true,
+          menuVisibleWithForbidden: true,
+          title: $t('page.MTP.modeltrain'),
+        },
+        name: 'MTP:train:job',
+        path: '/MTP/train/job',
+
+        // @ts-ignore 忽略报错
+        component: () => import('#/views/MTP/train/job/jobManager.vue'),
+      },
     ],
   },
 ];
