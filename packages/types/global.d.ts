@@ -12,6 +12,7 @@ export interface VbenAdminProAppConfigRaw {
   VITE_SMP_API_URL: string;
   VITE_DPP_API_URL: string;
   VITE_MTP_API_URL: string;
+  VITE_MEP_API_URL: string;
 }
 
 export interface ApplicationConfig {
@@ -19,6 +20,7 @@ export interface ApplicationConfig {
   dppApiURL: string;
   mtpApiURL: string;
   smpApiURL: string;
+  mepApiURL: string;
 }
 
 declare global {

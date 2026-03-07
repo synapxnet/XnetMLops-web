@@ -1,11 +1,18 @@
 <script lang="ts" setup>
 import type { DockerFile } from '../../../SMP/api/types';
 import type { TaskFormState, TaskFormStep1 } from '../taskcommon/task';
+import type { JenkinsNode } from '../../../SMP/api/jenkinsNode';
 
 import { computed, defineProps, h, nextTick, ref, watch } from 'vue';
 
 import {
+  ExclamationCircleOutlined,
+  QuestionCircleOutlined,
+  SyncOutlined,
+} from '@ant-design/icons-vue';
+import {
   Button,
+  Divider,
   Form,
   Input,
   message,
@@ -19,6 +26,7 @@ import {
 
 // 新增API导入
 import { getDockerFiles } from '../../../SMP/api/dockerFileManager';
+import { fetchJenkinsNodesByStatus } from '../../../SMP/api/jenkinsNode';
 
 // 修改props定义
 const props = defineProps<{
@@ -31,6 +39,25 @@ const props = defineProps<{
 
 const emit = defineEmits(['update:modelValue']);
 const requiredRule = (message: string) => ({ required: true, message });
+
+// 非中文验证规则（类似文件夹命名）
+const noChineseRule = {
+  validator: (_rule: any, value: string) => {
+    if (!value) return Promise.resolve();
+    // 检查是否包含中文字符
+    const chineseRegex = /[\u4e00-\u9fa5]/;
+    if (chineseRegex.test(value)) {
+      return Promise.reject('任务名称不能包含中文字符');
+    }
+    // 检查是否符合文件夹命名规范（字母、数字、下划线、中划线）
+    const validNameRegex = /^[a-zA-Z0-9_-]+$/;
+    if (!validNameRegex.test(value)) {
+      return Promise.reject('任务名称只能包含字母、数字、下划线和中划线');
+    }
+    return Promise.resolve();
+  },
+  trigger: 'blur',
+};
 // 组件注册
 const AForm = Form;
 const AFormItem = Form.Item;
@@ -105,11 +132,40 @@ const validate = async () => {
 defineExpose({ validate });
 // 资源选择弹窗状态
 const showResourceDialog = ref(false);
-const resourceOptions = ref([
-  { id: 1, name: 'GPU-A100', specs: '80GB显存' },
-  { id: 2, name: 'GPU-V100', specs: '32GB显存' },
-  { id: 3, name: 'CPU-16C', specs: '16核64GB' },
-]);
+const selectedNode = ref<JenkinsNode | null>(null);
+
+// 已部署的Jenkins节点
+const deployedNodes = ref<JenkinsNode[]>([]);
+const loadingNodes = ref(false);
+
+// 加载已部署的Jenkins节点
+const loadDeployedNodes = async () => {
+  try {
+    loadingNodes.value = true;
+    const nodes = await fetchJenkinsNodesByStatus('deployed');
+    deployedNodes.value = nodes || [];
+  } catch (error) {
+    console.error('加载节点失败:', error);
+    deployedNodes.value = [];
+  } finally {
+    loadingNodes.value = false;
+  }
+};
+
+// 根据训练模式过滤已部署的节点
+const filteredDeployedNodes = computed(() => {
+  const trainType = localFormState.value.trainType;
+  if (!trainType) {
+    return deployedNodes.value;
+  }
+  return deployedNodes.value.filter((node) => node.resource_type === trainType);
+});
+
+// 监听训练模式变化，重置已选资源
+watch(() => localFormState.value.trainType, () => {
+  selectedNode.value = null;
+  localFormState.value.resources = '';
+});
 
 // 镜像选择相关状态
 const showImageDialog = ref(false);
@@ -185,10 +241,10 @@ const schemas = ref([
   [
     {
       component: 'Input',
-      componentProps: { placeholder: '请输入任务名称', class: 'w-full' },
+      componentProps: { placeholder: '请输入任务名称（仅支持字母、数字、下划线、中划线）', class: 'w-full' },
       fieldName: 'taskName',
       label: '任务名称：',
-      rules: [requiredRule('请输入任务名称')],
+      rules: [requiredRule('请输入任务名称'), noChineseRule],
     },
     {
       component: 'Select',
@@ -263,14 +319,14 @@ const schemas = ref([
       rules: [requiredRule('请选择训练模式')],
       componentProps: {
         options: [
-          { label: '单机CPU', value: '0' },
-          { label: '多机CPU', value: '1' },
-          { label: '单机GPU', value: '2' },
-          { label: '多机GPU', value: '3' },
+          { label: 'CPU', value: 'cpu' },
+          { label: '单卡GPU', value: 'single_gpu' },
+          { label: '多卡GPU', value: 'multi_gpu' },
         ],
       },
       fieldName: 'trainType',
       label: '训练模式',
+      tooltip: '选择与作业节点资源类型匹配的训练模式',
     },
     {
       component: 'Input',
@@ -326,11 +382,34 @@ const getComponent = (componentType: string) => {
 };
 
 const openResourceSelector = () => {
+  // 加载已部署节点
+  if (deployedNodes.value.length === 0) {
+    loadDeployedNodes();
+  }
   showResourceDialog.value = true;
 };
 
-const selectResource = (resource: any) => {
-  localFormState.value.resources = resource.name;
+// 选择已部署节点的资源
+const selectNodeResource = (node: JenkinsNode) => {
+  selectedNode.value = node;
+
+  // 构建显示文本
+  let displayText = `${node.name}`;
+  const specs = [];
+  if (node.cpu_cores) specs.push(`CPU: ${node.cpu_cores}核`);
+  if (node.ram_gb) specs.push(`RAM: ${node.ram_gb}GB`);
+  if (node.gpu_memory) {
+    if (node.gpu_count && node.gpu_count > 1) {
+      specs.push(`GPU: ${node.gpu_count}x${node.gpu_memory}GB (${node.gpu_count}x${node.gpu_model})`);
+    } else {
+      specs.push(`GPU: ${node.gpu_memory}GB (${node.gpu_model || ''})`);
+    }
+  }
+  if (specs.length > 0) {
+    displayText += ` (${specs.join(', ')})`;
+  }
+
+  localFormState.value.resources = displayText;
   showResourceDialog.value = false;
 
   // 主动触发资源字段验证
@@ -457,20 +536,84 @@ const selectImage = () => {
   <!-- 资源选择弹窗 -->
   <Modal
     v-model:open="showResourceDialog"
-    title="选择资源规格"
-    width="800px"
+    title="选择作业节点资源"
+    width="900px"
     :footer="null"
   >
-    <div class="resource-grid">
-      <div
-        v-for="resource in resourceOptions"
-        :key="resource.id"
-        class="resource-card"
-        @click="selectResource(resource)"
-        :class="{ selected: localFormState.resources === resource.name }"
-      >
-        <h3>{{ resource.name }}</h3>
-        <p class="specs">{{ resource.specs }}</p>
+    <div class="resource-selector">
+      <!-- 提示信息 -->
+      <div v-if="!localFormState.trainType" class="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded text-yellow-700">
+        请先选择训练模式，以便筛选匹配的作业节点
+      </div>
+
+      <!-- 加载中 -->
+      <div v-if="loadingNodes" class="text-center py-8">
+        <SyncOutlined spin class="text-2xl text-blue-500" />
+        <p class="mt-2 text-gray-500">正在加载作业节点...</p>
+      </div>
+
+      <!-- 已部署节点资源 -->
+      <div v-else-if="filteredDeployedNodes.length > 0">
+        <div class="mb-4 text-sm text-gray-500">
+          共 {{ filteredDeployedNodes.length }} 个可用节点
+          <span v-if="localFormState.trainType">
+            （{{ localFormState.trainType === 'cpu' ? 'CPU' : localFormState.trainType === 'single_gpu' ? '单卡GPU' : '多卡GPU' }} 类型）
+          </span>
+        </div>
+        <div class="resource-grid">
+          <div
+            v-for="node in filteredDeployedNodes"
+            :key="node.id"
+            class="resource-card"
+            :class="{ selected: selectedNode?.id === node.id }"
+            @click="selectNodeResource(node)"
+          >
+            <div class="card-header">
+              <h3>{{ node.name }}</h3>
+              <Tag v-if="node.resource_type === 'cpu'" color="blue">CPU</Tag>
+              <Tag v-else-if="node.resource_type === 'single_gpu'" color="green">单卡GPU</Tag>
+              <Tag v-else-if="node.resource_type === 'multi_gpu'" color="orange">多卡GPU</Tag>
+            </div>
+            <div class="card-body">
+              <div class="spec-item">
+                <span class="spec-label">地域:</span>
+                <span class="spec-value">{{ node.region === 'guangzhou' ? '广州' : node.region === 'beijing' ? '北京' : node.region === 'shanghai' ? '上海' : node.region === 'silicon_valley' ? '硅谷' : node.region === 'singapore' ? '新加坡' : node.region || '-' }}</span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-label">主机:</span>
+                <span class="spec-value">{{ node.host }}</span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-label">CPU:</span>
+                <span class="spec-value">{{ node.cpu_cores || 2 }} 核</span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-label">RAM:</span>
+                <span class="spec-value">{{ node.ram_gb || 128 }} GB</span>
+              </div>
+              <div v-if="node.gpu_memory" class="spec-item">
+                <span class="spec-label">GPU:</span>
+                <span class="spec-value">{{ node.gpu_count && node.gpu_count > 1 ? `${node.gpu_count}x` : '' }}{{ node.gpu_memory }}GB</span>
+              </div>
+              <div v-if="node.gpu_model" class="spec-item">
+                <span class="spec-label">GPU型号:</span>
+                <span class="spec-value">{{ node.gpu_count && node.gpu_count > 1 ? `${node.gpu_count}x ` : '' }}{{ node.gpu_model }}</span>
+              </div>
+            </div>
+            <div class="card-footer">
+              <Tag :color="node.container_type === 'cce' ? 'purple' : 'cyan'">
+                {{ node.container_type === 'cce' ? 'CCE' : 'Docker' }}
+              </Tag>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 无可用节点 -->
+      <div v-else class="text-center py-8 text-gray-400">
+        <ExclamationCircleOutlined class="text-4xl mb-4" />
+        <p>暂无可用的作业节点</p>
+        <p class="text-sm mt-2">请先在SMP模块中配置并部署作业节点</p>
       </div>
     </div>
   </Modal>
@@ -550,27 +693,81 @@ const selectImage = () => {
 <style lang="scss" scoped>
 @use '../taskcommon/form-styles.scss' as *;
 
+.resource-selector {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
 .resource-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 16px;
 }
 
 .resource-card {
-  border: 1px solid #e8e8e8;
-  border-radius: 4px;
+  border: 2px solid #e8e8e8;
+  border-radius: 8px;
   padding: 16px;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.3s ease;
+  background: #fff;
 
   &:hover {
     border-color: #40a9ff;
-    box-shadow: 0 2px 8px rgba(24, 144, 255, 0.2);
+    box-shadow: 0 4px 12px rgba(24, 144, 255, 0.15);
+    transform: translateY(-2px);
   }
 
   &.selected {
     border-color: #1890ff;
     background-color: #e6f7ff;
+    box-shadow: 0 4px 12px rgba(24, 144, 255, 0.25);
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f0f0f0;
+
+    h3 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #262626;
+    }
+  }
+
+  .card-body {
+    margin-bottom: 12px;
+  }
+
+  .spec-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 13px;
+  }
+
+  .spec-label {
+    color: #8c8c8c;
+  }
+
+  .spec-value {
+    color: #262626;
+    font-weight: 500;
+  }
+
+  .card-footer {
+    padding-top: 8px;
+    border-top: 1px solid #f0f0f0;
+  }
+
+  .description {
+    font-size: 12px;
+    color: #8c8c8c;
   }
 
   h3 {
@@ -583,6 +780,10 @@ const selectImage = () => {
     color: #595959;
     margin-bottom: 0;
   }
+}
+
+.resource-card.selected .card-header h3 {
+  color: #1890ff;
 }
 
 .image-selector {

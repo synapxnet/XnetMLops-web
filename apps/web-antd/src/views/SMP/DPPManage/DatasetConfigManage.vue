@@ -235,7 +235,6 @@ const clearZoneSearch = () => {
     <ACard
       title="数据类型配置"
       class="mb-6"
-      :head-style="{ backgroundColor: '#f0f2f5' }"
     >
       <template #extra>
         <div class="flex items-center gap-2">
@@ -255,11 +254,6 @@ const clearZoneSearch = () => {
           <AButton
             type="primary"
             @click="showAddModal('datasetTypes')"
-            style="
-              background-color: #1890ff;
-              border-color: #1890ff;
-              color: white;
-            "
           >
             <PlusOutlined />
             新增数据类型
@@ -278,7 +272,6 @@ const clearZoneSearch = () => {
             <AButton
               type="link"
               @click="editItem('datasetTypes', record)"
-              style="color: #1890ff"
             >
               编辑
             </AButton>
@@ -286,7 +279,6 @@ const clearZoneSearch = () => {
               type="link"
               danger
               @click="deleteItem('datasetTypes', record.value)"
-              style="color: #ff4d4f"
             >
               删除
             </AButton>
@@ -306,7 +298,7 @@ const clearZoneSearch = () => {
     </ACard>
 
     <!-- 数据区域配置卡片 -->
-    <ACard title="数据区域配置" :head-style="{ backgroundColor: '#f0f2f5' }">
+    <ACard title="数据区域配置">
       <template #extra>
         <div class="flex items-center gap-2">
           <!-- 搜索框 -->
@@ -325,11 +317,6 @@ const clearZoneSearch = () => {
           <AButton
             type="primary"
             @click="showAddModal('datasetZones')"
-            style="
-              background-color: #1890ff;
-              border-color: #1890ff;
-              color: white;
-            "
           >
             <PlusOutlined />
             新增数据区域
@@ -348,7 +335,6 @@ const clearZoneSearch = () => {
             <AButton
               type="link"
               @click="editItem('datasetZones', record)"
-              style="color: #1890ff"
             >
               编辑
             </AButton>
@@ -356,7 +342,6 @@ const clearZoneSearch = () => {
               type="link"
               danger
               @click="deleteItem('datasetZones', record.value)"
-              style="color: #ff4d4f"
             >
               删除
             </AButton>
@@ -388,12 +373,8 @@ const clearZoneSearch = () => {
 
 <style scoped>
 /* 添加必要的样式覆盖 */
-:deep(.ant-card-head) {
-  background-color: #f0f2f5 !important;
-}
-
 :deep(.ant-table) {
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--ant-color-border);
   border-radius: 4px;
 }
 
@@ -421,11 +402,10 @@ const clearZoneSearch = () => {
 }
 
 :deep(.ant-input-affix-wrapper:hover) {
-  border-color: #1890ff;
+  border-color: var(--ant-color-primary);
 }
 
 :deep(.ant-input-affix-wrapper-focused) {
-  border-color: #1890ff;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+  border-color: var(--ant-color-primary);
 }
 </style>

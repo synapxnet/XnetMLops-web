@@ -103,16 +103,27 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/MTP/algorithm/algorithmModify.vue'),
       },
       {
-        // 二级级主页设置
+        // 算法文件管理器页面（不在菜单显示）
         meta: {
           icon: '',
-          // hideInMenu: true,
-          menuVisibleWithForbidden: true,
+          hideInMenu: true,
+          title: '算法文件管理',
+        },
+        name: 'MTP:algorithm:algorithmFileManager',
+        path: '/MTP/algorithm/algorithmFileManager',
+        // @ts-ignore 忽略报错
+        component: () =>
+          import('#/views/MTP/algorithm/algorithmFileManager.vue'),
+      },
+      {
+        // 任务详情页面（不在菜单显示）
+        meta: {
+          icon: '',
+          hideInMenu: true,
           title: $t('page.MTP.modeltrain'),
         },
         name: 'MTP:train:job',
         path: '/MTP/train/job',
-
         // @ts-ignore 忽略报错
         component: () => import('#/views/MTP/train/job/jobManager.vue'),
       },

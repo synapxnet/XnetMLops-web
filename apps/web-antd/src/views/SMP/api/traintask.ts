@@ -61,7 +61,17 @@ export interface PipelineBuildStatus {
   startTime: Date;
   endTime?: Date;
 }
-
+export interface ScheduleBuildStatus {
+  jobName: string;
+  scheduleConfig: string;
+  nextBuildNumber: number;
+  queueUrl: string;
+  overallStatus: string;
+  jobHistoryBuild: PipelineBuildStatus[];
+  consoleOutput?: string;
+  startTime: Date;
+  endTime?: Date;
+}
 // 新增作业信息接口类型
 export interface JobInfo {
   jobUid: string;
@@ -69,6 +79,15 @@ export interface JobInfo {
   jobContent: string;
   startAt: Date;
   endAt?: Date;
+}
+
+// 调度作业列表项接口
+export interface ScheduleJobItem {
+  jobUid: string;
+  jobStatus: string;
+  startAt: Date;
+  endAt?: Date;
+  scheduleActive: number;
 }
 
 // 调度接口类型定义
@@ -92,7 +111,7 @@ export interface ScheduleStartResponse {
     cronExpression: string;
     jobName: string;
     queueUrl: string;
-    scheduleActive: boolean;
+    scheduleActive: number;
   };
   message: string;
   error: null | string;
@@ -496,7 +515,7 @@ export const startSchedule = async (
 ): Promise<ScheduleStartResponse> => {
   try {
     const response = await mtpRequestClient.post<ScheduleStartResponse>(
-      '/mtp/schedule/start',
+      '/mtp/schedule/pipeline',
       { scheduleConfig },
       {
         params: { taskUID },
@@ -506,6 +525,7 @@ export const startSchedule = async (
         },
       },
     );
+    console.log('开始调度响应:', response);
     return response;
   } catch (error) {
     message.error('开始调度失败');
@@ -546,9 +566,9 @@ export const stopSchedule = async (
 export const getScheduleStatus = async (
   jobName: string,
   tenantUid: string,
-): Promise<ScheduleStatusResponse> => {
+): Promise<ScheduleBuildStatus> => {
   try {
-    const response = await mtpRequestClient.get<ScheduleStatusResponse>(
+    const response = await mtpRequestClient.get<ScheduleBuildStatus>(
       `/mtp/schedule/status/${jobName}`,
       {
         headers: {
@@ -585,5 +605,51 @@ export const updateSchedule = async (
   } catch (error) {
     message.error('更新调度配置失败');
     throw error;
+  }
+};
+
+/**
+ * 获取任务的调度作业列表
+ */
+export const fetchScheduleRecords = async (
+  taskUid: string,
+  tenantUid: string,
+): Promise<ScheduleJobItem[]> => {
+  try {
+    // 注意：这里使用 taskUid 而不是 jobUid
+    const response = await mtpRequestClient.get<ScheduleJobItem[]>(
+      `/mtp/schedule/${taskUid}/jobs`,
+      {
+        headers: { 'X-Tenant-Uid': tenantUid },
+      },
+    );
+    return response || [];
+  } catch {
+    // 静默处理，不显示错误消息
+    return [];
+  }
+};
+
+export const fetchScheduleJobsByTaskUid = async (
+  taskUid: string,
+  tenantUid: string,
+): Promise<(ScheduleBuildStatus & { scheduleActive: number }) | null> => {
+  try {
+    // 第一步：获取任务下的所有调度作业
+    const jobs = await fetchScheduleRecords(taskUid, tenantUid);
+    if (!jobs || jobs.length === 0) {
+      return null;
+    }
+    // 第二步：使用实际的 jobUid 获取调度状态（jobUid 就是 Jenkins 的 jobName）
+    const jobUid = jobs[0].jobUid;
+    if (!jobUid) {
+      console.warn('调度作业缺少 jobUid');
+      return null;
+    }
+    const scheduleJob = await getScheduleStatus(jobUid, tenantUid);
+    return { ...scheduleJob, scheduleActive: jobs[0].scheduleActive };
+  } catch (error) {
+    console.error('获取调度作业失败:', error);
+    return null;
   }
 };

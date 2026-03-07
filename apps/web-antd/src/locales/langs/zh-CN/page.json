@@ -20,6 +20,18 @@
     "modeltrain": "任务",
     "modeloutput": "输出"
   },
+  "MEP": {
+    "title": "模型部署(MEP)",
+    "llmService": "大模型服务",
+    "llmServiceCreate": "新增大模型服务",
+    "llmServiceModify": "编辑大模型服务",
+    "apiKey": "API密钥管理",
+    "deployment": "模型部署",
+    "deploymentCreate": "新建部署",
+    "deploymentDetail": "部署详情",
+    "nodes": "部署节点",
+    "nodeCreate": "新增节点"
+  },
   "MRP": {
     "title": "模型推理(MRP)"
   },
@@ -28,5 +40,15 @@
   },
   "SMP": {
     "title": "系统管理(SMP)"
+  },
+  "XAA": {
+    "title": "Xnet智能体(XAA)",
+    "workflow": "工作流管理",
+    "workflowCreate": "创建工作流",
+    "workflowEdit": "编辑工作流",
+    "workflowDesigner": "工作流设计器",
+    "executions": "执行记录",
+    "executionDetail": "执行详情",
+    "skill": "技能管理"
   }
 }

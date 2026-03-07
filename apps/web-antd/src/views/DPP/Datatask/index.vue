@@ -299,21 +299,18 @@ data.forEach((item) => {
 <style scoped>
 /* 表格边框样式 */
 .custom-table {
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--ant-color-border);
   border-radius: 4px;
 }
 
 /* 表头样式 */
 .custom-table :deep(.ant-table-thead) > tr > th {
-  background-color: #f0f8ff; /* 淡灰蓝色 */
-  color: #2c3e50; /* 文字颜色 */
   font-weight: 600;
-  border-bottom: 1px solid #d9d9d9 !important;
 }
 
 /* 表格单元格边框 */
 .custom-table :deep(.ant-table-tbody) > tr > td {
-  border-right: 1px solid #e8e8e8;
+  border-right: 1px solid var(--ant-color-border);
 }
 
 /* 最后单元格去掉右边框 */
@@ -321,17 +318,13 @@ data.forEach((item) => {
   border-right: none;
 }
 
-/* 行悬停效果 */
-.custom-table :deep(.ant-table-tbody) > tr:hover > td {
-  background-color: #fafafa;
-}
 /* 添加链接样式 */
 .custom-table :deep(.ant-table-tbody) a {
-  color: #1890ff;
+  color: var(--ant-color-primary);
   cursor: pointer;
 }
 .custom-table :deep(.ant-table-tbody) a:hover {
-  color: #40a9ff;
+  color: var(--ant-color-primary-hover);
 }
 /* 添加卡片样式 */
 .mb-6 {
@@ -341,13 +334,11 @@ data.forEach((item) => {
 /* 描述列表样式 */
 :deep(.ant-descriptions-item-label) {
   font-weight: 600;
-  background-color: #fafafa;
   width: 150px;
 }
 
 /* 预格式化文本样式 */
 pre {
-  background-color: #f5f5f5;
   padding: 8px;
   border-radius: 4px;
   overflow: auto;
@@ -365,20 +356,19 @@ pre {
 .divider-line {
   flex-grow: 1;
   height: 1px;
-  background-color: #e8e8e8;
+  background-color: var(--ant-color-border);
 }
 
 .divider-title {
   padding: 0 12px;
   font-weight: 600;
-  color: #1890ff;
+  color: var(--ant-color-primary);
   white-space: nowrap;
 }
 /* 添加上游依赖样式 */
 /* 添加依赖项样式 */
 .dependency-item {
-  border: 1px solid #e8e8e8;
-  background-color: #fafafa;
+  border: 1px solid var(--ant-color-border);
 }
 
 .dependency-selectors {
@@ -393,8 +383,7 @@ pre {
 
 .selected-info {
   padding: 12px 16px;
-  background-color: #f0f8ff;
-  border: 1px solid #91d5ff;
+  border: 1px solid var(--ant-color-primary-border);
   border-radius: 4px;
   display: flex;
   justify-content: space-between;
@@ -406,7 +395,7 @@ pre {
 }
 
 .delete-btn {
-  color: #ff4d4f;
+  color: var(--ant-color-error);
   padding: 0;
 }
 
@@ -416,7 +405,7 @@ pre {
 }
 
 .no-dependencies {
-  border: 1px dashed #d9d9d9;
+  border: 1px dashed var(--ant-color-border);
   border-radius: 4px;
 }
 .upstream-dependency {
@@ -435,8 +424,7 @@ pre {
 
 .selected-info {
   padding: 12px 16px;
-  background-color: #f0f8ff;
-  border: 1px solid #91d5ff;
+  border: 1px solid var(--ant-color-primary-border);
   border-radius: 4px;
   display: flex;
   justify-content: space-between;
@@ -448,7 +436,7 @@ pre {
 }
 
 .delete-btn {
-  color: #ff4d4f;
+  color: var(--ant-color-error);
   padding: 0;
 }
 
@@ -464,25 +452,20 @@ pre {
 .task-header {
   display: flex;
   padding: 8px 12px;
-  background-color: #f0f8ff;
-  border-bottom: 1px solid #91d5ff;
+  border-bottom: 1px solid var(--ant-color-primary-border);
   font-weight: 600;
 }
 
 .task-item {
   display: flex;
   padding: 12px;
-  border-bottom: 1px solid #e8e8e8;
-}
-
-.task-item:hover {
-  background-color: #fafafa;
+  border-bottom: 1px solid var(--ant-color-border);
 }
 
 .no-tasks {
   padding: 24px;
   text-align: center;
-  color: #999;
+  color: var(--ant-color-text-tertiary);
   font-size: 16px;
 }
 </style>

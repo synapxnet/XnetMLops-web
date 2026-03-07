@@ -488,7 +488,6 @@ const handleCancel = () => {
 .form-section {
   margin-bottom: 20px;
   padding: 15px;
-  background-color: #f9fafb;
   border-radius: 8px;
 }
 

@@ -11,7 +11,7 @@ import {
   errorMessageResponseInterceptor,
   RequestClient,
 } from '@vben/request';
-import { useAccessStore } from '@vben/stores';
+import { useAccessStore, useUserStore } from '@vben/stores';
 
 import { message } from 'ant-design-vue';
 
@@ -19,10 +19,8 @@ import { useAuthStore } from '#/store';
 
 import { refreshTokenApi } from './core';
 
-const { apiURL, smpApiURL, dppApiURL, mtpApiURL } = useAppConfig(
-  import.meta.env,
-  import.meta.env.PROD,
-);
+const { apiURL, smpApiURL, dppApiURL, mtpApiURL, mepApiURL, xaaApiURL } =
+  useAppConfig(import.meta.env, import.meta.env.PROD);
 
 function createRequestClient(baseURL: string, options?: RequestClientOptions) {
   const client = new RequestClient({
@@ -68,9 +66,14 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
   client.addRequestInterceptor({
     fulfilled: async (config) => {
       const accessStore = useAccessStore();
+      const userStore = useUserStore();
 
       config.headers.Authorization = formatToken(accessStore.accessToken);
       config.headers['Accept-Language'] = preferences.app.locale;
+      // 添加用户ID到请求头
+      if (userStore.userInfo?.userId) {
+        config.headers['X-User-Id'] = userStore.userInfo.userId;
+      }
       return config;
     },
   });
@@ -123,6 +126,14 @@ export const mtpRequestClient = createRequestClient(mtpApiURL, {
 });
 // smp接口请求客户端
 export const smpRequestClient = createRequestClient(smpApiURL, {
+  responseReturn: 'data',
+});
+// mep接口请求客户端(模型部署平台)
+export const mepRequestClient = createRequestClient(mepApiURL, {
+  responseReturn: 'data',
+});
+// xaa接口请求客户端(Xnet智能体)
+export const xaaRequestClient = createRequestClient(xaaApiURL, {
   responseReturn: 'data',
 });
 

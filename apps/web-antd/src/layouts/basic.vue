@@ -19,9 +19,13 @@ import { openWindow } from '@vben/utils';
 
 import { $t } from '#/locales';
 import { useAuthStore } from '#/store';
+import AssistantFloatingWindow from '#/components/AssistantFloatingWindow/index.vue';
 import LoginForm from '#/views/_core/authentication/login.vue';
 
 import { getOrganizationTree } from '../views/SMP/api/deptTreeData';
+
+// 智能助手浮窗控制
+const showAssistantFloat = ref(true);
 
 const notifications = ref<NotificationItem[]>([
   {
@@ -252,4 +256,11 @@ onMounted(() => {
       <LockScreen :avatar @to-login="handleLogout" />
     </template>
   </BasicLayout>
+
+  <!-- 智能助手浮动窗口 -->
+  <AssistantFloatingWindow
+    v-if="showAssistantFloat"
+    :visible="showAssistantFloat"
+    @close="showAssistantFloat = false"
+  />
 </template>

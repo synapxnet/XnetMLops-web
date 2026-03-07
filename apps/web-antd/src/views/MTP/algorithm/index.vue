@@ -150,6 +150,18 @@ const handleDelete = async (id: number) => {
   }
 };
 
+// 查看目录 - 跳转到算法文件管理器
+const handleViewDirectory = (record: AlgorithmItem) => {
+  router.push({
+    path: '/MTP/algorithm/algorithmFileManager',
+    query: {
+      id: record.id.toString(),
+      name: record.algorithm_name,
+      isCAS: record.is_CAS ? 'true' : 'false',
+    },
+  });
+};
+
 // 添加下游任务状态管理（示例数据）
 const downstreamTasks = ref<
   Record<number, Array<{ name: string; type: string }>>
@@ -228,7 +240,9 @@ const searchName = ref('');
           <a @click="handleNameClick(record)">{{ record.algorithm_name }}</a>
         </template>
         <template v-if="column.key === 'operation'">
-          <Button type="link" size="small">查看目录</Button>
+          <Button type="link" size="small" @click="handleViewDirectory(record)">
+            查看目录
+          </Button>
           <span class="divider"></span>
           <Button type="link" size="small" @click="handleDelete(record.id)">
             删除
@@ -333,21 +347,18 @@ const searchName = ref('');
 <style scoped>
 /* 表格边框样式 */
 .custom-table {
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--ant-color-border);
   border-radius: 4px;
 }
 
 /* 表头样式 */
 .custom-table :deep(.ant-table-thead) > tr > th {
-  background-color: #f0f8ff;
-  color: #2c3e50;
   font-weight: 600;
-  border-bottom: 1px solid #d9d9d9 !important;
 }
 
 /* 表格单元格边框 */
 .custom-table :deep(.ant-table-tbody) > tr > td {
-  border-right: 1px solid #e8e8e8;
+  border-right: 1px solid var(--ant-color-border);
 }
 
 /* 最后单元格去掉右边框 */
@@ -355,31 +366,25 @@ const searchName = ref('');
   border-right: none;
 }
 
-/* 行悬停效果 */
-.custom-table :deep(.ant-table-tbody) > tr:hover > td {
-  background-color: #fafafa;
-}
-
 /* 添加链接样式 */
 .custom-table :deep(.ant-table-tbody) a {
-  color: #1890ff;
+  color: var(--ant-color-primary);
   cursor: pointer;
 }
 .custom-table :deep(.ant-table-tbody) a:hover {
-  color: #40a9ff;
+  color: var(--ant-color-primary-hover);
 }
 
 .divider {
   display: inline-block;
   height: 12px;
   margin: 0 8px;
-  border-left: 1px solid #e8e8e8;
+  border-left: 1px solid var(--ant-color-border);
 }
 
 /* 描述列表样式 */
 :deep(.ant-descriptions-item-label) {
   font-weight: 600;
-  background-color: #fafafa;
 }
 
 /* 添加下游任务样式 */
@@ -390,25 +395,20 @@ const searchName = ref('');
 .task-header {
   display: flex;
   padding: 8px 12px;
-  background-color: #f0f8ff;
-  border-bottom: 1px solid #91d5ff;
+  border-bottom: 1px solid var(--ant-color-primary-border);
   font-weight: 600;
 }
 
 .task-item {
   display: flex;
   padding: 12px;
-  border-bottom: 1px solid #e8e8e8;
-}
-
-.task-item:hover {
-  background-color: #fafafa;
+  border-bottom: 1px solid var(--ant-color-border);
 }
 
 .no-tasks {
   padding: 24px;
   text-align: center;
-  color: #999;
+  color: var(--ant-color-text-tertiary);
   font-size: 16px;
 }
 </style>

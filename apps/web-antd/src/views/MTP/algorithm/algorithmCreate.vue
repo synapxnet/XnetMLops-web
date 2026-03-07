@@ -1169,7 +1169,7 @@ const removeAlgorithm = () => {
           }}分片)</span
         >
       </div>
-      <div class="h-3 rounded-full bg-gray-200">
+      <div class="h-3 rounded-full bg-gray-200 dark:bg-gray-700">
         <div
           class="h-full rounded-full bg-blue-500 transition-all duration-300"
           :style="{ width: `${uploadProgress}%` }"
@@ -1184,7 +1184,7 @@ const removeAlgorithm = () => {
           <div
             v-for="(progress, index) in chunkProgress"
             :key="index"
-            class="h-2 rounded-full bg-gray-200"
+            class="h-2 rounded-full bg-gray-200 dark:bg-gray-700"
           >
             <div
               class="h-full rounded-full bg-green-500"
@@ -1201,13 +1201,13 @@ const removeAlgorithm = () => {
         <span>上传进度</span>
         <span>{{ uploadProgress }}%</span>
       </div>
-      <div class="h-3 rounded-full bg-gray-200">
+      <div class="h-3 rounded-full bg-gray-200 dark:bg-gray-700">
         <div
           class="h-full rounded-full bg-blue-500 transition-all duration-300"
           :style="{ width: `${uploadProgress}%` }"
         ></div>
       </div>
-      <div class="mt-2 text-sm text-gray-500">正在上传，请勿关闭页面...</div>
+      <div class="mt-2 text-sm text-gray-500 dark:text-gray-400">正在上传，请勿关闭页面...</div>
     </div>
 
     <!-- 上传结果 -->
@@ -1308,17 +1308,16 @@ const removeAlgorithm = () => {
                 <span>{{ record.usage }}</span>
                 <span>{{ record.usagePercent }}%</span>
               </div>
-              <div class="mt-1 h-2 rounded-full bg-gray-200">
+              <div class="mt-1 h-2 rounded-full bg-gray-200 dark:bg-gray-700">
                 <div
                   class="h-full rounded-full"
                   :style="{
                     width: `${record.usagePercent}%`,
-                    backgroundColor:
-                      record.usageStatus.color === 'red'
-                        ? '#f5222d'
-                        : record.usageStatus.color === 'orange'
-                          ? '#fa8c16'
-                          : '#52c41a',
+                  }"
+                  :class="{
+                    'bg-red-500': record.usageStatus.color === 'red',
+                    'bg-orange-500': record.usageStatus.color === 'orange',
+                    'bg-green-500': record.usageStatus.color !== 'red' && record.usageStatus.color !== 'orange',
                   }"
                 ></div>
               </div>
@@ -1355,7 +1354,7 @@ const removeAlgorithm = () => {
 
 <style scoped>
 .upload-section {
-  @apply rounded-lg bg-gray-50;
+  @apply rounded-lg bg-gray-50 dark:bg-gray-800;
 }
 
 :deep(.ant-upload.ant-upload-drag) {
@@ -1407,7 +1406,7 @@ const removeAlgorithm = () => {
 }
 
 .header-line {
-  @apply absolute bottom-0 left-0 h-px w-full bg-gray-200;
+  @apply absolute bottom-0 left-0 h-px w-full bg-gray-200 dark:bg-gray-700;
 }
 
 .drag-content {
@@ -1447,18 +1446,15 @@ const removeAlgorithm = () => {
 }
 
 :deep(.ant-cascader-disabled) {
-  background-color: #f5f5f5;
   cursor: not-allowed;
 }
 
 :deep(.ant-input[readonly]) {
   cursor: pointer;
-  background-color: #f8fafc;
 }
 
 :deep(.ant-input[readonly]:hover) {
-  border-color: #1890ff;
-  background-color: #e6f7ff;
+  border-color: var(--ant-color-primary);
 }
 
 .algorithm-selection {

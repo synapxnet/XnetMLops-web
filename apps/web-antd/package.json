@@ -27,6 +27,10 @@
   },
   "dependencies": {
     "@ant-design/icons-vue": "^6.1.0",
+    "@vue-flow/background": "^1.3.2",
+    "@vue-flow/controls": "^1.1.2",
+    "@vue-flow/core": "^1.41.3",
+    "@vue-flow/minimap": "^1.5.2",
     "@vben/access": "workspace:*",
     "@vben/common-ui": "workspace:*",
     "@vben/constants": "workspace:*",
@@ -46,7 +50,11 @@
     "dayjs": "catalog:",
     "element-plus": "^2.9.10",
     "pinia": "catalog:",
+    "uuid": "^9.0.1",
     "vue": "catalog:",
     "vue-router": "catalog:"
+  },
+  "devDependencies": {
+    "@types/uuid": "^9.0.8"
   }
 }

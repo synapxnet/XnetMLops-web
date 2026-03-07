@@ -39,6 +39,14 @@ export default defineConfig(async () => {
 
             ws: true,
           },
+          '/smp/smp': {
+            changeOrigin: true, // 开启跨域
+            rewrite: (path) => path.replace(/^\/smp\/smp/, '/api/smp'),
+            target: 'http://192.168.1.156:8185',
+
+            // 处理 /smp/smp/xxx 路径（smpRequestClient baseURL=/smp + API路径/smp/xxx）
+            ws: true,
+          },
           '/smp': {
             changeOrigin: true, // 开启跨域
             rewrite: (path) => path.replace(/^\/smp/, ''),
@@ -47,6 +55,20 @@ export default defineConfig(async () => {
             // mock代理目标地址
             // http://localhost:5320/api
             // http://192.168.10.102:8181/api
+
+            ws: true,
+          },
+          '/mep': {
+            changeOrigin: true, // 开启跨域
+            // 后端Controller路径: /mep/xxx (如 /mep/api-keys, /mep/nodes)
+            target: 'http://192.168.1.156:8184',
+
+            ws: true,
+          },
+          '/xaa': {
+            changeOrigin: true, // 开启跨域
+            rewrite: (path) => path.replace(/^\/xaa/, '/api/xaa'),
+            target: 'http://192.168.1.156:8186',
 
             ws: true,
           },

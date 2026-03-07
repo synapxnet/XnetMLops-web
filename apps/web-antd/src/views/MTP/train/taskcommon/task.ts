@@ -54,6 +54,9 @@ export interface TaskFormStep4 {
     notificationContent: string;
     // 通知标题
     notificationTitle: string;
+    // 通知触发条件
+    notificationTrigger: string;
+
     // 通知类型
     notificationUserID: string;
   };

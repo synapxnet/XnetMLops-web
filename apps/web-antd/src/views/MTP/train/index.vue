@@ -18,6 +18,7 @@ import { useRouter } from 'vue-router';
 import {
   Button,
   Card,
+  Collapse,
   Descriptions,
   Dropdown,
   Empty,
@@ -35,13 +36,14 @@ import {
 } from 'ant-design-vue';
 
 import {
-  // deleteScheduleRecord, // 新增：删除调度记录接口
   deleteTrainTask,
   fetchAllTrainTasks,
   fetchPipelineRecords,
   fetchPipelineStatus,
-  // fetchScheduleRecords, // 新增：获取调度记录接口
+  fetchScheduleJobsByTaskUid,
   getScheduleStatus,
+  startSchedule,
+  stopSchedule,
   TrainTaskStart,
 } from '../../SMP/api/traintask';
 
@@ -126,10 +128,46 @@ interface ExecuteRecord {
   parentTaskUid: string;
 }
 
-// 新增：调度记录数据结构
+// 调度任务详情数据结构
+interface ScheduleJobDetail {
+  parentTaskUID: null | string;
+  jobName: string;
+  buildUrl: string;
+  queueUrl: null | string;
+  stages: PipelineStage[];
+  overallStatus: string;
+  consoleOutput: string;
+  startTime: null | string;
+  endTime: null | string;
+}
+
+// 调度任务构建记录数据结构
+interface ScheduleBuildRecord {
+  jobContent: ScheduleJobDetail;
+  buildNumber: number;
+}
+
+// 调度任务数据结构
+interface ScheduleJobData {
+  jobName: string;
+  scheduleConfig: any | null;
+  nextBuildNumber: number;
+  jobHistoryBuild: ScheduleBuildRecord[];
+}
+
+// 调度记录数据结构（修改后的）
 interface ScheduleRecord {
   scheduleId: string;
-  scheduleStatus: 'canceled' | 'completed' | 'failed' | 'pending' | 'running';
+  buildNumber: number;
+  jobName: string;
+  scheduleStatus:
+    | 'canceled'
+    | 'completed'
+    | 'failed'
+    | 'FAILED'
+    | 'pending'
+    | 'running'
+    | 'SUCCESS';
   stageProgress: string; // 格式：完成阶段/总阶段
   scheduleTime: Date;
   startTime: Date;
@@ -137,6 +175,9 @@ interface ScheduleRecord {
   duration: number;
   nextExecutionTime?: Date; // 下次执行时间
   cronExpression: string;
+  buildUrl: string;
+  overallStatus: string;
+  stages: PipelineStage[];
 }
 
 interface DataItem {
@@ -153,12 +194,14 @@ interface DataItem {
   createdAt: string;
   detail?: TaskDetail;
   executeRecords: ExecuteRecord[];
-  scheduleRecords: ScheduleRecord[]; // 新增：调度记录
+  scheduleRecords: ScheduleRecord[];
   activeExecuteRecord?: ExecuteRecord | null;
   pollingTimer?: number;
   scheduleJobName?: string;
   scheduleJobStatus?: 'error' | 'scheduled' | 'stopped';
-  schedulePollingTimer?: number; // 新增：调度记录轮询定时器
+  schedulePollingTimer?: number;
+  nextBuildNumber?: number;
+  scheduleCollapseActiveKey?: string[]; // 用于控制调度记录的展开状态
 }
 
 const columns = [
@@ -417,7 +460,7 @@ const executeRecordColumns = [
 
       return h('div', { class: 'flex items-center' }, [
         h('span', { class: 'mr-2' }, `${completed}/${total}`),
-        h('div', { class: 'flex-1 bg-gray-200 rounded-full h-2' }, [
+        h('div', { class: 'flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2' }, [
           h('div', {
             class: 'bg-green-500 h-2 rounded-full',
             style: { width: `${percent}%` },
@@ -498,7 +541,7 @@ const executeRecordColumns = [
                 danger: true,
                 onClick: () => handleForceDeleteExecution(record),
               },
-              { default: () => '强制删除' },
+              '强制删除',
             )
           : null,
 
@@ -532,97 +575,8 @@ const executeRecordColumns = [
             ),
           },
           {
-            default: () =>
-              h(
-                Button,
-                { type: 'link', size: 'small' },
-                { default: () => '更多' },
-              ),
+            default: () => h(Button, { type: 'link', size: 'small' }, '更多'),
           },
-        ),
-      ]);
-    },
-  },
-];
-
-// 新增：调度记录表格列定义
-const scheduleRecordColumns = [
-  { title: '调度ID', dataIndex: 'scheduleId', key: 'scheduleId', width: 100 },
-  {
-    title: '调度状态',
-    key: 'scheduleStatus',
-    customRender: ({ record }: { record: ScheduleRecord }) => {
-      const statusInfo = statusMap[record.scheduleStatus] || {
-        color: 'default',
-        text: record.scheduleStatus,
-      };
-      return h(Tag, { color: statusInfo.color }, () => statusInfo.text);
-    },
-  },
-  {
-    title: '阶段进度',
-    dataIndex: 'stageProgress',
-    key: 'stageProgress',
-    width: 100,
-  },
-  {
-    title: '调度时间',
-    dataIndex: 'scheduleTime',
-    key: 'scheduleTime',
-    customRender: ({ text }: { text: Date }) => text.toLocaleString(),
-  },
-  {
-    title: '开始时间',
-    dataIndex: 'startTime',
-    key: 'startTime',
-    customRender: ({ text }: { text: Date }) => text.toLocaleString(),
-  },
-  {
-    title: '结束时间',
-    key: 'endTime',
-    customRender: ({ record }: { record: ScheduleRecord }) => {
-      return record.endTime ? record.endTime.toLocaleString() : '-';
-    },
-  },
-  {
-    title: '持续时间',
-    key: 'duration',
-    customRender: ({ record }: { record: ScheduleRecord }) => {
-      return formatDuration(record.duration);
-    },
-  },
-  {
-    title: '下次执行时间',
-    key: 'nextExecutionTime',
-    customRender: ({ record }: { record: ScheduleRecord }) => {
-      return record.nextExecutionTime
-        ? record.nextExecutionTime.toLocaleString()
-        : '-';
-    },
-  },
-  {
-    title: '操作',
-    key: 'operation',
-    customRender: ({ record }: { record: ScheduleRecord }) => {
-      return h('div', { class: 'flex gap-1' }, [
-        h(
-          Button,
-          {
-            type: 'link',
-            size: 'small',
-            onClick: () => showScheduleLog(record),
-          },
-          '查看日志',
-        ),
-        h(
-          Button,
-          {
-            type: 'link',
-            size: 'small',
-            danger: true,
-            onClick: () => handleDeleteScheduleRecord(record),
-          },
-          '删除',
         ),
       ]);
     },
@@ -667,51 +621,121 @@ const showConsoleOutput = (record: ExecuteRecord) => {
   });
 };
 
-// 新增：显示调度日志
-const showScheduleLog = (record: ScheduleRecord) => {
+// 显示调度构建详情（类似执行记录的查看任务详情）
+const showScheduleBuildDetail = (record: ScheduleRecord) => {
   Modal.info({
-    title: `调度日志 - ${record.scheduleId}`,
+    title: `调度构建详情 - #${record.buildNumber}`,
     width: '80%',
-    content: h('div', { class: 'console-output' }, [
-      h('pre', [
-        h('div', { class: 'stage-header' }, `调度ID: ${record.scheduleId}`),
-        h('div', { class: 'stage-content' }, `状态: ${record.scheduleStatus}`),
-        h(
-          'div',
-          { class: 'stage-content' },
-          `阶段进度: ${record.stageProgress}`,
+    content: h('div', { class: 'schedule-build-detail' }, [
+      // 构建基本信息
+      h('div', { class: 'mb-4 grid grid-cols-2 gap-4' }, [
+        h('div', [
+          h('div', { class: 'font-medium mb-2' }, '构建信息'),
+          h('div', { class: 'grid grid-cols-1 gap-1' }, [
+            h('span', `构建编号: #${record.buildNumber}`),
+            h('span', `作业名称: ${record.jobName}`),
+            h('span', `调度时间: ${record.scheduleTime.toLocaleString()}`),
+            h('span', `开始时间: ${record.startTime.toLocaleString()}`),
+            record.endTime &&
+              h('span', `结束时间: ${record.endTime.toLocaleString()}`),
+            h('span', `持续时间: ${formatDuration(record.duration)}`),
+          ]),
+        ]),
+        h('div', [
+          h('div', { class: 'font-medium mb-2' }, '状态信息'),
+          h('div', { class: 'grid grid-cols-1 gap-1' }, [
+            h('div', { class: 'flex items-center' }, [
+              h('span', { class: 'mr-2' }, '总体状态:'),
+              h(
+                Tag,
+                { color: getStatusColor(record.overallStatus) },
+                record.overallStatus,
+              ),
+            ]),
+            h('div', { class: 'flex items-center' }, [
+              h('span', { class: 'mr-2' }, '调度状态:'),
+              h(
+                Tag,
+                { color: getStatusColor(record.scheduleStatus) },
+                record.scheduleStatus,
+              ),
+            ]),
+            h('span', `阶段进度: ${record.stageProgress}`),
+            record.cronExpression &&
+              h('span', `Cron表达式: ${record.cronExpression}`),
+            record.nextExecutionTime &&
+              h(
+                'span',
+                `下次执行: ${record.nextExecutionTime.toLocaleString()}`,
+              ),
+          ]),
+        ]),
+      ]),
+
+      // 构建阶段详情
+      h('div', { class: 'mb-4' }, [
+        h('h4', { class: 'font-medium mb-2' }, '构建阶段'),
+        ...record.stages.map((stage, index) =>
+          h('div', { class: 'mb-2 p-3 border rounded' }, [
+            h('div', { class: 'flex justify-between items-center mb-2' }, [
+              h(
+                'span',
+                { class: 'font-medium' },
+                `${index + 1}. ${stage.stageName}`,
+              ),
+              h('div', { class: 'flex items-center gap-2' }, [
+                h(Tag, { color: getStatusColor(stage.status) }, stage.status),
+                h(
+                  'span',
+                  { class: 'text-gray-500 text-sm' },
+                  formatDuration(stage.durationMillis),
+                ),
+              ]),
+            ]),
+            stage.logs &&
+              h(
+                'pre',
+                {
+                  class:
+                    'text-sm bg-gray-50 dark:bg-gray-800 p-2 rounded max-h-40 overflow-auto',
+                },
+                stage.logs,
+              ),
+          ]),
         ),
+      ]),
+
+      // 构建日志
+      h('div', [
+        h('h4', { class: 'font-medium mb-2' }, '构建日志'),
         h(
-          'div',
-          { class: 'stage-content' },
-          `Cron表达式: ${record.cronExpression}`,
+          'pre',
+          { class: 'bg-gray-100 dark:bg-gray-800 p-3 rounded max-h-96 overflow-auto text-sm' },
+          record.stages.flatMap((s) => s.logs || '').join('\n') ||
+            '暂无日志输出',
         ),
-        h('div', { class: 'stage-content' }, '日志内容: 暂无日志'),
       ]),
     ]),
     okText: '关闭',
+    cancelText: '查看原链接',
+    cancelButtonProps: { type: 'link' },
+    onCancel: () => {
+      window.open(record.buildUrl, '_blank');
+    },
   });
 };
 
-// 新增：删除调度记录
+// 删除调度记录
 const handleDeleteScheduleRecord = async (record: ScheduleRecord) => {
   Modal.confirm({
     title: '确认删除',
-    content: `确定要删除调度记录 ${record.scheduleId} 吗？`,
+    content: `确定要删除调度记录 构建#${record.buildNumber} 吗？`,
     okText: '删除',
     cancelText: '取消',
     okType: 'danger',
     async onOk() {
       try {
-        // 调用删除调度记录API
-        const result = await deleteScheduleRecord(record.scheduleId);
-        if (result === null) {
-          message.success('调度记录已删除');
-          // 重新获取调度记录
-          fetchData();
-        } else {
-          message.error(`删除失败: ${result.message}`);
-        }
+        message.success('调度记录删除功能待实现');
       } catch (error: any) {
         message.error(`删除失败: ${error.message || '未知错误'}`);
       }
@@ -721,7 +745,38 @@ const handleDeleteScheduleRecord = async (record: ScheduleRecord) => {
 
 // 原有函数保持不变...
 const handleCancelExecution = async (execRecord: ExecuteRecord) => {
-  // ... 保持不变
+  try {
+    // 调用删除作业接口，但不强制停止构建
+    const result = await deleteJenkinsJob(execRecord.jobUid, false);
+
+    if (result.code === 0) {
+      message.success('任务已取消');
+
+      // 更新任务状态
+      const parentTask = data.value.find(
+        (t) => t.uid === execRecord.parentTaskUid,
+      );
+
+      if (parentTask && parentTask.activeExecuteRecord) {
+        parentTask.activeExecuteRecord.status = 'ABORTED';
+        parentTask.activeExecuteRecord.endTime = new Date();
+
+        // 停止轮询
+        if (parentTask.pollingTimer) {
+          clearInterval(parentTask.pollingTimer);
+          parentTask.pollingTimer = undefined;
+        }
+
+        // 更新任务状态
+        parentTask.status = 'canceled';
+        parentTask.activeExecuteRecord = null;
+      }
+    } else {
+      message.error(`取消失败: ${result.message}`);
+    }
+  } catch (error: any) {
+    message.error(`取消失败: ${error.message || '未知错误'}`);
+  }
 };
 
 const handleViewJobDetail = (execRecord: ExecuteRecord) => {
@@ -732,11 +787,115 @@ const handleViewJobDetail = (execRecord: ExecuteRecord) => {
 };
 
 const handleDeleteExecution = async (execRecord: ExecuteRecord) => {
-  // ... 保持不变
+  // 临时更新状态为删除中
+  const parentTask = data.value.find((t) => t.uid === execRecord.parentTaskUid);
+
+  if (parentTask) {
+    const targetRecord = parentTask.executeRecords.find(
+      (r) => r.jobUid === execRecord.jobUid,
+    );
+    if (targetRecord) {
+      targetRecord.status = 'DELETING';
+    }
+  }
+  Modal.confirm({
+    title: '确认删除',
+    content: `确定要删除执行记录 ${execRecord.jobUid} 吗？此操作将：\n1. 删除 Jenkins 作业\n2. 删除数据库记录\n3. 清理缓存`,
+    okText: '删除',
+    cancelText: '取消',
+    okType: 'danger',
+    async onOk() {
+      try {
+        // 调用删除作业接口
+        const result = await deleteJenkinsJob(execRecord.jobUid);
+        console.log('取消任务执行结果:', result);
+
+        if (result === null) {
+          message.success('执行记录已删除');
+
+          // 找到父任务并更新执行记录列表
+          const parentTask = data.value.find(
+            (t) => t.uid === execRecord.parentTaskUid,
+          );
+
+          if (parentTask) {
+            // 从执行记录列表中移除
+            parentTask.executeRecords = parentTask.executeRecords.filter(
+              (r) => r.jobUid !== execRecord.jobUid,
+            );
+
+            // 如果删除的是活跃记录，清活跃记录
+            if (parentTask.activeExecuteRecord?.jobUid === execRecord.jobUid) {
+              parentTask.activeExecuteRecord = null;
+
+              // 停止轮询
+              if (parentTask.pollingTimer) {
+                clearInterval(parentTask.pollingTimer);
+                parentTask.pollingTimer = undefined;
+              }
+
+              // 更新任务状态
+              parentTask.status = 'pending';
+            }
+          }
+        } else {
+          message.error(`删除失败: ${result.message}`);
+        }
+      } catch (error: any) {
+        message.error(`删除失败: ${error.message || '未知错误'}`);
+      }
+    },
+  });
 };
 
 const handleForceDeleteExecution = async (execRecord: ExecuteRecord) => {
-  // ... 保持不变
+  Modal.confirm({
+    title: '强制删除',
+    content: `确定要强制删除执行记录 ${execRecord.jobUid} 吗？\n此操作将：\n1. 强制停止正在运行的构建\n2. 删除 Jenkins 作业\n3. 删除数据库记录`,
+    okText: '强制删除',
+    cancelText: '取消',
+    okType: 'danger',
+    async onOk() {
+      try {
+        // 调用删除作业接口，强制停止构建
+        const result = await deleteJenkinsJob(execRecord.jobUid, true);
+
+        if (result === null) {
+          message.success('执行记录已强制删除');
+
+          // 更新前端数据
+          const parentTask = data.value.find(
+            (t) => t.uid === execRecord.parentTaskUid,
+          );
+
+          if (parentTask) {
+            // 从执行记录列表中移除
+            parentTask.executeRecords = parentTask.executeRecords.filter(
+              (r) => r.jobUid !== execRecord.jobUid,
+            );
+
+            // 如果删除的是活跃记录
+            if (parentTask.activeExecuteRecord?.jobUid === execRecord.jobUid) {
+              parentTask.activeExecuteRecord = null;
+
+              // 停止轮询
+              if (parentTask.pollingTimer) {
+                clearInterval(parentTask.pollingTimer);
+                parentTask.pollingTimer = undefined;
+              }
+
+              // 更新任务状态
+              parentTask.status = 'canceled';
+            }
+          }
+        } else {
+          message.error(`删除失败: ${result.message}`);
+        }
+      } catch (error: any) {
+        message.error(`删除失败: ${error.message || '未知错误'}`);
+      }
+    },
+  });
 };
 
 const handleRerunExecution = (execRecord: ExecuteRecord) => {
@@ -746,16 +905,209 @@ const handleRerunExecution = (execRecord: ExecuteRecord) => {
   }
 };
 
+// 批量删除任务的所有作业
 const handleDeleteAllExecutions = (record: DataItem) => {
-  // ... 保持不变
+  Modal.confirm({
+    title: '批量删除确认',
+    content: `确定要删除任务 "${record.name}" 的所有 ${record.executeRecords.length} 个执行记录吗？`,
+    okText: '删除全部',
+    cancelText: '取消',
+    okType: 'danger',
+    async onOk() {
+      try {
+        // 这里可以调用批量删除接口或循环调用单个删除
+        const deletePromises = record.executeRecords.map((execRecord) =>
+          deleteJenkinsJob(execRecord.jobUid, false),
+        );
+
+        await Promise.all(deletePromises);
+
+        // 清空执行记录
+        record.executeRecords = [];
+
+        // 清除活跃记录和轮询
+        record.activeExecuteRecord = null;
+        if (record.pollingTimer) {
+          clearInterval(record.pollingTimer);
+          record.pollingTimer = undefined;
+        }
+
+        // 重置任务状态
+        record.status = 'pending';
+
+        message.success('所有执行记录已删除');
+      } catch (error: any) {
+        message.error(`批量删除失败: ${error.message || '未知错误'}`);
+      }
+    },
+  });
 };
 
+// 开始调度
 const handleStartSchedule = async (record: DataItem) => {
-  // ... 保持不变
+  try {
+    // 检查是否有调度配置
+    const scheduleConfig = record.detail?.taskStep4.scheduleConfig;
+    if (!scheduleConfig || !scheduleConfig.isActive) {
+      message.warning('请先配置调度信息并激活调度');
+      return;
+    }
+
+    Modal.confirm({
+      title: '开始调度确认',
+      content: h('div', [
+        h('p', `确定要开始调度任务 "${record.name}" 吗？`),
+        scheduleConfig.isActive &&
+          h('div', { class: 'mt-2 p-2 bg-blue-50 rounded' }, [
+            h('p', { class: 'font-medium' }, '调度配置信息:'),
+            h(
+              'p',
+              { class: 'text-sm' },
+              `调度类型: ${scheduleConfig.intervalType}`,
+            ),
+            scheduleConfig.intervalType === 'daily' &&
+              scheduleConfig.dailyTime &&
+              h(
+                'p',
+                { class: 'text-sm' },
+                `执行时间: 每天 ${scheduleConfig.dailyTime}`,
+              ),
+            scheduleConfig.intervalType === 'weekly' &&
+              scheduleConfig.weeklyDays &&
+              scheduleConfig.weeklyTime &&
+              h(
+                'p',
+                { class: 'text-sm' },
+                `执行时间: 每周 ${scheduleConfig.weeklyDays?.join('、')} ${scheduleConfig.weeklyTime}`,
+              ),
+            scheduleConfig.intervalType === 'hourly' &&
+              scheduleConfig.hourlyMinute &&
+              h(
+                'p',
+                { class: 'text-sm' },
+                `执行时间: 每小时第 ${scheduleConfig.hourlyMinute} 分钟`,
+              ),
+            scheduleConfig.intervalType === 'interval' &&
+              scheduleConfig.intervalDuration &&
+              scheduleConfig.intervalUnit &&
+              h(
+                'p',
+                { class: 'text-sm' },
+                `执行间隔: 每 ${scheduleConfig.intervalDuration} ${scheduleConfig.intervalUnit}`,
+              ),
+            scheduleConfig.intervalType === 'cron' &&
+              scheduleConfig.cronExpression &&
+              h(
+                'p',
+                { class: 'text-sm' },
+                `Cron表达式: ${scheduleConfig.cronExpression}`,
+              ),
+          ]),
+      ]),
+      okText: '开始调度',
+      cancelText: '取消',
+      async onOk() {
+        try {
+          // 调用开始调度API
+          const result = await startSchedule(
+            record.uid,
+            tenantUid.value,
+            userId.value,
+            scheduleConfig,
+          );
+
+          if (result === null) {
+            message.error(`开始调度失败: ${result.message}`);
+            record.scheduleJobStatus = 'error';
+            record.scheduleStatus = 'error';
+          } else {
+            message.success('调度任务创建成功');
+
+            // 保存调度作业信息到record
+            record.scheduleJobName = result.jobName;
+            record.scheduleJobStatus = result.scheduleActive
+              ? 'scheduled'
+              : 'stopped';
+            record.scheduleStatus = result.scheduleActive
+              ? 'scheduled'
+              : 'stopped';
+
+            // 显示调度信息
+            message.info(
+              `调度任务创建成功！作业名称: ${result.jobName}, 调度状态: ${
+                result.scheduleActive ? '已激活' : '未激活'
+              }`,
+            );
+          }
+        } catch (error: any) {
+          message.error(`开始调度失败: ${error.message || '未知错误'}`);
+          record.scheduleJobStatus = 'error';
+          record.scheduleStatus = 'error';
+        }
+      },
+    });
+  } catch (error: any) {
+    message.error(`开始调度失败: ${error.message || '未知错误'}`);
+  }
 };
 
+// 结束调度
 const handleStopSchedule = async (record: DataItem) => {
-  // ... 保持不变
+  if (!record.scheduleJobName) {
+    message.warning('该任务没有调度作业');
+    return;
+  }
+
+  Modal.confirm({
+    title: '结束调度确认',
+    content: h('div', [
+      h('p', `确定要结束任务 "${record.name}" 的调度吗？`),
+      h(
+        'p',
+        { class: 'text-sm text-gray-500' },
+        `调度作业: ${record.scheduleJobName}`,
+      ),
+      h(
+        'p',
+        { class: 'text-sm text-red-500' },
+        '此操作将停止所有相关构建并删除调度配置',
+      ),
+    ]),
+    okText: '结束调度',
+    cancelText: '取消',
+    okType: 'danger',
+    async onOk() {
+      try {
+        // 调用结束调度API
+        const result = await stopSchedule(
+          record.scheduleJobName!,
+          tenantUid.value,
+          userId.value,
+          true,
+        );
+
+        if (result === null) {
+          message.error(`结束调度失败: ${result.message}`);
+        } else {
+          message.success('调度任务已结束');
+
+          // 更新任务状态
+          record.scheduleJobStatus = 'stopped';
+          record.scheduleStatus = 'stopped';
+
+          // 显示详细信息
+          const details = [];
+          if (result.buildsStopped) details.push('构建已停止');
+          if (result.scheduleConfigDeleted) details.push('调度配置已删除');
+          if (result.jobDeleted) details.push('作业已删除');
+
+          message.info(`调度结束完成: ${details.join(', ')}`);
+        }
+      } catch (error: any) {
+        message.error(`结束调度失败: ${error.message || '未知错误'}`);
+      }
+    },
+  });
 };
 
 const handleViewScheduleStatus = async (record: DataItem) => {
@@ -810,7 +1162,7 @@ const handleViewScheduleStatus = async (record: DataItem) => {
             h('h4', { class: 'font-medium mb-2' }, '调度配置详情:'),
             h(
               'pre',
-              { class: 'bg-gray-100 p-3 rounded max-h-60 overflow-auto' },
+              { class: 'bg-gray-100 dark:bg-gray-800 p-3 rounded max-h-60 overflow-auto' },
               JSON.stringify(result.scheduleConfig, null, 2),
             ),
           ]),
@@ -825,34 +1177,77 @@ const handleViewScheduleStatus = async (record: DataItem) => {
   }
 };
 
-// 新增：获取调度记录
+// 获取调度记录
 const fetchScheduleRecordsForTask = async (record: DataItem) => {
   try {
-    const response = await fetchScheduleRecords(record.uid, tenantUid.value);
-    if (response && Array.isArray(response)) {
-      record.scheduleRecords = response.map((item: any) => ({
-        scheduleId: item.scheduleId || item.id,
-        scheduleStatus: item.scheduleStatus || item.status,
-        stageProgress: item.stageProgress || '0/0',
-        scheduleTime: new Date(item.scheduleTime || item.createdAt),
-        startTime: new Date(item.startTime || item.scheduleTime),
-        endTime: item.endTime ? new Date(item.endTime) : undefined,
-        duration: item.duration || 0,
-        nextExecutionTime: item.nextExecutionTime
-          ? new Date(item.nextExecutionTime)
-          : undefined,
-        cronExpression:
-          item.cronExpression ||
-          record.detail?.taskStep4.scheduleConfig.cronExpression ||
-          '',
-      }));
+    const response = await fetchScheduleJobsByTaskUid(
+      record.uid,
+      tenantUid.value,
+    );
+    console.log('获取调度记录响应:', response);
+    if (response) {
+      // 保存作业名称和下一个构建编号
+      record.scheduleJobName = response.jobName;
+      record.nextBuildNumber = response.nextBuildNumber;
+      if (response.scheduleActive === 1) {
+        record.scheduleStatus = 'scheduled';
+        record.scheduleJobStatus = 'scheduled';
+        console.log(`任务 ${record.name} 调度状态更新为: scheduled`);
+      } else {
+        record.scheduleStatus = 'stopped';
+        record.scheduleJobStatus = 'stopped';
+      }
+
+      // 转换历史构建记录为ScheduleRecord格式
+      record.scheduleRecords = response.jobHistoryBuild.map(
+        (item: ScheduleBuildRecord) => {
+          const jobContent = item.jobContent;
+          const startTime = jobContent.startTime
+            ? new Date(jobContent.startTime)
+            : new Date();
+          const endTime = jobContent.endTime
+            ? new Date(jobContent.endTime)
+            : undefined;
+          const duration = endTime
+            ? endTime.getTime() - startTime.getTime()
+            : 0;
+
+          // 计算阶段进度
+          const completedStages = jobContent.stages.filter((stage) =>
+            ['ABORTED', 'FAILED', 'SUCCESS'].includes(stage.status),
+          ).length;
+          const totalStages = jobContent.stages.length;
+          const stageProgress = `${completedStages}/${totalStages}`;
+
+          return {
+            scheduleId: `${record.uid}_${item.buildNumber}`,
+            buildNumber: item.buildNumber,
+            jobName: jobContent.jobName,
+            scheduleStatus: jobContent.overallStatus as any,
+            stageProgress,
+            scheduleTime: startTime,
+            startTime,
+            endTime,
+            duration,
+            cronExpression:
+              response.scheduleConfig?.cronExpression ||
+              record.detail?.taskStep4.scheduleConfig.cronExpression ||
+              '',
+            buildUrl: jobContent.buildUrl,
+            overallStatus: jobContent.overallStatus,
+            stages: jobContent.stages,
+          };
+        },
+      );
+    } else {
+      console.error('获取调度记录失败:', response);
     }
   } catch (error) {
     console.error(`获取任务 ${record.uid} 的调度记录失败:`, error);
   }
 };
 
-// 新增：开始调度记录轮询
+// 开始调度记录轮询
 const startSchedulePolling = (record: DataItem) => {
   if (record.schedulePollingTimer) {
     clearInterval(record.schedulePollingTimer);
@@ -860,10 +1255,10 @@ const startSchedulePolling = (record: DataItem) => {
 
   record.schedulePollingTimer = window.setInterval(async () => {
     await fetchScheduleRecordsForTask(record);
-  }, 10_000); // 每10秒轮询一次
+  }, 10_000);
 };
 
-// 新增：停止调度记录轮询
+// 停止调度记录轮询
 const stopSchedulePolling = (record: DataItem) => {
   if (record.schedulePollingTimer) {
     clearInterval(record.schedulePollingTimer);
@@ -906,10 +1301,11 @@ const fetchData = async () => {
         tabActiveKey: '2',
         detail: mapTaskDetail(task),
         executeRecords: [],
-        scheduleRecords: [], // 初始化调度记录
+        scheduleRecords: [],
         activeExecuteRecord: null,
         pollingTimer: undefined,
         schedulePollingTimer: undefined,
+        scheduleCollapseActiveKey: [],
       }));
 
       // 为每个任务获取执行记录
@@ -923,15 +1319,15 @@ const fetchData = async () => {
             item.executeRecords = records.map((record) => {
               const startTime = record.startTime
                 ? new Date(record.startTime)
-                : record.startAt
+                : (record.startAt
                   ? new Date(record.startAt)
-                  : new Date();
+                  : new Date());
 
               const endTime = record.endTime
                 ? new Date(record.endTime)
-                : record.endAt
+                : (record.endAt
                   ? new Date(record.endAt)
-                  : undefined;
+                  : undefined);
 
               return {
                 id: record.jobUid,
@@ -1100,6 +1496,17 @@ const createMoreMenu = (record: DataItem) => {
     h(
       Menu.Item,
       {
+        key: 'copy',
+        onClick: () => handleCopyTask(record),
+      },
+      '复制任务',
+    ),
+  );
+
+  menuItems.push(
+    h(
+      Menu.Item,
+      {
         key: 'delete',
         onClick: () => handleDelete(record.uid),
       },
@@ -1108,6 +1515,15 @@ const createMoreMenu = (record: DataItem) => {
   );
 
   return h(Menu, {}, { default: () => menuItems });
+};
+
+// 处理复制任务
+const handleCopyTask = (record: DataItem) => {
+  // 跳转到创建任务页面，并传递要复制的任务ID
+  router.push({
+    path: '/MTP/train/task',
+    query: { copyFrom: record.uid },
+  });
 };
 
 // 修改上游依赖状态管理
@@ -1449,7 +1865,7 @@ const data = ref<DataItem[]>([]);
         </template>
 
         <template #expandedRowRender="{ record }">
-          <div class="bg-gray-50 p-4">
+          <div class="bg-gray-50 dark:bg-gray-900 p-4">
             <Tabs
               :active-key="record.tabActiveKey"
               @update:active-key="(key) => (record.tabActiveKey = key)"
@@ -1553,7 +1969,7 @@ const data = ref<DataItem[]>([]);
                       </Descriptions.Item>
                       <Descriptions.Item label="训练配置内容" :span="2">
                         <pre
-                          class="max-h-40 overflow-auto rounded bg-gray-100 p-3"
+                          class="max-h-40 overflow-auto rounded bg-gray-100 dark:bg-gray-800 p-3"
                           >{{
                             record.detail?.taskStep3.trainConfig.content ||
                             '无配置内容'
@@ -1628,13 +2044,15 @@ const data = ref<DataItem[]>([]);
                         <div v-else class="text-gray-400">未创建调度作业</div>
                       </Descriptions.Item>
 
-                      <Descriptions.Item label="下次执行时间">
-                        <div v-if="record.scheduleStatus === 'scheduled'">
-                          <!-- 这里可以显示通过cron表达式计算的下次执行时间 -->
+                      <Descriptions.Item label="下一个构建编号">
+                        <div
+                          v-if="
+                            record.scheduleStatus === 'scheduled' &&
+                            record.nextBuildNumber
+                          "
+                        >
                           <Tag color="green">
-                            {{
-                              new Date(Date.now() + 3600000).toLocaleString()
-                            }}
+                            #{{ record.nextBuildNumber }}
                           </Tag>
                         </div>
                         <div v-else class="text-gray-400">未调度</div>
@@ -1712,7 +2130,7 @@ const data = ref<DataItem[]>([]);
                 </Table>
               </TabPane>
 
-              <!-- 新增：调度记录TabPane -->
+              <!-- 修改后的调度记录TabPane -->
               <TabPane key="3" tab="调度记录">
                 <div class="mb-4 flex items-center justify-between">
                   <div>
@@ -1727,32 +2145,102 @@ const data = ref<DataItem[]>([]);
                       共 {{ record.scheduleRecords.length }} 个调度记录
                     </span>
                   </div>
-                  <div class="text-sm text-gray-400">
-                    自动刷新:
-                    {{
-                      record.scheduleStatus === 'scheduled' ? '开启' : '关闭'
-                    }}
+                  <Button
+                    type="primary"
+                    @click="handleStartSchedule(record)"
+                    v-if="record.scheduleStatus !== 'scheduled'"
+                  >
+                    开始调度
+                  </Button>
+                </div>
+
+                <!-- 显示调度作业信息 -->
+                <div v-if="record.scheduleJobName" class="mb-4">
+                  <div class="grid grid-cols-2 gap-4">
+                    <div>
+                      <div class="text-sm text-gray-500">调度作业</div>
+                      <div class="text-lg font-medium">
+                        {{ record.scheduleJobName }}
+                      </div>
+                    </div>
+                    <div>
+                      <div class="text-sm text-gray-500">下一个构建编号</div>
+                      <div class="text-lg font-medium">
+                        <Tag color="blue" v-if="record.nextBuildNumber">
+                          #{{ record.nextBuildNumber }}
+                        </Tag>
+                        <span v-else class="text-gray-400">暂无</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <Table
-                  :columns="scheduleRecordColumns"
-                  :data-source="record.scheduleRecords"
-                  :pagination="false"
-                  row-key="scheduleId"
+                <!-- 调度记录展示 -->
+                <div
+                  v-if="
+                    record.scheduleJobName && record.scheduleRecords.length > 0
+                  "
                 >
-                  <template #emptyText>
-                    <Empty description="暂无调度记录">
-                      <Button
-                        type="primary"
-                        @click="handleStartSchedule(record)"
-                        v-if="record.scheduleStatus !== 'scheduled'"
-                      >
-                        开始调度
-                      </Button>
-                    </Empty>
-                  </template>
-                </Table>
+                  <Collapse
+                    v-model:active-key="record.scheduleCollapseActiveKey"
+                    :bordered="false"
+                  >
+                    <Collapse.Panel
+                      key="schedule-builds"
+                      :header="`调度构建记录 (${record.scheduleRecords.length} 个)`"
+                    >
+                      <div class="build-record-grid">
+                        <div
+                          v-for="scheduleRecord in record.scheduleRecords"
+                          :key="scheduleRecord.buildNumber"
+                          class="build-record-item"
+                          :class="{
+                            success: scheduleRecord.overallStatus === 'SUCCESS',
+                            failed: scheduleRecord.overallStatus === 'FAILED',
+                            running:
+                              scheduleRecord.overallStatus === 'IN_PROGRESS',
+                            queued: scheduleRecord.overallStatus === 'QUEUED',
+                          }"
+                          @click="showScheduleBuildDetail(scheduleRecord)"
+                        >
+                          <div class="build-number">
+                            #{{ scheduleRecord.buildNumber }}
+                          </div>
+                          <div class="build-status">
+                            <Tag
+                              :color="
+                                getStatusColor(scheduleRecord.overallStatus)
+                              "
+                              size="small"
+                            >
+                              {{ scheduleRecord.overallStatus }}
+                            </Tag>
+                          </div>
+                          <div class="build-time text-xs text-gray-500">
+                            {{ scheduleRecord.startTime.toLocaleDateString() }}
+                          </div>
+                        </div>
+                      </div>
+                    </Collapse.Panel>
+                  </Collapse>
+                </div>
+                <div
+                  v-else-if="
+                    record.scheduleJobName &&
+                    record.scheduleRecords.length === 0
+                  "
+                >
+                  <div class="py-8 text-center text-gray-400">
+                    暂无调度构建记录
+                  </div>
+                </div>
+                <div v-else>
+                  <Empty description="暂无调度记录" class="py-8">
+                    <Button type="primary" @click="handleStartSchedule(record)">
+                      开始调度
+                    </Button>
+                  </Empty>
+                </div>
               </TabPane>
 
               <!-- 调整原有的TabPane key -->
@@ -1885,7 +2373,7 @@ const data = ref<DataItem[]>([]);
                     v-if="downstreamTasks[record.uid]?.length"
                     class="task-list"
                   >
-                    <div class="task-header flex bg-gray-100 p-3 font-medium">
+                    <div class="task-header flex bg-gray-100 dark:bg-gray-800 p-3 font-medium">
                       <div class="header-item" style="width: 40%">任务名称</div>
                       <div class="header-item" style="width: 40%">任务类型</div>
                       <div class="header-item" style="width: 20%">操作</div>
@@ -1929,8 +2417,6 @@ const data = ref<DataItem[]>([]);
 
 <style scoped>
 .search-container {
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
   border-radius: 8px;
 }
 
@@ -1953,16 +2439,10 @@ const data = ref<DataItem[]>([]);
 
 :deep(.ant-descriptions-item-label) {
   font-weight: 500;
-  color: #4a5568;
-}
-
-:deep(.ant-card-head) {
-  background-color: #f7fafc;
 }
 
 .pipeline-stages {
   padding: 12px;
-  background-color: #f9f9f9;
   border-radius: 4px;
 }
 
@@ -1996,20 +2476,114 @@ const data = ref<DataItem[]>([]);
 .console-output {
   max-height: 60vh;
   overflow: auto;
-  background: #1e1e1e;
-  color: #dcdcdc;
   padding: 16px;
   font-family: monospace;
   white-space: pre-wrap;
 }
 
 .stage-header {
-  color: #569cd6;
   font-weight: bold;
   margin-top: 10px;
 }
 
 .stage-content {
   margin-left: 20px;
+}
+
+/* 调度记录样式 */
+.build-record-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.build-record-item {
+  border: 2px solid var(--ant-color-border);
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100px;
+}
+
+.build-record-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: var(--ant-color-primary);
+}
+
+.build-record-item.success {
+  border-color: var(--ant-color-success);
+}
+
+.build-record-item.success:hover {
+  border-color: var(--ant-color-success);
+}
+
+.build-record-item.failed {
+  border-color: var(--ant-color-error);
+}
+
+.build-record-item.failed:hover {
+  border-color: var(--ant-color-error);
+}
+
+.build-record-item.running {
+  border-color: var(--ant-color-primary);
+  animation: pulse 2s infinite;
+}
+
+.build-record-item.queued {
+  border-color: var(--ant-color-warning);
+}
+
+.build-number {
+  font-size: 1.25rem;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.build-status {
+  margin-bottom: 6px;
+}
+
+.build-time {
+  margin-top: 4px;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(59, 130, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+
+/* 调度构建详情对话框样式 */
+.schedule-build-detail {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.schedule-build-detail pre {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.schedule-build-detail .ant-tag {
+  margin-right: 4px;
 }
 </style>

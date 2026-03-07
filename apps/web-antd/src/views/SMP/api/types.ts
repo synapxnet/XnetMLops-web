@@ -60,6 +60,8 @@ export interface DatasetItem {
   dept_uid?: null | string;
   level: number;
   encryption: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // 算法

@@ -30,7 +30,9 @@ const userId = computed(() => currentUserInfo.value?.userId || '');
 const route = useRoute();
 const router = useRouter();
 const isEditMode = ref(false);
+const isCopyMode = ref(false);
 const taskId = ref<null | string>(null);
+const copyFromId = ref<null | string>(null);
 const currentStep = ref(0);
 const steps = ref([
   { title: '基础信息' },
@@ -132,16 +134,22 @@ const formState = ref<TaskFormState>({
 });
 
 const close = () => {
-  router.push('/MTP/train/index');
+  // 使用 replace 避免历史记录问题，并强制刷新列表页
+  router.replace('/MTP/train/index');
 };
 
 // 初始化：检查URL参数
 onMounted(() => {
   taskId.value = route.query.id as string;
+  copyFromId.value = route.query.copyFrom as string;
   isEditMode.value = !!taskId.value;
+  isCopyMode.value = !!copyFromId.value;
 
   if (isEditMode.value) {
     loadTaskData(taskId.value);
+  } else if (isCopyMode.value) {
+    // 复制模式：加载原任务数据但清除uid，并提示修改名称
+    loadTaskDataForCopy(copyFromId.value);
   }
 });
 
@@ -202,8 +210,73 @@ const loadTaskData = async (id: string) => {
   }
 };
 
+// 加载任务数据用于复制（不设置uid，修改名称）
+const loadTaskDataForCopy = async (id: string) => {
+  try {
+    const taskData = await fetchTrainTaskDetail(id, tenantUid.value);
+
+    // 转换后端数据为前端表单格式，但修改任务名称并清除uid相关信息
+    formState.value = {
+      taskStep1: {
+        taskName: taskData.task_name + '_clone', // 添加克隆后缀
+        taskType: taskData.task_type,
+        encryption: taskData.encryption,
+        taskZone: taskData.task_zone,
+        podType: taskData.pod_type,
+        resources: taskData.resources,
+        trainType: taskData.train_type,
+        imageUid: taskData.image_uid,
+        image: taskData.image,
+        describe: taskData.description,
+      },
+      taskStep2: {
+        algorithmUID: taskData.algorithm_uid,
+        algorithmName: taskData.algorithm_name,
+        algorithmVersion: taskData.algorithm_version,
+        datasets: taskData.datasets.map((ds) => ({
+          id: ds.dataset_id,
+          selectedId: ds.dataset_id,
+          name: ds.dataset_file,
+          selectedName: ds.dataset_name,
+          selectedUID: ds.dataset_uid,
+          bucketIdentifier: ds.bucket_identifier,
+          datasetName: ds.dataset_name,
+        })),
+        taskroute: taskData.task_route,
+      },
+      taskStep3: {
+        customVariables: taskData.custom_variables.map((cv) => ({
+          id: Date.now() + Math.random(), // 生成新ID
+          name: cv.name,
+          value: cv.value,
+        })),
+        trainConfig: {
+          content: taskData.train_config_content,
+          format: taskData.train_config_format,
+        },
+      },
+      taskStep4: {
+        notificationConfig: JSON.parse(taskData.notification_config || '{}'),
+        outputConfig: JSON.parse(taskData.output_config || '{}'),
+        scheduleConfig: {
+          ...JSON.parse(taskData.schedule_config || '{}'),
+          isActive: false, // 复制时默认不启用调度
+        },
+      },
+    };
+
+    message.info('已加载任务数据，请修改任务名称后保存');
+  } catch {
+    message.error('加载任务数据失败');
+  }
+};
+
 // 页面标题动态化
-const pageTitle = computed(() => (isEditMode.value ? '编辑任务' : '新增任务'));
+const pageTitle = computed(() => {
+  if (isEditMode.value) return '编辑任务';
+  if (isCopyMode.value) return '复制任务';
+  return '新增任务';
+});
 
 // 提交处理（区分创建/编辑）
 const handleSubmit = async () => {
@@ -232,9 +305,10 @@ const handleSubmit = async () => {
       message.success('任务更新成功！');
     } else {
       await createTrainTask(formState.value, userId.value, tenantUid.value);
-      message.success('任务创建成功！');
+      message.success(isCopyMode.value ? '任务复制成功！' : '任务创建成功！');
     }
-    router.push('/MTP/train/index');
+    // 使用 replace 避免返回时出现空白页
+    router.replace('/MTP/train/index');
   } catch (error) {
     console.error('操作失败:', error);
     message.error(
@@ -295,7 +369,7 @@ const handleSubmit = async () => {
           取消
         </AButton>
         <AButton type="primary" v-if="currentStep === 3" @click="handleSubmit">
-          {{ isEditMode ? '更新' : '提交' }}
+          {{ isEditMode ? '更新' : isCopyMode ? '保存副本' : '提交' }}
         </AButton>
       </div>
     </div>

@@ -476,7 +476,7 @@ const showToken = (token: string) => {
       h('p', { class: 'mb-2' }, '请妥善保管您的访问凭证：'),
       h(
         'div',
-        { class: 'bg-gray-100 p-3 rounded-md break-all font-mono' },
+        { class: 'bg-gray-100 dark:bg-gray-800 p-3 rounded-md break-all font-mono' },
         token,
       ),
       h(
@@ -720,14 +720,12 @@ watch(searchKey, () => {
 }
 
 :deep(.ant-table-thead > tr > th) {
-  background-color: #f8fafc !important;
   font-weight: 600;
 }
 
 :deep(.ant-table) {
   border-radius: 6px;
   overflow: hidden;
-  border: 1px solid #f0f0f0;
 }
 
 :deep(.ant-btn-link) {

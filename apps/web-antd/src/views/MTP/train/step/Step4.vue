@@ -3,6 +3,7 @@ import type { TaskFormState, TaskFormStep4 } from '../taskcommon/task';
 
 import { computed, ref, watch } from 'vue';
 
+import { PlusOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue';
 import {
   Button,
   Checkbox,
@@ -15,6 +16,7 @@ import {
   Radio,
   Select,
   Table,
+  Tooltip,
 } from 'ant-design-vue';
 import dayjs from 'dayjs';
 
@@ -22,6 +24,7 @@ const props = defineProps<{
   modelValue: TaskFormState;
 }>();
 const emit = defineEmits(['update:modelValue']);
+
 // 组件注册
 const AForm = Form;
 const AFormItem = Form.Item;
@@ -36,8 +39,9 @@ const AInputNumber = InputNumber;
 const AButton = Button;
 const ATable = Table;
 const ACheckbox = Checkbox;
+const ATooltip = Tooltip;
 
-// 修改本地表单状态初始化
+// 修改本地表单状态初始化，添加通知触发条件
 const localFormState = ref<TaskFormStep4>({
   scheduleConfig: {
     intervalType: 'daily',
@@ -51,11 +55,11 @@ const localFormState = ref<TaskFormStep4>({
     onceTime: null,
     weeklyDays: [],
     weeklyTime: '',
-    isActive: false, // 确保初始状态为false
+    isActive: false,
   },
   outputConfig: {
     autoPublish: false,
-    isActive: false, // 增加初始状态
+    isActive: false,
     outputPath: '',
     outputType: '',
   },
@@ -63,7 +67,8 @@ const localFormState = ref<TaskFormStep4>({
     notificationContent: '',
     notificationTitle: '',
     notificationUserID: '',
-    isActive: false, // 确保初始状态为false
+    notificationTrigger: 'on_failure', // 新增：通知触发条件，默认失败通知
+    isActive: false,
   },
 });
 
@@ -86,7 +91,6 @@ watch(
         ...localFormState.value.scheduleConfig,
         ...scheduleConfig,
         isActive: scheduleConfig?.isActive ?? false,
-        // 移除 dayjs 转换，直接使用字符串
         dailyTime: scheduleConfig?.dailyTime || '',
         weeklyTime: scheduleConfig?.weeklyTime || '',
         hourlyMinute: scheduleConfig?.hourlyMinute || '',
@@ -97,18 +101,22 @@ watch(
       },
       outputConfig: {
         ...localFormState.value.outputConfig,
-        ...sanitizeConfig(outputConfig || {}), // 过滤undefined
+        ...sanitizeConfig(outputConfig || {}),
         isActive: outputConfig?.isActive ?? false,
       },
       notificationConfig: {
         ...localFormState.value.notificationConfig,
-        ...sanitizeConfig(notificationConfig || {}), // 过滤undefined
+        ...sanitizeConfig(notificationConfig || {}),
         isActive: notificationConfig?.isActive ?? false,
+        // 设置默认值，如果没有则使用失败通知
+        notificationTrigger:
+          notificationConfig?.notificationTrigger || 'on_failure',
       },
     };
   },
   { immediate: true, deep: true },
 );
+
 // 表单验证
 const formRef = ref<InstanceType<typeof AForm>>();
 const validate = async () => {
@@ -119,9 +127,7 @@ const validate = async () => {
 
     // 调度配置验证
     if (scheduleConfig.isActive) {
-      // 优先检查是否选择调度类型
       if (scheduleConfig.intervalType) {
-        // 各类型具体验证
         const validateMap = {
           daily: () =>
             !localFormState.value.scheduleConfig.dailyTime?.trim() &&
@@ -137,7 +143,7 @@ const validate = async () => {
           interval: () =>
             (!scheduleConfig.intervalDuration ||
               !scheduleConfig.intervalUnit ||
-              !scheduleConfig.dateRange?.[0] || // 新增日期范围验证
+              !scheduleConfig.dateRange?.[0] ||
               !scheduleConfig.dateRange?.[1]) &&
             '间隔配置和日期范围',
           once: () => !scheduleConfig.onceTime && '执行时间',
@@ -161,6 +167,11 @@ const validate = async () => {
       if (!notificationConfig.notificationTitle) errors.push('通知标题');
       if (!notificationConfig.notificationContent) errors.push('通知内容');
       if (!notificationConfig.notificationUserID) errors.push('接收人');
+      // 新增：通知触发条件验证（可选，因为有默认值）
+      if (!notificationConfig.notificationTrigger) {
+        localFormState.value.notificationConfig.notificationTrigger =
+          'on_failure';
+      }
     }
 
     if (errors.length > 0) {
@@ -175,7 +186,6 @@ const validate = async () => {
           d.toDate(),
         ),
         onceTime: localFormState.value.scheduleConfig.onceTime?.toDate(),
-        // 直接使用字符串，无需转换
         dailyTime: localFormState.value.scheduleConfig.dailyTime,
         weeklyTime: localFormState.value.scheduleConfig.weeklyTime,
         hourlyMinute: localFormState.value.scheduleConfig.hourlyMinute,
@@ -208,6 +218,25 @@ const weekDayOptions = ref(
   })),
 );
 
+// 通知触发条件选项
+const notificationTriggerOptions = [
+  {
+    value: 'on_failure',
+    label: '任务失败时通知',
+    description: '仅当任务执行失败时发送通知',
+  },
+  {
+    value: 'on_success',
+    label: '任务成功时通知',
+    description: '仅当任务执行成功时发送通知',
+  },
+  {
+    value: 'always',
+    label: '无论失败成功都通知',
+    description: '无论任务执行结果如何都发送通知',
+  },
+];
+
 // 自动发布绑定到scheduleConfig
 const autoPublish = computed({
   get: () => localFormState.value.outputConfig.autoPublish,
@@ -220,7 +249,6 @@ const enableScheduling = computed({
   set: (val) => {
     localFormState.value.scheduleConfig.isActive = val;
     if (!val) {
-      // 重置调度配置
       localFormState.value.scheduleConfig = {
         ...localFormState.value.scheduleConfig,
         intervalType: undefined,
@@ -267,6 +295,7 @@ const enableNotification = computed({
         notificationContent: '',
         notificationTitle: '',
         notificationUserID: '',
+        notificationTrigger: 'on_failure', // 重置时也重置触发条件
       };
     }
   },
@@ -292,7 +321,6 @@ const newOutput = ref<OutputConfig>({
 });
 const handleConfirmOutput = () => {
   if (selectedOutput.value) {
-    // 改为直接修改嵌套属性
     localFormState.value.outputConfig.outputPath = selectedOutput.value.name;
     localFormState.value.outputConfig.outputType =
       selectedOutput.value.name.toLowerCase();
@@ -539,7 +567,6 @@ const outputOptions = ref<OutputConfig[]>([
           <div class="header-top">
             <h3 class="section-title">
               <ACheckbox v-model:checked="enableOutput">
-                <!-- 修改为Checkbox -->
                 开启输出配置
               </ACheckbox>
             </h3>
@@ -575,7 +602,6 @@ const outputOptions = ref<OutputConfig[]>([
           <div class="header-top">
             <h3 class="section-title">
               <ACheckbox v-model:checked="enableNotification">
-                <!-- 修改为Checkbox -->
                 开启通知模板
               </ACheckbox>
             </h3>
@@ -618,6 +644,44 @@ const outputOptions = ref<OutputConfig[]>([
               :rows="4"
             />
           </AFormItem>
+
+          <!-- 新增：高级设置 - 通知触发条件 -->
+          <div class="advanced-settings mt-4">
+            <h4
+              class="mb-2 flex items-center text-sm font-medium text-gray-700"
+            >
+              <span>高级设置</span>
+              <ATooltip title="配置通知的触发条件">
+                <QuestionCircleOutlined class="ml-1 text-gray-400" />
+              </ATooltip>
+            </h4>
+            <AFormItem
+              label="触发条件"
+              name="notificationConfig.notificationTrigger"
+              class="mt-2"
+            >
+              <ARadioGroup
+                v-model:value="
+                  localFormState.notificationConfig.notificationTrigger
+                "
+                class="notification-trigger-radio"
+              >
+                <ARadio
+                  v-for="option in notificationTriggerOptions"
+                  :key="option.value"
+                  :value="option.value"
+                  class="notification-radio-item"
+                >
+                  <div class="flex flex-col">
+                    <span class="font-medium">{{ option.label }}</span>
+                    <span class="text-xs text-gray-500">{{
+                      option.description
+                    }}</span>
+                  </div>
+                </ARadio>
+              </ARadioGroup>
+            </AFormItem>
+          </div>
         </div>
       </div>
     </div>
@@ -703,4 +767,48 @@ const outputOptions = ref<OutputConfig[]>([
 </template>
 <style lang="scss" scoped>
 @use '../taskcommon/form-styles.scss' as *;
+
+.notification-trigger-radio {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+
+  .notification-radio-item {
+    border: 1px solid #d9d9d9;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin: 0 !important;
+    transition: all 0.3s;
+
+    &:hover {
+      border-color: #1890ff;
+      background-color: #f0f9ff;
+    }
+
+    &.ant-radio-wrapper-checked {
+      border-color: #1890ff;
+      background-color: #e6f7ff;
+
+      .ant-radio-inner {
+        border-color: #1890ff;
+        background-color: #1890ff;
+      }
+    }
+
+    .ant-radio {
+      top: 2px;
+    }
+
+    .ant-radio + span {
+      padding: 0 8px;
+      flex: 1;
+    }
+  }
+}
+
+.advanced-settings {
+  border-top: 1px solid #f0f0f0;
+  padding-top: 16px;
+}
 </style>

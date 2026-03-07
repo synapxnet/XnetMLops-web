@@ -7,45 +7,49 @@ import type {
 import { useRouter } from 'vue-router';
 
 import { WorkbenchProject } from '@vben/common-ui';
-import { SvgBtc1LogoIcon } from '@vben/icons';
-import { useUserStore } from '@vben/stores';
 import { openWindow } from '@vben/utils';
 
 import { Card } from 'ant-design-vue';
-
-const userStore = useUserStore();
 
 // 这是一个示例数据，实际项目中需要根据实际情况进行调整
 // url 也可以是内部路由，在 navTo 方法中识别处理，进行内部跳转
 // 例如：url: /dashboard/workspace
 const projectItems: WorkbenchProjectItem[] = [
   {
-    color: '',
-    icon: 'carbon:logo-github',
+    color: '#1890ff',
+    icon: 'carbon:data-table',
     title: '数据集配置项',
     content: '数据类型及数据区域配置',
-    group: 'DPP/MTP',
+    group: 'DPP配置',
     date: '2021-04-01',
     url: '/SMP/DPPManage/DatasetConfigManage',
   },
   {
     color: '#3fb27f',
-    icon: 'ion:logo-vue',
-    title: 'Vue',
+    icon: 'carbon:cloud-storage',
+    title: '存储桶配置',
     content: '子数据域配置',
     date: '2021-04-01',
-    group: 'DPP/MTP',
+    group: 'DPP配置',
     url: '/SMP/DPPManage/BucketConfigManage',
   },
-  // 自定义添加
   {
-    color: '',
-    content: '不要等待机会，而要创造机会。',
-    date: '2025-03-16',
-    group: '金融组',
-    icon: SvgBtc1LogoIcon,
-    title: 'BTCUSDT',
-    url: '/Test20250315',
+    color: '#722ed1',
+    icon: 'carbon:data-base',
+    title: '数据源配置',
+    content: '数据库连接配置（MySQL、PostgreSQL等）',
+    group: 'DPP配置',
+    date: '2025-01-01',
+    url: '/SMP/DPPManage/DataSourceManage',
+  },
+  {
+    color: '#fa8c16',
+    icon: 'carbon:logo-github',
+    title: '特征算子仓库',
+    content: '特征工程算子Git仓库配置',
+    group: 'DPP配置',
+    date: '2025-01-01',
+    url: '/SMP/DPPManage/FeatureOperatorGitManage',
   },
 ];
 

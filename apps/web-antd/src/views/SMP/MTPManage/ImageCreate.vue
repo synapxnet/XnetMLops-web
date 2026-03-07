@@ -753,13 +753,15 @@ onMounted(() => {
 }
 
 .docker-editor-panel {
-  background-color: #f0f7ff;
   border-radius: 8px;
 }
 
 :deep(.ant-input) {
-  background-color: #ffffff;
   border: 1px solid #d9d9d9;
+}
+
+.dark .docker-editor-panel {
+  background-color: #1f2937;
 }
 
 :deep(.ant-input:hover),

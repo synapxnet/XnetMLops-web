@@ -72,7 +72,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           icon: '',
           hideInMenu: true,
-          title: $t('修改数据集'),
+          title: $t('数据集详情'),
         },
         name: 'DPP:dataset:datafileModify',
         path: '/DPP/dataset/datafileModify',
@@ -84,12 +84,84 @@ const routes: RouteRecordRaw[] = [
         meta: {
           icon: '',
           hideInMenu: true,
-          title: $t('修改数据集'),
+          title: $t('数据集文件管理'),
         },
         name: 'DPP:dataset:datafileManager',
         path: '/DPP/dataset/datafileManager',
         // @ts-ignore 忽略报错
         component: () => import('#/views/DPP/dataset/datafileManager.vue'),
+      },
+      {
+        // 特征工程列表
+        meta: {
+          icon: '',
+          menuVisibleWithForbidden: true,
+          title: $t('特征工程'),
+        },
+        name: 'DPP:FeatureEngineering:index',
+        path: '/DPP/feature-engineering/index',
+        // @ts-ignore 忽略报错
+        component: () => import('#/views/DPP/FeatureEngineering/index.vue'),
+      },
+      {
+        // 新建特征工程
+        meta: {
+          icon: '',
+          hideInMenu: true,
+          title: $t('新建特征工程'),
+        },
+        name: 'DPP:FeatureEngineering:create',
+        path: '/DPP/feature-engineering/create',
+        // @ts-ignore 忽略报错
+        component: () =>
+          import('#/views/DPP/FeatureEngineering/FeatureCreate.vue'),
+      },
+      {
+        // 编辑特征工程
+        meta: {
+          icon: '',
+          hideInMenu: true,
+          title: $t('编辑特征工程'),
+        },
+        name: 'DPP:FeatureEngineering:edit',
+        path: '/DPP/feature-engineering/edit/:id',
+        // @ts-ignore 忽略报错
+        component: () =>
+          import('#/views/DPP/FeatureEngineering/FeatureCreate.vue'),
+      },
+      // RAG 知识库管理
+      {
+        meta: {
+          icon: '',
+          menuVisibleWithForbidden: true,
+          title: $t('知识库'),
+        },
+        name: 'DPP:KnowledgeBase:index',
+        path: '/DPP/KnowledgeBase',
+        // @ts-ignore 忽略报错
+        component: () => import('#/views/DPP/KnowledgeBase/index.vue'),
+      },
+      {
+        meta: {
+          icon: '',
+          hideInMenu: true,
+          title: $t('知识库文档管理'),
+        },
+        name: 'DPP:KnowledgeBase:documents',
+        path: '/DPP/KnowledgeBase/documents',
+        // @ts-ignore 忽略报错
+        component: () => import('#/views/DPP/KnowledgeBase/documents.vue'),
+      },
+      {
+        meta: {
+          icon: '',
+          hideInMenu: true,
+          title: $t('知识库检索测试'),
+        },
+        name: 'DPP:KnowledgeBase:retrieval-test',
+        path: '/DPP/KnowledgeBase/retrieval-test',
+        // @ts-ignore 忽略报错
+        component: () => import('#/views/DPP/KnowledgeBase/retrieval-test.vue'),
       },
     ],
   },

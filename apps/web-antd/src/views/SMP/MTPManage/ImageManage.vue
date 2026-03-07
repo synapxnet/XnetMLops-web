@@ -10,6 +10,7 @@ import {
   ExclamationCircleOutlined,
   PlusOutlined,
   SearchOutlined,
+  SyncOutlined,
 } from '@ant-design/icons-vue';
 import {
   Button,
@@ -195,12 +196,11 @@ const renderStatusTag = (repo: HarborRepository) => {
     {
       color: isValidUrl ? 'green' : 'red',
     },
-    [
-      h('span', { class: 'flex items-center gap-1' }, [
-        isValidUrl ? h(CheckCircleOutlined) : h(ExclamationCircleOutlined),
-        h('span', isValidUrl ? '有效' : '无效'),
-      ]),
-    ],
+    // 使用函数形式的 slot
+    () => h('span', { class: 'flex items-center gap-1' }, [
+      isValidUrl ? h(CheckCircleOutlined) : h(ExclamationCircleOutlined),
+      h('span', isValidUrl ? '有效' : '无效'),
+    ]),
   );
 };
 
@@ -290,6 +290,7 @@ onMounted(() => {
 </script>
 
 <template>
+  <div class="image-manage-wrapper">
   <div class="container mx-auto px-4 py-6">
     <!-- 标题和操作区 -->
     <div class="mb-6 flex items-center justify-between">
@@ -353,7 +354,7 @@ onMounted(() => {
   <!-- 添加/编辑仓库模态框 -->
   <Modal
     :title="isEditing ? '编辑仓库' : '添加仓库'"
-    v-model:visible="modalVisible"
+    v-model:open="modalVisible"
     width="600px"
     :ok-text="isEditing ? '更新' : '创建'"
     cancel-text="取消"
@@ -437,6 +438,7 @@ onMounted(() => {
       </div>
     </div>
   </Modal>
+  </div>
 </template>
 
 <style scoped>
@@ -455,13 +457,11 @@ onMounted(() => {
 }
 
 :deep(.ant-table-thead > tr > th) {
-  background-color: #f8fafc !important;
   font-weight: 600;
 }
 
 :deep(.ant-table) {
   border-radius: 6px;
   overflow: hidden;
-  border: 1px solid #f0f0f0;
 }
 </style>

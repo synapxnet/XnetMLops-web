@@ -98,17 +98,26 @@ const fetchFileList = async () => {
     if (response && Array.isArray(response) && response.length > 0) {
       // 确保正确处理数组响应
       fileList.value = response.map((file) => {
+        // 处理 HDFS URI，提取实际路径
+        // 例如：hdfs://192.168.1.5:8020/datasets/... -> /datasets/...
+        let rawPath = file.path;
+        if (rawPath.startsWith('hdfs://')) {
+          // 移除 hdfs://host:port 前缀，只保留路径部分
+          const hdfsMatch = rawPath.match(/^hdfs:\/\/[^/]+(\/.*)/);
+          if (hdfsMatch) {
+            rawPath = hdfsMatch[1];
+          }
+        }
+
         // 从完整路径中提取文件名
-        const fileName = file.path.split('/').pop() || '未知文件';
+        const fileName = rawPath.split('/').pop() || '未知文件';
 
         // 确保路径以斜杠开头
-        const filePath = file.path.startsWith('/')
-          ? file.path
-          : `/${file.path}`;
+        const filePath = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
 
         return {
           ...file,
-          id: file.path, // 使用完整路径作为ID
+          id: filePath, // 使用处理后的路径作为ID
           name: fileName,
           isDirectory: file.directory, // 使用后端返回的directory字段
           sizeFormatted: formatFileSize(file.size || 0),
@@ -205,7 +214,9 @@ const handleUpload = async () => {
   }
 
   try {
-    const response: ApiResponse = await uploadHdfsFile(
+    // 响应拦截器已经提取了 data 字段，response 直接就是 data 的内容
+    // 如果请求成功，response 会是 data 对象；如果失败会抛出异常
+    await uploadHdfsFile(
       datasetId.value,
       currentPath.value,
       uploadFile.value,
@@ -214,17 +225,13 @@ const handleUpload = async () => {
       },
     );
 
-    // 检查响应代码 - 假设0表示成功
-    if (response.code === 0) {
-      message.success('文件上传成功');
-      fetchFileList();
-      uploadVisible.value = false;
-      uploadFile.value = null;
-      uploadFileName.value = '';
-      uploadProgress.value = 0;
-    } else {
-      message.error(response.message || '文件上传失败');
-    }
+    // 请求成功（没有抛出异常）
+    message.success('文件上传成功');
+    fetchFileList();
+    uploadVisible.value = false;
+    uploadFile.value = null;
+    uploadFileName.value = '';
+    uploadProgress.value = 0;
   } catch (error) {
     console.error('文件上传失败:', error);
     message.error('文件上传失败');
@@ -267,18 +274,14 @@ const handleDelete = (file: HdfsFile) => {
     content: '删除后不可恢复',
     onOk: async () => {
       try {
-        const response: ApiResponse = await deleteHdfsFile(
+        // 响应拦截器已经提取了 data 字段，成功时不会抛出异常
+        await deleteHdfsFile(
           datasetId.value,
           file.id, // 使用完整路径作为ID
         );
 
-        // 检查响应代码 - 假设0表示成功
-        if (response.code === 0) {
-          message.success('删除成功');
-          fetchFileList();
-        } else {
-          message.error(response.message || '删除失败');
-        }
+        message.success('删除成功');
+        fetchFileList();
       } catch (error) {
         console.error('删除失败:', error);
         message.error('删除失败');
@@ -295,21 +298,17 @@ const handleCreateFolder = async () => {
   }
 
   try {
-    const response: ApiResponse = await createHdfsDirectory(
+    // 响应拦截器已经提取了 data 字段，成功时不会抛出异常
+    await createHdfsDirectory(
       datasetId.value,
       currentPath.value,
       newFolderName.value,
     );
 
-    // 检查响应代码 - 假设0表示成功
-    if (response.code === 0) {
-      message.success('文件夹创建成功');
-      fetchFileList();
-      createFolderVisible.value = false;
-      newFolderName.value = '';
-    } else {
-      message.error(response.message || '文件夹创建失败');
-    }
+    message.success('文件夹创建成功');
+    fetchFileList();
+    createFolderVisible.value = false;
+    newFolderName.value = '';
   } catch (error) {
     console.error('文件夹创建失败:', error);
     message.error('文件夹创建失败');
@@ -343,19 +342,15 @@ const handleBatchDelete = () => {
     content: '删除后不可恢复',
     onOk: async () => {
       try {
-        const response: ApiResponse = await batchDeleteHdfsFiles(
+        // 响应拦截器已经提取了 data 字段，成功时不会抛出异常
+        await batchDeleteHdfsFiles(
           datasetId.value,
           selectedFiles.value,
         );
 
-        // 检查响应代码 - 假设0表示成功
-        if (response.code === 0) {
-          message.success('删除成功');
-          selectedFiles.value = [];
-          fetchFileList();
-        } else {
-          message.error(response.message || '删除失败');
-        }
+        message.success('删除成功');
+        selectedFiles.value = [];
+        fetchFileList();
       } catch (error) {
         console.error('删除失败:', error);
         message.error('删除失败');
@@ -543,18 +538,12 @@ onMounted(() => {
 
 <style scoped>
 .hdfs-table :deep(.ant-table-thead > tr > th) {
-  background-color: #f0f8ff;
   font-weight: 600;
 }
 
-.hdfs-table :deep(.ant-table-tbody > tr:hover) {
-  background-color: #f9f9f9;
-}
-
 .file-details {
-  background-color: #fafafa;
   padding: 16px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--ant-color-border);
   border-radius: 4px;
   margin: 8px 0;
 }
@@ -567,7 +556,7 @@ onMounted(() => {
 .detail-label {
   font-weight: 600;
   width: 80px;
-  color: #666;
+  color: var(--ant-color-text-secondary);
 }
 
 .detail-value {
@@ -576,13 +565,12 @@ onMounted(() => {
 
 .upload-container {
   padding: 16px;
-  border: 1px dashed #d9d9d9;
+  border: 1px dashed var(--ant-color-border);
   border-radius: 4px;
   text-align: center;
 }
 
 .file-info {
-  background-color: #f5f5f5;
   padding: 8px;
   border-radius: 4px;
   display: flex;
@@ -590,7 +578,7 @@ onMounted(() => {
 }
 
 .file-size {
-  color: #999;
+  color: var(--ant-color-text-tertiary);
   margin-left: 8px;
 }
 </style>

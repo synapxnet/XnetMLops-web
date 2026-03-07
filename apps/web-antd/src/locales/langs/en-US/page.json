@@ -22,5 +22,15 @@
   },
   "RMP": {
     "title": "Rights Management Platform(RMP)"
+  },
+  "XAA": {
+    "title": "Xnet AI Agent(XAA)",
+    "workflow": "Workflow Management",
+    "workflowCreate": "Create Workflow",
+    "workflowEdit": "Edit Workflow",
+    "workflowDesigner": "Workflow Designer",
+    "executions": "Execution History",
+    "executionDetail": "Execution Detail",
+    "skill": "Skill Management"
   }
 }

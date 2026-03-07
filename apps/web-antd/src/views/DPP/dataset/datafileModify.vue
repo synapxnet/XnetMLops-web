@@ -396,7 +396,7 @@ const beforeUpload = (file: File) => {
 <style scoped>
 /* 与创建页面完全相同的样式 */
 .upload-section {
-  @apply rounded-lg bg-gray-50;
+  @apply rounded-lg bg-gray-50 dark:bg-gray-800;
 }
 
 :deep(.ant-upload.ant-upload-drag) {
@@ -448,7 +448,7 @@ const beforeUpload = (file: File) => {
 }
 
 .header-line {
-  @apply absolute bottom-0 left-0 h-px w-full bg-gray-200;
+  @apply absolute bottom-0 left-0 h-px w-full bg-gray-200 dark:bg-gray-700;
 }
 
 .drag-content {
@@ -478,9 +478,7 @@ const beforeUpload = (file: File) => {
 /* 添加禁用字段样式 */
 :deep(.disabled-input .ant-select-selector),
 :deep(.disabled-input .ant-input) {
-  background-color: #f5f5f5 !important;
   cursor: not-allowed !important;
-  color: rgba(0, 0, 0, 0.65) !important;
 }
 
 :deep(.disabled-input .ant-select-arrow) {

@@ -404,7 +404,7 @@ onMounted(() => {
   <div class="mt-5 rounded-lg bg-white p-6 shadow">
     <!-- 过滤条件卡片（置顶） -->
     <ACard
-      class="mb-6 !border-0 bg-gray-50 p-4 shadow-sm"
+      class="mb-6 !border-0 bg-gray-50 dark:bg-gray-800 p-4 shadow-sm"
       :body-style="{ padding: '16px 20px' }"
     >
       <div class="flex flex-wrap items-center gap-4">
@@ -538,8 +538,7 @@ onMounted(() => {
         <AButton
           type="primary"
           @click="showAddModal('tenant')"
-          class="flex items-center"
-          style="background-color: #52c41a; border-color: #52c41a"
+          class="flex items-center !bg-green-500 !border-green-500 hover:!bg-green-600"
         >
           <PlusOutlined class="mr-1" />
           新增租户存储桶
@@ -599,19 +598,16 @@ onMounted(() => {
                 }}%
               </span>
             </div>
-            <div class="mt-1 h-2 rounded-full bg-gray-200">
+            <div class="mt-1 h-2 rounded-full bg-gray-200 dark:bg-gray-700">
               <div
                 class="h-full rounded-full"
+                :class="{
+                  'bg-red-500': getUsageStatus(record.current_size, record.max_size).color === 'red',
+                  'bg-orange-500': getUsageStatus(record.current_size, record.max_size).color === 'orange',
+                  'bg-green-500': getUsageStatus(record.current_size, record.max_size).color !== 'red' && getUsageStatus(record.current_size, record.max_size).color !== 'orange',
+                }"
                 :style="{
                   width: `${(record.current_size / record.max_size) * 100}%`,
-                  backgroundColor:
-                    getUsageStatus(record.current_size, record.max_size)
-                      .color === 'red'
-                      ? '#f5222d'
-                      : getUsageStatus(record.current_size, record.max_size)
-                            .color === 'orange'
-                        ? '#fa8c16'
-                        : '#52c41a',
                 }"
               ></div>
             </div>
@@ -672,8 +668,6 @@ onMounted(() => {
 
 /* 过滤条件卡片 */
 .filter-card {
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
   border-radius: 8px;
 }
 
@@ -684,7 +678,6 @@ onMounted(() => {
 }
 
 :deep(.ant-table-thead > tr > th) {
-  background-color: #fafafa;
   font-weight: 600;
 }
 
@@ -700,12 +693,11 @@ onMounted(() => {
 }
 
 :deep(.ant-input-affix-wrapper:hover) {
-  border-color: #1890ff;
+  border-color: var(--ant-color-primary);
 }
 
 :deep(.ant-input-affix-wrapper-focused) {
-  border-color: #1890ff;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+  border-color: var(--ant-color-primary);
 }
 
 /* 标签样式 */

@@ -1,23 +1,39 @@
 <script lang="ts" setup>
+import type { HdfsFile } from '../../SMP/api/types';
+
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
 
 import {
+  AlertOutlined,
+  CloudOutlined,
+  FileOutlined,
+  FolderOutlined,
+} from '@ant-design/icons-vue';
+import {
+  Alert,
   Button,
   Card,
   Collapse,
+  Descriptions,
   Form,
   Input,
   message,
   Modal,
+  Progress,
   Select,
+  Table,
   Upload,
 } from 'ant-design-vue';
 
 // 引入API函数
 import { fetchAlgorithmDetail, updateAlgorithm } from '../../SMP/api/algorithm';
+import {
+  fetchAlgorithmFileList,
+  uploadAlgorithmFile,
+} from '../../SMP/api/algorithmManager';
 import { getbucketConfig } from '../../SMP/api/bucketConfig';
 import { fetchConfig } from '../../SMP/api/datasetConfig';
 
@@ -37,6 +53,18 @@ const activeKeys = ref(['advanced-settings']);
 const formState = ref<Record<string, any>>({});
 const algorithmId = ref<null | number>(null);
 
+// CAS 模式相关
+const isCAS = ref(false);
+const cloudAlgorithmInfo = ref<{
+  id: string;
+  name: string;
+  version: string;
+} | null>(null);
+
+// 算法文件列表（非CAS模式）
+const algorithmFiles = ref<HdfsFile[]>([]);
+const filesLoading = ref(false);
+
 // 配置数据
 const configData = ref({
   datasetTypes: [] as { label: string; value: string }[],
@@ -53,6 +81,19 @@ const uploadProgress = ref(0);
 const uploadStatus = ref<'error' | 'idle' | 'success' | 'uploading'>('idle');
 const selectedFile = ref<File | null>(null);
 const uploadModalVisible = ref(false);
+
+// 文件列表表格列
+const fileColumns = [
+  { title: '文件名', dataIndex: 'name', key: 'name' },
+  { title: '大小', dataIndex: 'sizeFormatted', key: 'size' },
+  {
+    title: '修改时间',
+    dataIndex: 'modificationTime',
+    key: 'modificationTime',
+    customRender: ({ text }: { text: number }) =>
+      text ? new Date(text).toLocaleString() : '-',
+  },
+];
 
 // 从API加载配置
 const loadConfig = async () => {
@@ -188,6 +229,56 @@ const schema = computed(() => [
   },
 ]);
 
+// 格式化文件大小
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${Number.parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
+};
+
+// 加载算法文件列表（非CAS模式）
+const loadAlgorithmFiles = async () => {
+  if (!algorithmId.value || isCAS.value) return;
+
+  filesLoading.value = true;
+  try {
+    const response = await fetchAlgorithmFileList(
+      algorithmId.value.toString(),
+      '/',
+    );
+
+    const data = response?.data || response;
+
+    if (data && Array.isArray(data)) {
+      algorithmFiles.value = data.map((file: any) => {
+        let rawPath = file.path;
+        if (rawPath.startsWith('hdfs://')) {
+          const hdfsMatch = rawPath.match(/^hdfs:\/\/[^/]+(\/.*)/);
+          if (hdfsMatch) {
+            rawPath = hdfsMatch[1];
+          }
+        }
+
+        const fileName = rawPath.split('/').pop() || '未知文件';
+
+        return {
+          ...file,
+          id: rawPath,
+          name: fileName,
+          isDirectory: file.directory,
+          sizeFormatted: formatFileSize(file.size || 0),
+        };
+      });
+    }
+  } catch (error) {
+    console.error('加载算法文件列表失败:', error);
+  } finally {
+    filesLoading.value = false;
+  }
+};
+
 // 加载算法信息
 const loadAlgorithm = async () => {
   const id = route.query.id ? Number.parseInt(route.query.id as string) : null;
@@ -203,6 +294,18 @@ const loadAlgorithm = async () => {
     // 调用API获取算法详情
     const algorithm = await fetchAlgorithmDetail(id);
 
+    // 设置 CAS 模式
+    isCAS.value = algorithm.is_CAS === true || algorithm.isCAS === true;
+
+    // 如果是 CAS 模式，设置云算法信息
+    if (isCAS.value && algorithm.cloud_algorithm_id) {
+      cloudAlgorithmInfo.value = {
+        id: algorithm.cloud_algorithm_id,
+        name: algorithm.algorithm_name,
+        version: algorithm.version,
+      };
+    }
+
     // 查找存储桶信息
     const bucket = buckets.value.find((b) => b.name === algorithm.bucket_name);
     if (bucket) {
@@ -215,6 +318,11 @@ const loadAlgorithm = async () => {
       encryption: algorithm.encryption ? '1' : '0',
       subdata_area: algorithm.subdata_area ? '1' : '0',
     };
+
+    // 非 CAS 模式加载文件列表
+    if (!isCAS.value) {
+      await loadAlgorithmFiles();
+    }
   } catch (error) {
     console.error('加载算法详情失败', error);
     message.error('加载算法详情失败');
@@ -326,23 +434,48 @@ const handleFileChange = (info: any) => {
   uploadProgress.value = 0;
 };
 
-const startUpload = () => {
+const startUpload = async () => {
   if (!selectedFile.value) {
     message.warning('请先选择文件');
     return;
   }
 
+  if (!algorithmId.value) {
+    message.error('算法ID无效');
+    return;
+  }
+
   uploadModalVisible.value = true;
   uploadStatus.value = 'uploading';
+  uploadProgress.value = 0;
 
-  // 模拟上传进度
-  const interval = setInterval(() => {
-    uploadProgress.value += 5;
-    if (uploadProgress.value >= 100) {
-      clearInterval(interval);
+  try {
+    const response = await uploadAlgorithmFile(
+      algorithmId.value.toString(),
+      '/',
+      selectedFile.value,
+      (progress) => {
+        uploadProgress.value = progress;
+      },
+    );
+
+    if (response.code === 0) {
       uploadStatus.value = 'success';
+      message.success('文件上传成功（已覆盖同名文件）');
+      // 刷新文件列表
+      await loadAlgorithmFiles();
+      // 清空选择
+      fileList.value = [];
+      selectedFile.value = null;
+    } else {
+      uploadStatus.value = 'error';
+      message.error(response.message || '文件上传失败');
     }
-  }, 200);
+  } catch (error: any) {
+    uploadStatus.value = 'error';
+    console.error('文件上传失败:', error);
+    message.error(error?.response?.data?.message || '文件上传失败');
+  }
 };
 
 const cancelUpload = () => {
@@ -350,6 +483,25 @@ const cancelUpload = () => {
   uploadStatus.value = 'idle';
   uploadProgress.value = 0;
   message.info('上传已取消');
+};
+
+// 跳转到完整文件管理器
+const goToFileManager = () => {
+  router.push({
+    path: '/MTP/algorithm/algorithmFileManager',
+    query: {
+      id: algorithmId.value?.toString(),
+      name: formState.value.algorithm_name,
+      isCAS: isCAS.value ? 'true' : 'false',
+    },
+  });
+};
+
+// 选择云算法（CAS模式）
+const selectCloudAlgorithm = () => {
+  // 跳转到 SMP 云算法仓库选择页面
+  message.info('请前往 SMP 云算法仓库选择算法');
+  // TODO: 实现云算法选择逻辑
 };
 </script>
 
@@ -400,44 +552,130 @@ const cancelUpload = () => {
             </div>
           </template>
 
-          <div class="upload-section">
-            <h3 class="section-title">算法文件</h3>
-            <p class="section-note">
-              当前文件: {{ formState.algorithm_file || '未上传' }}
-            </p>
-
-            <AUpload
-              class="w-full"
-              :file-list="fileList"
-              @change="handleFileChange"
-              accept=".py,.zip,.tar"
-              before-upload:false
-              type="drag"
-              :multiple="false"
-              :show-upload-list="{
-                showPreviewIcon: true,
-                showRemoveIcon: true,
-                showDownloadIcon: false,
-              }"
+          <!-- CAS 模式：显示云算法信息 -->
+          <div v-if="isCAS" class="cas-section">
+            <Alert
+              message="云算法仓库 (CAS) 模式"
+              description="当前算法来自云算法仓库，如需修改算法文件请在 SMP 云算法仓库中操作。"
+              type="info"
+              show-icon
+              class="mb-4"
             >
-              <div class="drag-content">
-                <div class="upload-tip">
-                  <span class="tip-icon">📁</span>
-                  <p class="tip-text">点击或拖拽文件到此区域上传新版本</p>
-                  <p class="support-types">支持格式：PY、ZIP、TAR</p>
-                  <p class="size-limit">单个文件不超过100GB</p>
-                </div>
-              </div>
-            </AUpload>
+              <template #icon><CloudOutlined /></template>
+            </Alert>
 
-            <Button
-              type="primary"
-              class="mt-4"
-              @click="startUpload"
-              :disabled="!selectedFile"
-            >
-              上传新版本
+            <h3 class="section-title">
+              <CloudOutlined class="mr-2" />
+              云算法信息
+            </h3>
+
+            <Descriptions bordered :column="1" class="mb-4">
+              <Descriptions.Item label="云算法ID">
+                {{ cloudAlgorithmInfo?.id || formState.cloud_algorithm_id || '-' }}
+              </Descriptions.Item>
+              <Descriptions.Item label="算法名称">
+                {{ cloudAlgorithmInfo?.name || formState.algorithm_name || '-' }}
+              </Descriptions.Item>
+              <Descriptions.Item label="版本">
+                {{ cloudAlgorithmInfo?.version || formState.version || '-' }}
+              </Descriptions.Item>
+            </Descriptions>
+
+            <Button type="primary" @click="selectCloudAlgorithm">
+              <CloudOutlined />
+              更换云算法
             </Button>
+          </div>
+
+          <!-- 非 CAS 模式：显示算法文件 -->
+          <div v-else class="upload-section">
+            <h3 class="section-title">
+              <FileOutlined class="mr-2" />
+              算法文件
+            </h3>
+
+            <!-- 当前文件列表 -->
+            <div class="current-files mb-4">
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-gray-600">当前文件列表：</span>
+                <Button type="link" size="small" @click="goToFileManager">
+                  查看完整目录
+                </Button>
+              </div>
+
+              <Table
+                :data-source="algorithmFiles"
+                :columns="fileColumns"
+                :loading="filesLoading"
+                :pagination="false"
+                size="small"
+                row-key="id"
+                :locale="{ emptyText: '暂无文件' }"
+              >
+                <template #bodyCell="{ column, record }">
+                  <template v-if="column.key === 'name'">
+                    <div class="flex items-center">
+                      <FolderOutlined
+                        v-if="record.isDirectory"
+                        class="mr-2 text-blue-500"
+                      />
+                      <FileOutlined v-else class="mr-2 text-gray-500" />
+                      <span>{{ record.name }}</span>
+                    </div>
+                  </template>
+                </template>
+              </Table>
+            </div>
+
+            <!-- 上传新文件 -->
+            <div class="upload-area">
+              <h4 class="text-sm font-medium mb-2">上传新文件（覆盖模式）：</h4>
+              <Alert
+                message="上传同名文件将会覆盖原有文件"
+                type="warning"
+                show-icon
+                class="mb-3"
+              >
+                <template #icon><AlertOutlined /></template>
+              </Alert>
+
+              <AUpload
+                class="w-full"
+                :file-list="fileList"
+                @change="handleFileChange"
+                accept=".py,.zip,.tar"
+                :before-upload="() => false"
+                type="drag"
+                :multiple="false"
+                :show-upload-list="{
+                  showPreviewIcon: true,
+                  showRemoveIcon: true,
+                  showDownloadIcon: false,
+                }"
+              >
+                <div class="drag-content">
+                  <div class="upload-tip">
+                    <span class="tip-icon">📁</span>
+                    <p class="tip-text">点击或拖拽文件到此区域上传</p>
+                    <p class="support-types">支持格式：PY、ZIP、TAR</p>
+                    <p class="size-limit">单个文件不超过100GB</p>
+                  </div>
+                </div>
+              </AUpload>
+
+              <div class="mt-4 flex gap-2">
+                <Button
+                  type="primary"
+                  @click="startUpload"
+                  :disabled="!selectedFile"
+                >
+                  上传文件
+                </Button>
+                <Button @click="goToFileManager">
+                  打开文件管理器
+                </Button>
+              </div>
+            </div>
           </div>
         </ACollapsePanel>
       </ACollapse>
@@ -549,7 +787,7 @@ const cancelUpload = () => {
   position: relative;
   font-size: 16px;
   font-weight: 600;
-  color: #1890ff;
+  color: var(--ant-color-primary);
   padding-bottom: 8px;
 }
 
@@ -559,12 +797,12 @@ const cancelUpload = () => {
   left: 0;
   width: 100%;
   height: 1px;
-  background-color: #e8e8e8;
+  background-color: var(--ant-color-border);
 }
 
-.upload-section {
+.upload-section,
+.cas-section {
   padding: 20px;
-  background-color: #f9f9f9;
   border-radius: 6px;
   margin-top: 16px;
 }
@@ -572,7 +810,9 @@ const cancelUpload = () => {
 .section-title {
   font-size: 16px;
   font-weight: 600;
-  margin-bottom: 8px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
 }
 
 .section-note {
@@ -580,10 +820,22 @@ const cancelUpload = () => {
   margin-bottom: 16px;
 }
 
+.current-files {
+  background: var(--ant-color-bg-container);
+  border: 1px solid var(--ant-color-border);
+  border-radius: 6px;
+  padding: 16px;
+}
+
+.upload-area {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--ant-color-border);
+}
+
 :deep(.ant-upload.ant-upload-drag) {
   height: 180px;
-  border: 2px dashed #d9d9d9;
-  background-color: #fff;
+  border: 2px dashed var(--ant-color-border);
   border-radius: 6px;
   display: flex;
   align-items: center;
@@ -592,7 +844,7 @@ const cancelUpload = () => {
 }
 
 :deep(.ant-upload.ant-upload-drag:hover) {
-  border-color: #1890ff;
+  border-color: var(--ant-color-primary);
 }
 
 .drag-content {
@@ -603,7 +855,7 @@ const cancelUpload = () => {
   font-size: 40px;
   margin-bottom: 12px;
   display: block;
-  color: #1890ff;
+  color: var(--ant-color-primary);
 }
 
 .tip-text {
@@ -657,14 +909,13 @@ const cancelUpload = () => {
 
 .progress-bar {
   height: 10px;
-  background-color: #f5f5f5;
   border-radius: 5px;
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background-color: #1890ff;
+  background-color: var(--ant-color-primary);
   border-radius: 5px;
   transition: width 0.3s;
 }
@@ -676,12 +927,12 @@ const cancelUpload = () => {
 }
 
 .success-text {
-  color: #52c41a;
+  color: var(--ant-color-success);
   font-weight: 500;
 }
 
 .error-text {
-  color: #f5222d;
+  color: var(--ant-color-error);
   font-weight: 500;
 }
 
@@ -710,13 +961,13 @@ const cancelUpload = () => {
 }
 
 .save-button {
-  background: linear-gradient(135deg, #52c41a, #389e0d);
+  background: var(--ant-color-success);
   color: white;
   border: none;
 }
 
 .cancel-button {
-  background: linear-gradient(135deg, #ff4d4f, #cf1322);
+  background: var(--ant-color-error);
   color: white;
   border: none;
 }
@@ -743,10 +994,7 @@ const cancelUpload = () => {
 
 :deep(.disabled-input .ant-input),
 :deep(.disabled-input .ant-select-selector) {
-  background-color: #f5f5f5;
-  color: rgba(0, 0, 0, 0.65);
   cursor: not-allowed;
-  border-color: #d9d9d9;
 }
 
 /* 响应式设计 */

@@ -20,6 +20,8 @@ export function useAppConfig(
     VITE_SMP_API_URL,
     VITE_DPP_API_URL,
     VITE_MTP_API_URL,
+    VITE_MEP_API_URL,
+    VITE_XAA_API_URL,
   } = config;
 
   return {
@@ -27,5 +29,7 @@ export function useAppConfig(
     dppApiURL: VITE_DPP_API_URL,
     mtpApiURL: VITE_MTP_API_URL,
     smpApiURL: VITE_SMP_API_URL,
+    mepApiURL: VITE_MEP_API_URL,
+    xaaApiURL: VITE_XAA_API_URL,
   };
 }

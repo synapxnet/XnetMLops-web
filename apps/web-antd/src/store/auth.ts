@@ -20,6 +20,41 @@ export const useAuthStore = defineStore('auth', () => {
   const loginLoading = ref(false);
 
   /**
+   * 跳转到登录页
+   */
+  async function redirectToLogin() {
+    resetAllStores();
+    await router.replace({
+      path: LOGIN_PATH,
+      query: {
+        redirect: encodeURIComponent(router.currentRoute.value.fullPath),
+      },
+    });
+  }
+
+  /**
+   * 获取用户信息和权限码（带错误处理）
+   */
+  async function fetchUserAndPermissions() {
+    try {
+      const [userInfo, accessCodes] = await Promise.all([
+        fetchUserInfo(),
+        getAccessCodesApi(),
+      ]);
+      return { userInfo, accessCodes };
+    } catch (error) {
+      // 获取用户信息或权限码失败，跳转到登录页
+      notification.error({
+        message: $t('authentication.requestFailed'),
+        description: $t('authentication.requestFailedDesc'),
+        duration: 3,
+      });
+      await redirectToLogin();
+      throw error; // 抛出错误让上层知道失败
+    }
+  }
+
+  /**
    * 异步处理登录操作
    * Asynchronously handle the login process
    * @param params 登录表单数据
@@ -39,17 +74,15 @@ export const useAuthStore = defineStore('auth', () => {
         accessStore.setAccessToken(accessToken);
 
         // 获取用户信息并存储到 accessStore 中
-        const [fetchUserInfoResult, accessCodes] = await Promise.all([
-          fetchUserInfo(),
-          getAccessCodesApi(),
-        ]);
+        const result = await fetchUserAndPermissions();
 
-        userInfo = fetchUserInfoResult;
+        if (!result) {
+          return { userInfo: null };
+        }
 
+        userInfo = result.userInfo;
         userStore.setUserInfo(userInfo);
-        accessStore.setAccessCodes(accessCodes);
-
-        // console.log('用户的访问代码:', accessCodes);
+        accessStore.setAccessCodes(result.accessCodes);
 
         if (accessStore.loginExpired) {
           accessStore.setLoginExpired(false);
@@ -67,6 +100,14 @@ export const useAuthStore = defineStore('auth', () => {
           });
         }
       }
+    } catch (error) {
+      // 登录失败或其他错误
+      console.error('Login failed:', error);
+      // 如果已经获取到token但后续步骤失败，需要清除token
+      if (accessStore.accessToken) {
+        await redirectToLogin();
+      }
+      return { userInfo: null };
     } finally {
       loginLoading.value = false;
     }
@@ -100,17 +141,15 @@ export const useAuthStore = defineStore('auth', () => {
         accessStore.setAccessToken(accessToken);
 
         // 获取用户信息并存储到 accessStore 中
-        const [fetchUserInfoResult, accessCodes] = await Promise.all([
-          fetchUserInfo(),
-          getAccessCodesApi(),
-        ]);
+        const result = await fetchUserAndPermissions();
 
-        userInfo = fetchUserInfoResult;
+        if (!result) {
+          return { userInfo: null };
+        }
 
+        userInfo = result.userInfo;
         userStore.setUserInfo(userInfo);
-        accessStore.setAccessCodes(accessCodes);
-
-        // console.log('用户的访问代码:', accessCodes);
+        accessStore.setAccessCodes(result.accessCodes);
 
         if (accessStore.loginExpired) {
           accessStore.setLoginExpired(false);
@@ -128,6 +167,14 @@ export const useAuthStore = defineStore('auth', () => {
           });
         }
       }
+    } catch (error) {
+      // 登录失败或其他错误
+      console.error('Code login failed:', error);
+      // 如果已经获取到token但后续步骤失败，需要清除token
+      if (accessStore.accessToken) {
+        await redirectToLogin();
+      }
+      return { userInfo: null };
     } finally {
       loginLoading.value = false;
     }
@@ -136,6 +183,7 @@ export const useAuthStore = defineStore('auth', () => {
       userInfo,
     };
   }
+
   async function logout(redirect: boolean = true) {
     try {
       await logoutApi();
@@ -158,9 +206,16 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function fetchUserInfo() {
     let userInfo: null | UserInfo = null;
-    userInfo = await getUserInfoApi();
-    userStore.setUserInfo(userInfo);
-    return userInfo;
+    try {
+      userInfo = await getUserInfoApi();
+      userStore.setUserInfo(userInfo);
+      return userInfo;
+    } catch (error) {
+      console.error('Fetch user info failed:', error);
+      // 获取用户信息失败，清空已设置的用户信息
+      userStore.setUserInfo(null);
+      throw error; // 抛出错误让上层处理
+    }
   }
 
   function $reset() {

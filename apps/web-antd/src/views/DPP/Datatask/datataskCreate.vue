@@ -255,7 +255,7 @@ const beforeUpload = (file: File) => {
 <style scoped>
 /* 上传区域样式 */
 .upload-section {
-  @apply rounded-lg bg-gray-50;
+  @apply rounded-lg bg-gray-50 dark:bg-gray-800;
 }
 
 :deep(.ant-upload.ant-upload-drag) {
@@ -309,7 +309,7 @@ const beforeUpload = (file: File) => {
 }
 
 .header-line {
-  @apply absolute bottom-0 left-0 h-px w-full bg-gray-200;
+  @apply absolute bottom-0 left-0 h-px w-full bg-gray-200 dark:bg-gray-700;
 }
 
 /* 拖拽内容样式 */
