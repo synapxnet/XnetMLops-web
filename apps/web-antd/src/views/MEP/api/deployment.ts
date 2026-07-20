@@ -9,6 +9,8 @@ import { message } from 'ant-design-vue';
 
 import { mepRequestClient } from '#/api/request';
 
+import { toSnakeCaseKeys } from './normalizers';
+
 /**
  * 获取模型部署列表
  */
@@ -16,7 +18,7 @@ export const fetchDeploymentList = async (): Promise<ModelDeployment[]> => {
   try {
     const response =
       await mepRequestClient.get<ModelDeployment[]>('/deployments');
-    return response;
+    return toSnakeCaseKeys(response);
   } catch (error) {
     console.error('获取部署列表失败:', error);
     message.error('获取部署列表失败');
@@ -34,7 +36,7 @@ export const fetchDeploymentDetail = async (
     const response = await mepRequestClient.get<ModelDeployment>(
       `/deployments/${id}`,
     );
-    return response;
+    return toSnakeCaseKeys(response);
   } catch (error) {
     console.error('获取部署详情失败:', error);
     message.error('获取部署详情失败');
@@ -64,7 +66,7 @@ export const createDeployment = async (
       payload,
     );
     message.success('创建部署任务成功');
-    return response;
+    return toSnakeCaseKeys(response);
   } catch (error) {
     console.error('创建部署失败:', error);
     message.error('创建部署失败');
@@ -85,7 +87,7 @@ export const updateDeployment = async (
       payload,
     );
     message.success('更新部署配置成功');
-    return response;
+    return toSnakeCaseKeys(response);
   } catch (error) {
     console.error('更新部署失败:', error);
     message.error('更新部署失败');

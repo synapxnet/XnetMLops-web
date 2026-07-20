@@ -311,7 +311,9 @@ const mapTaskDetail = (task: any): TaskDetail => {
 // 添加租户信息
 const currentUserInfo = inject<Ref<any>>('currentUserInfo', ref(null));
 const currentTenantInfo = inject<Ref<any>>('selectedOrganization', ref(null));
-const tenantUid = computed(() => currentTenantInfo.value?.tenantUid || '');
+const tenantUid = computed(
+  () => currentTenantInfo.value?.tenantUid || 'default',
+);
 const userId = computed(() => currentUserInfo.value?.userId || '');
 
 // 搜索相关逻辑

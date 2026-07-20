@@ -369,7 +369,9 @@ const mapTaskDetail = (task: any): TaskDetail => {
 // 添加租户信息
 const currentUserInfo = inject<Ref<any>>('currentUserInfo', ref(null));
 const currentTenantInfo = inject<Ref<any>>('selectedOrganization', ref(null));
-const tenantUid = computed(() => currentTenantInfo.value?.tenantUid || '');
+const tenantUid = computed(
+  () => currentTenantInfo.value?.tenantUid || 'default',
+);
 const userId = computed(() => currentUserInfo.value?.userId || '');
 
 // 搜索相关逻辑
@@ -1307,6 +1309,7 @@ const fetchData = async () => {
         schedulePollingTimer: undefined,
         scheduleCollapseActiveKey: [],
       }));
+      pagination.total = response.length;
 
       // 为每个任务获取执行记录
       await Promise.all(
@@ -1361,7 +1364,6 @@ const fetchData = async () => {
         }),
       );
 
-      pagination.total = response.length;
       initDependencies();
     }
   } catch {

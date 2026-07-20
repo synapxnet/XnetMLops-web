@@ -125,7 +125,7 @@ const routes: RouteRecordRaw[] = [
         name: 'MTP:train:job',
         path: '/MTP/train/job',
         // @ts-ignore 忽略报错
-        component: () => import('#/views/MTP/train/job/jobManager.vue'),
+        component: () => import('#/views/MTP/train/job/JobManager.vue'),
       },
     ],
   },

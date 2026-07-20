@@ -4,13 +4,15 @@ import { message } from 'ant-design-vue';
 
 import { mepRequestClient } from '#/api/request';
 
+import { toSnakeCaseKeys } from './normalizers';
+
 /**
  * 获取API Key列表
  */
 export const fetchApiKeyList = async (): Promise<ApiKeyItem[]> => {
   try {
     const response = await mepRequestClient.get<ApiKeyItem[]>('/api-keys');
-    return response;
+    return toSnakeCaseKeys(response);
   } catch (error) {
     console.error('获取API Key列表失败:', error);
     message.error('获取API Key列表失败');
@@ -24,7 +26,7 @@ export const fetchApiKeyList = async (): Promise<ApiKeyItem[]> => {
 export const fetchApiKeyDetail = async (id: number): Promise<ApiKeyItem> => {
   try {
     const response = await mepRequestClient.get<ApiKeyItem>(`/api-keys/${id}`);
-    return response;
+    return toSnakeCaseKeys(response);
   } catch (error) {
     console.error('获取API Key详情失败:', error);
     message.error('获取API Key详情失败');
@@ -53,7 +55,7 @@ export const createApiKey = async (
       ApiKeyItem & { plain_key: string }
     >('/api-keys', payload);
     message.success('创建API Key成功');
-    return response;
+    return toSnakeCaseKeys(response);
   } catch (error) {
     console.error('创建API Key失败:', error);
     message.error('创建API Key失败');
@@ -79,7 +81,7 @@ export const updateApiKey = async (
       payload,
     );
     message.success('更新API Key成功');
-    return response;
+    return toSnakeCaseKeys(response);
   } catch (error) {
     console.error('更新API Key失败:', error);
     message.error('更新API Key失败');
@@ -112,7 +114,7 @@ export const regenerateApiKey = async (
       `/api-keys/${id}/regenerate`,
     );
     message.success('重新生成API Key成功');
-    return response;
+    return toSnakeCaseKeys(response);
   } catch (error) {
     console.error('重新生成API Key失败:', error);
     message.error('重新生成API Key失败');

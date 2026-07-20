@@ -88,7 +88,7 @@ const deployConfig = ref<JenkinsMasterDeployConfig & { timezone?: string }>({
   javaVersion: '17',
   javaOpts: '-Xmx2g -Xms1g',
   adminUsername: 'admin',
-  adminPassword: 'admin123',
+  adminPassword: '',
   adminEmail: 'admin@localhost',
   installSuggestedPlugins: true,
   gitCredentials: [],

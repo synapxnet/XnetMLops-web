@@ -659,7 +659,7 @@ watch(searchKey, () => {
           {{ formErrors.token }}
         </p>
         <p class="mt-1 text-xs text-gray-500">
-          示例: ghp_your_token_here
+          示例: &lt;github-personal-access-token&gt;
         </p>
       </div>
 

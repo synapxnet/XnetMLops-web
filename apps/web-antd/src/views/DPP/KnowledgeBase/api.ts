@@ -18,6 +18,23 @@ import type {
 // dppRequestClient 会将请求代理到 DPP 后端服务
 const BASE_URL = '/dpp';
 
+function toCamelCaseKeys<T>(value: unknown): T {
+  if (Array.isArray(value)) {
+    return value.map((item) => toCamelCaseKeys(item)) as T;
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [
+        key.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase()),
+        toCamelCaseKeys(item),
+      ]),
+    ) as T;
+  }
+
+  return value as T;
+}
+
 // ==================== 知识库管理 ====================
 
 /**
@@ -29,14 +46,16 @@ export async function fetchKnowledgeBases(
   const url = status
     ? `${BASE_URL}/knowledge-bases?status=${status}`
     : `${BASE_URL}/knowledge-bases`;
-  return await dppRequestClient.get(url);
+  return toCamelCaseKeys(await dppRequestClient.get(url));
 }
 
 /**
  * 获取知识库详情
  */
 export async function fetchKnowledgeBase(id: number): Promise<KnowledgeBase> {
-  return await dppRequestClient.get(`${BASE_URL}/knowledge-bases/${id}`);
+  return toCamelCaseKeys(
+    await dppRequestClient.get(`${BASE_URL}/knowledge-bases/${id}`),
+  );
 }
 
 /**
@@ -84,7 +103,7 @@ export async function fetchDocuments(
   const url = status
     ? `${BASE_URL}/knowledge-bases/${kbId}/documents?status=${status}`
     : `${BASE_URL}/knowledge-bases/${kbId}/documents`;
-  return await dppRequestClient.get(url);
+  return toCamelCaseKeys(await dppRequestClient.get(url));
 }
 
 /**
@@ -94,8 +113,10 @@ export async function fetchDocument(
   kbId: number,
   docId: number,
 ): Promise<KBDocument> {
-  return await dppRequestClient.get(
-    `${BASE_URL}/knowledge-bases/${kbId}/documents/${docId}`,
+  return toCamelCaseKeys(
+    await dppRequestClient.get(
+      `${BASE_URL}/knowledge-bases/${kbId}/documents/${docId}`,
+    ),
   );
 }
 
@@ -155,8 +176,10 @@ export async function fetchChunks(
   kbId: number,
   docId: number,
 ): Promise<KBChunk[]> {
-  return await dppRequestClient.get(
-    `${BASE_URL}/knowledge-bases/${kbId}/documents/${docId}/chunks`,
+  return toCamelCaseKeys(
+    await dppRequestClient.get(
+      `${BASE_URL}/knowledge-bases/${kbId}/documents/${docId}/chunks`,
+    ),
   );
 }
 
@@ -198,7 +221,7 @@ export async function fetchRetrievalLogs(
   const url = limit
     ? `${BASE_URL}/knowledge-bases/${kbId}/retrieval-logs?limit=${limit}`
     : `${BASE_URL}/knowledge-bases/${kbId}/retrieval-logs`;
-  return await dppRequestClient.get(url);
+  return toCamelCaseKeys(await dppRequestClient.get(url));
 }
 
 // ==================== 嵌入模型 ====================
@@ -207,14 +230,18 @@ export async function fetchRetrievalLogs(
  * 获取嵌入模型列表
  */
 export async function fetchEmbeddingModels(): Promise<EmbeddingModel[]> {
-  return await dppRequestClient.get(`${BASE_URL}/embedding-models`);
+  return toCamelCaseKeys(
+    await dppRequestClient.get(`${BASE_URL}/embedding-models`),
+  );
 }
 
 /**
  * 获取嵌入模型详情
  */
 export async function fetchEmbeddingModel(id: number): Promise<EmbeddingModel> {
-  return await dppRequestClient.get(`${BASE_URL}/embedding-models/${id}`);
+  return toCamelCaseKeys(
+    await dppRequestClient.get(`${BASE_URL}/embedding-models/${id}`),
+  );
 }
 
 /**
