@@ -1,5 +1,7 @@
 <div align="center">
 
+**简体中文** | [English](./README.en-US.md) | [日本語](./README.ja-JP.md)
+
 # XnetMLops Web
 
 **XnetMLops 模型工程与智能体平台的 Web 控制台**
