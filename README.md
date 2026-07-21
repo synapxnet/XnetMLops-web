@@ -14,6 +14,30 @@
 
 ## 页面预览
 
+### DPP 数据处理
+
+| 数据集管理 | RAG 知识库 |
+| --- | --- |
+| ![XnetMLops 数据集管理](./docs/images/xnetmlops-dpp-datasets.png) | ![XnetMLops RAG 知识库](./docs/images/xnetmlops-dpp-knowledge-base.png) |
+
+### MTP 模型训练与 MEP 模型部署
+
+| 训练任务 | 模型部署 |
+| --- | --- |
+| ![XnetMLops 训练任务](./docs/images/xnetmlops-mtp-training.png) | ![XnetMLops 模型部署](./docs/images/xnetmlops-mep-deployments.png) |
+
+### SMP 系统管理与 XAA 智能体
+
+| 工作站资源 | 智能体工作流 |
+| --- | --- |
+| ![XnetMLops 工作站资源](./docs/images/xnetmlops-smp-workstations.png) | ![XnetMLops 智能体工作流](./docs/images/xnetmlops-xaa-workflows.png) |
+
+| 元技能仓库 | 智能助手 |
+| --- | --- |
+| ![XnetMLops 元技能仓库](./docs/images/xnetmlops-xaa-skills.png) | ![XnetMLops 智能助手](./docs/images/xnetmlops-xaa-assistants.png) |
+
+### 演示入口与项目信息
+
 | 演示登录 | 关于项目 |
 | --- | --- |
 | ![XnetMLops 演示登录](./docs/images/xnetmlops-login.png) | ![XnetMLops 关于项目](./docs/images/xnetmlops-about.png) |

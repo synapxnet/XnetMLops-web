@@ -1242,7 +1242,7 @@ const fetchScheduleRecordsForTask = async (record: DataItem) => {
         },
       );
     } else {
-      console.error('获取调度记录失败:', response);
+      record.scheduleRecords = [];
     }
   } catch (error) {
     console.error(`获取任务 ${record.uid} 的调度记录失败:`, error);
