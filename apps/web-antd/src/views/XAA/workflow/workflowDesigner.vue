@@ -167,7 +167,7 @@ onMounted(() => {
 <style scoped>
 .workflow-designer-page {
   height: calc(100vh - 48px);
-  background: #f0f2f5;
+  background: hsl(var(--muted));
 }
 
 :deep(.ant-spin-nested-loading) {

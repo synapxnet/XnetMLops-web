@@ -235,7 +235,7 @@ onMounted(() => {
 .installed-skills {
   padding: 16px;
   min-height: 100%;
-  background: #f5f5f5;
+  background: hsl(var(--background-deep));
 
   &__header {
     margin-bottom: 16px;
@@ -251,7 +251,7 @@ onMounted(() => {
   &__title {
     font-size: 24px;
     font-weight: 600;
-    color: #1f2937;
+    color: hsl(var(--foreground));
     margin: 0 0 8px 0;
     display: flex;
     align-items: center;
@@ -260,7 +260,7 @@ onMounted(() => {
 
   &__subtitle {
     font-size: 14px;
-    color: #6b7280;
+    color: hsl(var(--muted-foreground));
     margin: 0;
   }
 
@@ -288,7 +288,7 @@ onMounted(() => {
 
   &__name {
     font-weight: 500;
-    color: #1f2937;
+    color: hsl(var(--foreground));
     display: flex;
     align-items: center;
     gap: 8px;
@@ -296,7 +296,7 @@ onMounted(() => {
 
   &__desc {
     font-size: 12px;
-    color: #6b7280;
+    color: hsl(var(--muted-foreground));
     margin-top: 2px;
   }
 }

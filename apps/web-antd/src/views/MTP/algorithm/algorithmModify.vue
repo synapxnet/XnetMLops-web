@@ -816,7 +816,7 @@ const selectCloudAlgorithm = () => {
 }
 
 .section-note {
-  color: #666;
+  color: hsl(var(--muted-foreground));
   margin-bottom: 16px;
 }
 
@@ -866,7 +866,7 @@ const selectCloudAlgorithm = () => {
 
 .support-types,
 .size-limit {
-  color: #666;
+  color: hsl(var(--muted-foreground));
   font-size: 14px;
   margin-bottom: 4px;
 }
@@ -892,7 +892,7 @@ const selectCloudAlgorithm = () => {
 }
 
 .file-size {
-  color: #666;
+  color: hsl(var(--muted-foreground));
   font-size: 14px;
 }
 
@@ -943,7 +943,7 @@ const selectCloudAlgorithm = () => {
   gap: 20px;
   margin-top: 40px;
   padding-top: 30px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid hsl(var(--border));
 }
 
 .save-button,

@@ -563,7 +563,7 @@ onMounted(() => {
           <div class="section-title">
             跨云/跨地域部署配置
             <Switch v-model:checked="deployConfig.crossCloudMode" style="margin-left: 12px" />
-            <span style="margin-left: 8px; font-weight: normal; font-size: 13px; color: #666">
+            <span class="text-muted-foreground ml-2 text-[13px] font-normal">
               {{ deployConfig.crossCloudMode ? '已启用' : '未启用' }}
             </span>
           </div>
@@ -641,10 +641,10 @@ onMounted(() => {
 .section-title {
   font-size: 15px;
   font-weight: 600;
-  color: #333;
+  color: hsl(var(--foreground));
   padding: 12px 0;
   margin-top: 8px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid hsl(var(--border));
   margin-bottom: 16px;
   display: flex;
   align-items: center;
@@ -681,19 +681,19 @@ onMounted(() => {
   gap: 12px;
   padding-top: 24px;
   margin-top: 24px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid hsl(var(--border));
 }
 
 .hint-text {
   font-size: 12px;
-  color: #999;
+  color: hsl(var(--muted-foreground));
   margin-top: 4px;
 }
 
 /* Hosts 预览样式 */
 .hosts-preview {
-  background: #fafafa;
-  border: 1px solid #e8e8e8;
+  background: hsl(var(--muted));
+  border: 1px solid hsl(var(--border));
   border-radius: 4px;
   padding: 8px 12px;
 }

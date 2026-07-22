@@ -235,7 +235,7 @@ const clearZoneSearch = () => {
     <ACard
       title="数据类型配置"
       class="mb-6"
-      :head-style="{ backgroundColor: '#f0f2f5' }"
+      :head-style="{ backgroundColor: 'hsl(var(--muted))' }"
     >
       <template #extra>
         <div class="flex items-center gap-2">
@@ -306,7 +306,7 @@ const clearZoneSearch = () => {
     </ACard>
 
     <!-- 数据区域配置卡片 -->
-    <ACard title="数据区域配置" :head-style="{ backgroundColor: '#f0f2f5' }">
+    <ACard title="数据区域配置" :head-style="{ backgroundColor: 'hsl(var(--muted))' }">
       <template #extra>
         <div class="flex items-center gap-2">
           <!-- 搜索框 -->
@@ -389,11 +389,11 @@ const clearZoneSearch = () => {
 <style scoped>
 /* 添加必要的样式覆盖 */
 :deep(.ant-card-head) {
-  background-color: #f0f2f5 !important;
+  background-color: hsl(var(--muted)) !important;
 }
 
 :deep(.ant-table) {
-  border: 1px solid #e8e8e8;
+  border: 1px solid hsl(var(--border));
   border-radius: 4px;
 }
 

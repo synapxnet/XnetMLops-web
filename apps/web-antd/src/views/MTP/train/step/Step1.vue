@@ -705,12 +705,12 @@ const selectImage = () => {
 }
 
 .resource-card {
-  border: 2px solid #e8e8e8;
+  border: 2px solid hsl(var(--border));
   border-radius: 8px;
   padding: 16px;
   cursor: pointer;
   transition: all 0.3s ease;
-  background: #fff;
+  background: hsl(var(--card));
 
   &:hover {
     border-color: #40a9ff;
@@ -720,7 +720,7 @@ const selectImage = () => {
 
   &.selected {
     border-color: #1890ff;
-    background-color: #e6f7ff;
+    background-color: hsl(var(--primary) / 12%);
     box-shadow: 0 4px 12px rgba(24, 144, 255, 0.25);
   }
 
@@ -730,13 +730,13 @@ const selectImage = () => {
     align-items: center;
     margin-bottom: 12px;
     padding-bottom: 8px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid hsl(var(--border));
 
     h3 {
       margin: 0;
       font-size: 15px;
       font-weight: 600;
-      color: #262626;
+      color: hsl(var(--foreground));
     }
   }
 
@@ -752,32 +752,32 @@ const selectImage = () => {
   }
 
   .spec-label {
-    color: #8c8c8c;
+    color: hsl(var(--muted-foreground));
   }
 
   .spec-value {
-    color: #262626;
+    color: hsl(var(--foreground));
     font-weight: 500;
   }
 
   .card-footer {
     padding-top: 8px;
-    border-top: 1px solid #f0f0f0;
+    border-top: 1px solid hsl(var(--border));
   }
 
   .description {
     font-size: 12px;
-    color: #8c8c8c;
+    color: hsl(var(--muted-foreground));
   }
 
   h3 {
     margin-top: 0;
     margin-bottom: 8px;
-    color: #262626;
+    color: hsl(var(--foreground));
   }
 
   .specs {
-    color: #595959;
+    color: hsl(var(--muted-foreground));
     margin-bottom: 0;
   }
 }
@@ -792,11 +792,11 @@ const selectImage = () => {
     transition: background-color 0.2s;
 
     &:hover {
-      background-color: #f0f7ff;
+      background-color: hsl(var(--primary) / 8%);
     }
 
     &.selected {
-      background-color: #e6f7ff;
+      background-color: hsl(var(--primary) / 12%);
     }
   }
 }

@@ -77,8 +77,8 @@ function getIcon(iconName?: string) {
 <style lang="scss" scoped>
 .node-preview {
   min-width: 160px;
-  background: #fff;
-  border: 2px solid #e5e7eb;
+  background: hsl(var(--card));
+  border: 2px solid hsl(var(--border));
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   pointer-events: none;
@@ -105,7 +105,7 @@ function getIcon(iconName?: string) {
   &__title {
     font-size: 14px;
     font-weight: 600;
-    color: #1f2937;
+    color: hsl(var(--foreground));
   }
 }
 </style>

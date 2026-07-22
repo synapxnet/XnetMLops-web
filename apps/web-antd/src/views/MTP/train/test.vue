@@ -2026,8 +2026,8 @@ const data = ref<DataItem[]>([]);
 
 <style scoped>
 .search-container {
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background-color: hsl(var(--muted));
+  border: 1px solid hsl(var(--border));
   border-radius: 8px;
 }
 
@@ -2050,22 +2050,22 @@ const data = ref<DataItem[]>([]);
 
 :deep(.ant-descriptions-item-label) {
   font-weight: 500;
-  color: #4a5568;
+  color: hsl(var(--muted-foreground));
 }
 
 :deep(.ant-card-head) {
-  background-color: #f7fafc;
+  background-color: hsl(var(--muted));
 }
 
 .pipeline-stages {
   padding: 12px;
-  background-color: #f9f9f9;
+  background-color: hsl(var(--accent));
   border-radius: 4px;
 }
 
 .stage-item {
   padding: 8px 0;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid hsl(var(--border));
 }
 
 .stage-header {
@@ -2080,13 +2080,13 @@ const data = ref<DataItem[]>([]);
 
 .stage-duration {
   margin-left: auto;
-  color: #666;
+  color: hsl(var(--muted-foreground));
   font-size: 0.9em;
 }
 
 .stage-time {
   margin-top: 4px;
-  color: #888;
+  color: hsl(var(--muted-foreground));
   font-size: 0.85em;
 }
 

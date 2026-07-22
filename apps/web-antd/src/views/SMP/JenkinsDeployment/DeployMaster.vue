@@ -1060,7 +1060,7 @@ onUnmounted(() => {
 .deploying-text {
   margin-top: 24px;
   font-size: 16px;
-  color: #666;
+  color: hsl(var(--muted-foreground));
 }
 
 .success-section {
@@ -1101,14 +1101,14 @@ onUnmounted(() => {
 }
 
 .hint-text {
-  color: #666;
+  color: hsl(var(--muted-foreground));
   font-size: 13px;
   margin: 8px 0;
 }
 
 .credential-item {
   padding: 16px;
-  background: #fafafa;
+  background: hsl(var(--muted));
   border-radius: 8px;
   margin-bottom: 12px;
 }

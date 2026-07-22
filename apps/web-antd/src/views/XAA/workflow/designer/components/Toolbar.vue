@@ -217,8 +217,8 @@ function handleZoomSelect({ key }: { key: string }) {
   justify-content: space-between;
   height: 48px;
   padding: 0 16px;
-  background: #fff;
-  border-bottom: 1px solid #e5e7eb;
+  background: hsl(var(--card));
+  border-bottom: 1px solid hsl(var(--border));
 
   &__left,
   &__right {
@@ -236,7 +236,7 @@ function handleZoomSelect({ key }: { key: string }) {
   &__name {
     font-size: 14px;
     font-weight: 600;
-    color: #1f2937;
+    color: hsl(var(--foreground));
   }
 
   &__zoom {
@@ -250,13 +250,13 @@ function handleZoomSelect({ key }: { key: string }) {
     min-width: 48px;
     text-align: center;
     font-size: 12px;
-    color: #6b7280;
+    color: hsl(var(--muted-foreground));
     cursor: pointer;
     padding: 4px 8px;
     border-radius: 4px;
 
     &:hover {
-      background: #f3f4f6;
+      background: hsl(var(--accent));
     }
   }
 }

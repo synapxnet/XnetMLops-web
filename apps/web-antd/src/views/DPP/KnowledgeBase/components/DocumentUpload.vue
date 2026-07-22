@@ -235,7 +235,7 @@ function handleCancel() {
 
 .file-list {
   margin-top: 16px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid hsl(var(--border));
   border-radius: 8px;
   padding: 12px;
   max-height: 200px;
@@ -247,7 +247,7 @@ function handleCancel() {
     align-items: center;
     margin-bottom: 8px;
     font-weight: 500;
-    color: #1f2937;
+    color: hsl(var(--foreground));
   }
 }
 
@@ -256,7 +256,7 @@ function handleCancel() {
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: #fafafa;
+  background: hsl(var(--muted));
   border-radius: 4px;
   margin-bottom: 4px;
 
@@ -285,7 +285,7 @@ function handleCancel() {
   }
 
   &__size {
-    color: #9ca3af;
+    color: hsl(var(--muted-foreground));
     font-size: 12px;
     margin-left: 8px;
   }
@@ -326,14 +326,14 @@ function handleCancel() {
 
 .form-help {
   font-size: 12px;
-  color: #9ca3af;
+  color: hsl(var(--muted-foreground));
   margin-top: 4px;
 }
 
 .upload-progress {
   margin-top: 16px;
   padding: 12px;
-  background: #f6ffed;
+  background: hsl(var(--success) / 12%);
   border-radius: 8px;
 
   &__text {
@@ -350,7 +350,7 @@ function handleCancel() {
     display: block;
     margin-bottom: 8px;
     font-weight: 500;
-    color: #374151;
+    color: hsl(var(--foreground));
   }
 }
 </style>

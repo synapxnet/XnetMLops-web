@@ -117,7 +117,7 @@ function handleClick() {
     <!-- 主卡片 -->
     <rect
       x="0" y="0" width="160" height="120" rx="16"
-      fill="#fff"
+      fill="hsl(var(--card))"
       :filter="`url(#shadow-${node.id})`"
       class="card-bg"
     />
@@ -176,7 +176,7 @@ function handleClick() {
     </g>
 
     <!-- 底部装饰线 -->
-    <line x1="12" y1="100" x2="148" y2="100" stroke="#f0f0f0" stroke-width="1"/>
+    <line x1="12" y1="100" x2="148" y2="100" stroke="hsl(var(--border))" stroke-width="1"/>
 
     <!-- 底部操作提示 -->
     <g transform="translate(80, 110)">
@@ -255,13 +255,13 @@ function handleClick() {
 
 .node-name {
   font-size: 14px;
-  fill: #1a202c;
+  fill: hsl(var(--foreground));
   font-weight: 600;
 }
 
 .node-ip {
   font-size: 11px;
-  fill: #718096;
+  fill: hsl(var(--muted-foreground));
   font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
 }
 
@@ -272,7 +272,7 @@ function handleClick() {
 
 .click-hint {
   font-size: 10px;
-  fill: #a0aec0;
+  fill: hsl(var(--muted-foreground));
   opacity: 0;
   transition: opacity 0.2s ease;
 }

@@ -195,14 +195,14 @@ function handleUninstall() {
   &__title {
     font-size: 16px;
     font-weight: 600;
-    color: #1f2937;
+    color: hsl(var(--foreground));
     margin-bottom: 8px;
     line-height: 1.4;
   }
 
   &__description {
     font-size: 13px;
-    color: #6b7280;
+    color: hsl(var(--muted-foreground));
     line-height: 1.5;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -215,7 +215,7 @@ function handleUninstall() {
     justify-content: space-between;
     align-items: center;
     padding-top: 12px;
-    border-top: 1px solid #f0f0f0;
+    border-top: 1px solid hsl(var(--border));
   }
 
   &__meta {
@@ -223,12 +223,12 @@ function handleUninstall() {
     align-items: center;
     gap: 12px;
     font-size: 12px;
-    color: #9ca3af;
+    color: hsl(var(--muted-foreground));
   }
 
   &__category {
     padding: 2px 8px;
-    background: #f3f4f6;
+    background: hsl(var(--muted));
     border-radius: 4px;
   }
 

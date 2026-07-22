@@ -312,7 +312,7 @@ onMounted(() => {
 <style scoped>
 .cluster-page {
   padding: 24px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
+  background: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--muted)) 100%);
   min-height: calc(100vh - 64px);
 }
 
@@ -357,7 +357,7 @@ onMounted(() => {
 .title-text p {
   margin: 4px 0 0;
   font-size: 13px;
-  color: #8c8c8c;
+  color: hsl(var(--muted-foreground));
   letter-spacing: 1px;
 }
 
@@ -370,7 +370,7 @@ onMounted(() => {
 }
 
 .stat-card {
-  background: #fff;
+  background: hsl(var(--card));
   border-radius: 16px;
   padding: 20px;
   display: flex;
@@ -431,7 +431,7 @@ onMounted(() => {
 
 .stat-label {
   font-size: 14px;
-  color: #8c8c8c;
+  color: hsl(var(--muted-foreground));
   margin-top: 4px;
 }
 
@@ -441,7 +441,7 @@ onMounted(() => {
   gap: 16px;
   margin-top: 8px;
   padding-top: 12px;
-  border-top: 1px dashed #e8e8e8;
+  border-top: 1px dashed hsl(var(--border));
 }
 
 .detail-item {
@@ -449,7 +449,7 @@ onMounted(() => {
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: #666;
+  color: hsl(var(--muted-foreground));
 }
 
 .detail-item .dot {
@@ -469,7 +469,7 @@ onMounted(() => {
 .stat-progress {
   width: 100%;
   height: 4px;
-  background: #f0f0f0;
+  background: hsl(var(--muted));
   border-radius: 2px;
   margin-top: 12px;
   overflow: hidden;
@@ -542,7 +542,7 @@ onMounted(() => {
 
 /* 拓扑图容器 */
 .topology-container {
-  background: #fff;
+  background: hsl(var(--card));
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
@@ -554,31 +554,31 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  background: linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--muted)) 100%);
 }
 
 .empty-icon {
   width: 80px;
   height: 80px;
-  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  background: linear-gradient(135deg, hsl(var(--muted)) 0%, hsl(var(--accent)) 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 36px;
-  color: #94a3b8;
+  color: hsl(var(--muted-foreground));
   margin-bottom: 20px;
 }
 
 .empty-text {
   font-size: 18px;
-  color: #475569;
+  color: hsl(var(--foreground));
   margin: 0 0 8px;
 }
 
 .empty-hint {
   font-size: 14px;
-  color: #94a3b8;
+  color: hsl(var(--muted-foreground));
   margin: 0 0 24px;
 }
 

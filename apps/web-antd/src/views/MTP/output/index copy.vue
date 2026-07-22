@@ -313,21 +313,21 @@ const handleBatchDelete = () => {
 <style scoped>
 /* 表格边框样式 */
 .custom-table {
-  border: 1px solid #e8e8e8;
+  border: 1px solid hsl(var(--border));
   border-radius: 4px;
 }
 
 /* 表头样式 */
 .custom-table :deep(.ant-table-thead) > tr > th {
-  background-color: #f0f8ff; /* 淡灰蓝色 */
-  color: #2c3e50; /* 文字颜色 */
+  background-color: hsl(var(--primary) / 10%);
+  color: hsl(var(--foreground));
   font-weight: 600;
-  border-bottom: 1px solid #d9d9d9 !important;
+  border-bottom: 1px solid hsl(var(--border)) !important;
 }
 
 /* 表格单元格边框 */
 .custom-table :deep(.ant-table-tbody) > tr > td {
-  border-right: 1px solid #e8e8e8;
+  border-right: 1px solid hsl(var(--border));
 }
 
 /* 最后单元格去掉右边框 */
@@ -337,7 +337,7 @@ const handleBatchDelete = () => {
 
 /* 行悬停效果 */
 .custom-table :deep(.ant-table-tbody) > tr:hover > td {
-  background-color: #fafafa;
+  background-color: hsl(var(--accent));
 }
 /* 添加链接样式 */
 .custom-table :deep(.ant-table-tbody) a {
@@ -355,13 +355,13 @@ const handleBatchDelete = () => {
 /* 描述列表样式 */
 :deep(.ant-descriptions-item-label) {
   font-weight: 600;
-  background-color: #fafafa;
+  background-color: hsl(var(--muted));
   width: 150px;
 }
 
 /* 预格式化文本样式 */
 pre {
-  background-color: #f5f5f5;
+  background-color: hsl(var(--muted));
   padding: 8px;
   border-radius: 4px;
   overflow: auto;
@@ -379,7 +379,7 @@ pre {
 .divider-line {
   flex-grow: 1;
   height: 1px;
-  background-color: #e8e8e8;
+  background-color: hsl(var(--border));
 }
 
 .divider-title {
@@ -391,8 +391,8 @@ pre {
 /* 添加上游依赖样式 */
 /* 添加依赖项样式 */
 .dependency-item {
-  border: 1px solid #e8e8e8;
-  background-color: #fafafa;
+  border: 1px solid hsl(var(--border));
+  background-color: hsl(var(--muted));
 }
 
 .dependency-selectors {
@@ -407,8 +407,8 @@ pre {
 
 .selected-info {
   padding: 12px 16px;
-  background-color: #f0f8ff;
-  border: 1px solid #91d5ff;
+  background-color: hsl(var(--primary) / 10%);
+  border: 1px solid hsl(var(--primary) / 35%);
   border-radius: 4px;
   display: flex;
   justify-content: space-between;
@@ -430,7 +430,7 @@ pre {
 }
 
 .no-dependencies {
-  border: 1px dashed #d9d9d9;
+  border: 1px dashed hsl(var(--border));
   border-radius: 4px;
 }
 .upstream-dependency {
@@ -449,8 +449,8 @@ pre {
 
 .selected-info {
   padding: 12px 16px;
-  background-color: #f0f8ff;
-  border: 1px solid #91d5ff;
+  background-color: hsl(var(--primary) / 10%);
+  border: 1px solid hsl(var(--primary) / 35%);
   border-radius: 4px;
   display: flex;
   justify-content: space-between;
@@ -478,25 +478,25 @@ pre {
 .task-header {
   display: flex;
   padding: 8px 12px;
-  background-color: #f0f8ff;
-  border-bottom: 1px solid #91d5ff;
+  background-color: hsl(var(--primary) / 10%);
+  border-bottom: 1px solid hsl(var(--primary) / 35%);
   font-weight: 600;
 }
 
 .task-item {
   display: flex;
   padding: 12px;
-  border-bottom: 1px solid #e8e8e8;
+  border-bottom: 1px solid hsl(var(--border));
 }
 
 .task-item:hover {
-  background-color: #fafafa;
+  background-color: hsl(var(--accent));
 }
 
 .no-tasks {
   padding: 24px;
   text-align: center;
-  color: #999;
+  color: hsl(var(--muted-foreground));
   font-size: 16px;
 }
 </style>

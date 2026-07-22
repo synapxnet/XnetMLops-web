@@ -2450,7 +2450,7 @@ const data = ref<DataItem[]>([]);
 
 .stage-item {
   padding: 8px 0;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid hsl(var(--border));
 }
 
 .stage-header {
@@ -2465,13 +2465,13 @@ const data = ref<DataItem[]>([]);
 
 .stage-duration {
   margin-left: auto;
-  color: #666;
+  color: hsl(var(--muted-foreground));
   font-size: 0.9em;
 }
 
 .stage-time {
   margin-top: 4px;
-  color: #888;
+  color: hsl(var(--muted-foreground));
   font-size: 0.85em;
 }
 

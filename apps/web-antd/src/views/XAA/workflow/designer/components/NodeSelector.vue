@@ -150,21 +150,21 @@ function onNodeClick(nodeType: NodeType) {
 .node-selector {
   width: 280px;
   height: 100%;
-  background: #fff;
-  border-right: 1px solid #e5e7eb;
+  background: hsl(var(--card));
+  border-right: 1px solid hsl(var(--border));
   display: flex;
   flex-direction: column;
 
   &__header {
     padding: 16px;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid hsl(var(--border));
   }
 
   &__title {
     display: block;
     font-size: 14px;
     font-weight: 600;
-    color: #1f2937;
+    color: hsl(var(--foreground));
     margin-bottom: 12px;
   }
 
@@ -185,15 +185,15 @@ function onNodeClick(nodeType: NodeType) {
     align-items: center;
     gap: 12px;
     padding: 10px 12px;
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
+    background: hsl(var(--accent));
+    border: 1px solid hsl(var(--border));
     border-radius: 8px;
     cursor: grab;
     transition: all 0.2s ease;
 
     &:hover {
-      background: #f3f4f6;
-      border-color: #d1d5db;
+      background: hsl(var(--accent));
+      border-color: hsl(var(--border));
       transform: translateY(-1px);
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     }
@@ -223,12 +223,12 @@ function onNodeClick(nodeType: NodeType) {
   &__name {
     font-size: 13px;
     font-weight: 500;
-    color: #1f2937;
+    color: hsl(var(--foreground));
   }
 
   &__desc {
     font-size: 11px;
-    color: #6b7280;
+    color: hsl(var(--muted-foreground));
     margin-top: 2px;
     white-space: nowrap;
     overflow: hidden;
@@ -240,7 +240,7 @@ function onNodeClick(nodeType: NodeType) {
   padding: 8px 16px !important;
   font-size: 12px;
   font-weight: 600;
-  color: #6b7280;
+  color: hsl(var(--muted-foreground));
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }

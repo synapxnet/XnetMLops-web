@@ -531,7 +531,7 @@ onMounted(() => {
 .kb-documents {
   padding: 16px;
   min-height: 100%;
-  background: #f5f5f5;
+  background: hsl(var(--background-deep));
 
   &__header {
     margin-bottom: 16px;
@@ -556,7 +556,7 @@ onMounted(() => {
   &__title {
     font-size: 24px;
     font-weight: 600;
-    color: #1f2937;
+    color: hsl(var(--foreground));
     margin: 0 0 8px 0;
     display: flex;
     align-items: center;
@@ -565,7 +565,7 @@ onMounted(() => {
 
   &__subtitle {
     font-size: 14px;
-    color: #6b7280;
+    color: hsl(var(--muted-foreground));
     margin: 0;
   }
 
@@ -613,7 +613,7 @@ onMounted(() => {
 
 .chunk-count {
   &__tokens {
-    color: #9ca3af;
+    color: hsl(var(--muted-foreground));
     font-size: 12px;
     margin-left: 4px;
   }
@@ -621,15 +621,15 @@ onMounted(() => {
 
 .doc-detail {
   padding: 16px;
-  background: #fafafa;
+  background: hsl(var(--muted));
   border-radius: 8px;
 }
 
 .doc-error {
   margin-top: 12px;
   padding: 8px 12px;
-  background: #fff2f0;
-  border: 1px solid #ffccc7;
+  background: hsl(var(--destructive) / 10%);
+  border: 1px solid hsl(var(--destructive) / 35%);
   border-radius: 4px;
   color: #ff4d4f;
   display: flex;
@@ -643,12 +643,12 @@ onMounted(() => {
   gap: 12px;
   margin-top: 16px;
   padding: 12px;
-  background: #e6f7ff;
+  background: hsl(var(--primary) / 10%);
   border-radius: 8px;
 
   &__count {
     font-weight: 500;
-    color: #1890ff;
+    color: hsl(var(--primary));
   }
 }
 </style>

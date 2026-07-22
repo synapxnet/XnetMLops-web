@@ -2383,7 +2383,7 @@ onMounted(async () => {
 
 .org-display {
   padding: 8px 12px;
-  background-color: #f5f5f5;
+  background-color: hsl(var(--muted));
   border-radius: 4px;
   min-height: 40px;
   display: flex;
@@ -2392,7 +2392,7 @@ onMounted(async () => {
 
 :deep(.ant-input-disabled),
 :deep(.ant-select-disabled .ant-select-selector) {
-  background-color: #f5f5f5 !important;
+  background-color: hsl(var(--muted)) !important;
   color: rgba(0, 0, 0, 0.65) !important;
 }
 
@@ -2410,9 +2410,9 @@ onMounted(async () => {
 
 .operator-info {
   padding: 12px;
-  background-color: #f9f9f9;
+  background-color: hsl(var(--accent));
   border-radius: 8px;
-  border: 1px solid #eee;
+  border: 1px solid hsl(var(--border));
 }
 
 :deep(.ant-collapse-header) {
@@ -2431,7 +2431,7 @@ onMounted(async () => {
 }
 
 .notification-radio-item {
-  border: 1px solid #d9d9d9;
+  border: 1px solid hsl(var(--border));
   border-radius: 6px;
   padding: 12px 16px;
   margin: 0 !important;
@@ -2440,16 +2440,16 @@ onMounted(async () => {
 
 .notification-radio-item:hover {
   border-color: #1890ff;
-  background-color: #f0f9ff;
+  background-color: hsl(var(--primary) / 8%);
 }
 
 :deep(.ant-radio-wrapper-checked.notification-radio-item) {
   border-color: #1890ff;
-  background-color: #e6f7ff;
+  background-color: hsl(var(--primary) / 12%);
 }
 
 .advanced-settings {
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid hsl(var(--border));
   padding-top: 16px;
 }
 
@@ -2459,7 +2459,7 @@ onMounted(async () => {
 }
 
 .image-selector :deep(.ant-table-row:hover) {
-  background-color: #f0f7ff;
+  background-color: hsl(var(--primary) / 8%);
 }
 
 :deep(.ant-steps) {

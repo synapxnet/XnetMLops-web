@@ -253,7 +253,7 @@ const columns = [
           {
             type: 'link',
             onClick: () => editItem(record),
-            style: { color: canEdit ? '#1890ff' : '#bfbfbf' },
+            style: { color: canEdit ? '#1890ff' : 'hsl(var(--muted-foreground))' },
             disabled: !canEdit,
           },
           [h(EditOutlined), ' 编辑'],
@@ -264,7 +264,7 @@ const columns = [
             type: 'link',
             danger: true,
             onClick: () => confirmDelete(record),
-            style: { color: canEdit ? '#ff4d4f' : '#bfbfbf' },
+            style: { color: canEdit ? '#ff4d4f' : 'hsl(var(--muted-foreground))' },
             disabled: !canEdit,
           },
           [h(DeleteOutlined), ' 删除'],
