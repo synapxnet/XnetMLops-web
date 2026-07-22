@@ -616,14 +616,14 @@ onMounted(() => {
 
 .config-section {
   padding: 16px;
-  background: #fafafa;
+  background: hsl(var(--muted));
   border-radius: 8px;
 }
 
 .config-section .section-title {
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #e8e8e8;
+  border-bottom: 1px solid hsl(var(--border));
   font-weight: 600;
   color: #1890ff;
 }

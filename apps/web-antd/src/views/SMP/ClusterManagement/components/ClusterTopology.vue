@@ -227,7 +227,7 @@ function getMasterPosition(masterId?: number) {
   position: relative;
   width: 100%;
   min-height: 560px;
-  background: linear-gradient(180deg, #fafbff 0%, #f5f7ff 50%, #f0f4ff 100%);
+  background: linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--background)) 50%, hsl(var(--primary) / 6%) 100%);
   border-radius: 0 0 16px 16px;
   overflow: hidden;
 }
@@ -280,13 +280,13 @@ function getMasterPosition(masterId?: number) {
 
 .empty-title {
   font-size: 18px;
-  fill: #4a5568;
+  fill: hsl(var(--foreground));
   font-weight: 500;
 }
 
 .empty-hint {
   font-size: 14px;
-  fill: #a0aec0;
+  fill: hsl(var(--muted-foreground));
 }
 
 /* 图例 */
@@ -297,10 +297,10 @@ function getMasterPosition(masterId?: number) {
   display: flex;
   gap: 20px;
   padding: 14px 24px;
-  background: rgba(255, 255, 255, 0.95);
+  background: hsl(var(--card) / 95%);
   border-radius: 14px;
   box-shadow: 0 4px 20px rgba(102, 126, 234, 0.1);
-  border: 1px solid rgba(102, 126, 234, 0.08);
+  border: 1px solid hsl(var(--border));
   backdrop-filter: blur(10px);
   z-index: 10;
 }
@@ -349,7 +349,7 @@ function getMasterPosition(masterId?: number) {
 
 .legend-text {
   font-size: 13px;
-  color: #4a5568;
+  color: hsl(var(--foreground));
   font-weight: 500;
 }
 
@@ -362,10 +362,10 @@ function getMasterPosition(masterId?: number) {
   align-items: center;
   gap: 8px;
   padding: 10px 18px;
-  background: rgba(255, 255, 255, 0.95);
+  background: hsl(var(--card) / 95%);
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.04);
+  border: 1px solid hsl(var(--border));
   z-index: 10;
 }
 
@@ -399,7 +399,7 @@ function getMasterPosition(masterId?: number) {
 .badge-text {
   font-size: 13px;
   font-weight: 700;
-  color: #4a5568;
+  color: hsl(var(--foreground));
   letter-spacing: 1px;
 }
 

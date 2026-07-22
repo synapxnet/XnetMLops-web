@@ -303,7 +303,7 @@ function handleUninstall() {
   &__title {
     font-size: 20px;
     font-weight: 600;
-    color: #1f2937;
+    color: hsl(var(--foreground));
     margin-bottom: 8px;
     display: flex;
     align-items: center;
@@ -315,7 +315,7 @@ function handleUninstall() {
     flex-wrap: wrap;
     gap: 16px;
     font-size: 13px;
-    color: #6b7280;
+    color: hsl(var(--muted-foreground));
 
     span {
       display: flex;
@@ -335,7 +335,7 @@ function handleUninstall() {
   &__section-title {
     font-size: 14px;
     font-weight: 600;
-    color: #374151;
+    color: hsl(var(--foreground));
     margin-bottom: 12px;
     display: flex;
     align-items: center;
@@ -344,7 +344,7 @@ function handleUninstall() {
 
   &__description {
     font-size: 14px;
-    color: #4b5563;
+    color: hsl(var(--foreground));
     line-height: 1.6;
   }
 
@@ -364,13 +364,13 @@ function handleUninstall() {
     align-items: center;
     gap: 6px;
     padding: 8px 12px;
-    background: #f3f4f6;
+    background: hsl(var(--muted));
     border-radius: 8px;
     font-size: 13px;
-    color: #9ca3af;
+    color: hsl(var(--muted-foreground));
 
     &--active {
-      background: #ecfdf5;
+      background: hsl(var(--success) / 12%);
       color: #059669;
     }
   }
@@ -380,7 +380,7 @@ function handleUninstall() {
   }
 
   &__content {
-    background: #f9fafb;
+    background: hsl(var(--muted));
     border-radius: 8px;
     padding: 12px;
     max-height: 200px;

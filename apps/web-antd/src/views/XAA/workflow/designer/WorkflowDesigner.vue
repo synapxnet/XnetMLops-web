@@ -63,7 +63,7 @@
           @viewport-change="handleViewportChange"
         >
           <!-- 背景 -->
-          <Background :gap="14" :size="2" pattern-color="#e5e7eb" />
+          <Background :gap="14" :size="2" pattern-color="hsl(var(--border))" />
 
           <!-- 小地图 -->
           <MiniMap
@@ -538,7 +538,7 @@ defineExpose({
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #f9fafb;
+  background: hsl(var(--background-deep));
 
   &__main {
     display: flex;
@@ -552,11 +552,11 @@ defineExpose({
     overflow: hidden;
 
     .vue-flow {
-      background: #fafafa;
+      background: hsl(var(--muted));
     }
 
     .vue-flow__background {
-      background-color: #fafafa;
+      background-color: hsl(var(--muted));
     }
   }
 
@@ -572,8 +572,8 @@ defineExpose({
   position: absolute;
   right: 16px;
   bottom: 16px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -591,8 +591,8 @@ defineExpose({
 .vue-flow__handle {
   width: 12px;
   height: 12px;
-  background: #fff;
-  border: 2px solid #b1b1b7;
+  background: hsl(var(--card));
+  border: 2px solid hsl(var(--border));
   border-radius: 50%;
 
   &:hover {
@@ -602,7 +602,7 @@ defineExpose({
 }
 
 .vue-flow__edge-path {
-  stroke: #b1b1b7;
+  stroke: hsl(var(--border));
   stroke-width: 2;
 }
 

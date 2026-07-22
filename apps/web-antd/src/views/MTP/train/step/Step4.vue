@@ -775,7 +775,7 @@ const outputOptions = ref<OutputConfig[]>([
   width: 100%;
 
   .notification-radio-item {
-    border: 1px solid #d9d9d9;
+    border: 1px solid hsl(var(--border));
     border-radius: 6px;
     padding: 12px 16px;
     margin: 0 !important;
@@ -783,12 +783,12 @@ const outputOptions = ref<OutputConfig[]>([
 
     &:hover {
       border-color: #1890ff;
-      background-color: #f0f9ff;
+      background-color: hsl(var(--primary) / 8%);
     }
 
     &.ant-radio-wrapper-checked {
       border-color: #1890ff;
-      background-color: #e6f7ff;
+      background-color: hsl(var(--primary) / 12%);
 
       .ant-radio-inner {
         border-color: #1890ff;
@@ -808,7 +808,7 @@ const outputOptions = ref<OutputConfig[]>([
 }
 
 .advanced-settings {
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid hsl(var(--border));
   padding-top: 16px;
 }
 </style>

@@ -326,7 +326,7 @@ onMounted(() => {
 .create-skill {
   padding: 16px;
   min-height: 100%;
-  background: #f5f5f5;
+  background: hsl(var(--background-deep));
 
   &__card {
     max-width: 900px;

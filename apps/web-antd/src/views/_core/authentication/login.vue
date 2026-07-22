@@ -1,10 +1,9 @@
 <script lang="ts" setup>
 import type { VbenFormSchema } from '@vben/common-ui';
-import type { BasicOption } from '@vben/types';
 
-import { computed, markRaw } from 'vue';
+import { computed } from 'vue';
 
-import { AuthenticationLogin, SliderCaptcha, z } from '@vben/common-ui';
+import { AuthenticationCodeLogin, z } from '@vben/common-ui';
 import { $t } from '@vben/locales';
 
 import { useAuthStore } from '#/store';
@@ -12,77 +11,39 @@ import { useAuthStore } from '#/store';
 defineOptions({ name: 'Login' });
 
 const authStore = useAuthStore();
-
-const MOCK_USER_OPTIONS: BasicOption[] = [
-  {
-    label: 'Super',
-    value: 'vben',
-  },
-  {
-    label: 'Admin',
-    value: 'admin',
-  },
-  {
-    label: 'User',
-    value: 'jack',
-  },
-];
+const CODE_LENGTH = 6;
+const DEMO_PHONE = '12345678900';
+const DEMO_VERIFICATION_CODE = '000000';
 
 const formSchema = computed((): VbenFormSchema[] => {
   return [
     {
-      component: 'VbenSelect',
-      componentProps: {
-        options: MOCK_USER_OPTIONS,
-        placeholder: $t('authentication.selectAccount'),
-      },
-      fieldName: 'selectAccount',
-      label: $t('authentication.selectAccount'),
-      rules: z
-        .string()
-        .min(1, { message: $t('authentication.selectAccount') })
-        .optional()
-        .default('vben'),
-    },
-    {
       component: 'VbenInput',
       componentProps: {
-        placeholder: $t('authentication.usernameTip'),
+        placeholder: $t('authentication.mobile'),
       },
-      dependencies: {
-        trigger(values, form) {
-          if (values.selectAccount) {
-            const findUser = MOCK_USER_OPTIONS.find(
-              (item) => item.value === values.selectAccount,
-            );
-            if (findUser) {
-              form.setValues({
-                password: '123456',
-                username: findUser.value,
-              });
-            }
-          }
-        },
-        triggerFields: ['selectAccount'],
-      },
-      fieldName: 'username',
-      label: $t('authentication.username'),
-      rules: z.string().min(1, { message: $t('authentication.usernameTip') }),
+      defaultValue: DEMO_PHONE,
+      fieldName: 'phoneNumber',
+      label: $t('authentication.mobile'),
+      rules: z
+        .string()
+        .min(1, { message: $t('authentication.mobileTip') })
+        .refine((v) => /^\d{11}$/.test(v), {
+          message: $t('authentication.mobileErrortip'),
+        }),
     },
     {
-      component: 'VbenInputPassword',
+      component: 'VbenPinInput',
       componentProps: {
-        placeholder: $t('authentication.password'),
+        codeLength: CODE_LENGTH,
+        placeholder: $t('authentication.code'),
+        showSendButton: false,
       },
-      fieldName: 'password',
-      label: $t('authentication.password'),
-      rules: z.string().min(1, { message: $t('authentication.passwordTip') }),
-    },
-    {
-      component: markRaw(SliderCaptcha),
-      fieldName: 'captcha',
-      rules: z.boolean().refine((value) => value, {
-        message: $t('authentication.verifyRequiredTip'),
+      defaultValue: DEMO_VERIFICATION_CODE,
+      fieldName: 'code',
+      label: $t('authentication.code'),
+      rules: z.string().length(CODE_LENGTH, {
+        message: $t('authentication.codeTip', [CODE_LENGTH]),
       }),
     },
   ];
@@ -90,9 +51,9 @@ const formSchema = computed((): VbenFormSchema[] => {
 </script>
 
 <template>
-  <AuthenticationLogin
+  <AuthenticationCodeLogin
     :form-schema="formSchema"
     :loading="authStore.loginLoading"
-    @submit="authStore.authLogin"
+    @submit="authStore.authCodeLogin"
   />
 </template>

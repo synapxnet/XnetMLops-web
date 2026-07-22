@@ -11,7 +11,7 @@
       margin-top: 16px;
       width: 100%;
       min-height: 200px;
-      border: 1px solid #ccc;
+      border: 1px solid hsl(var(--border));
       position: relative;
 
       .form {
@@ -21,7 +21,7 @@
 
         :deep(.ant-input[readonly]) {
           cursor: pointer;
-          background-color: #fff;
+          background-color: hsl(var(--input-background));
           &:hover {
             border-color: #1890ff;
           }
@@ -55,7 +55,7 @@
 
   .resource-card {
     padding: 20px;
-    border: 1px solid #e8e8e8;
+    border: 1px solid hsl(var(--border));
     border-radius: 4px;
     cursor: pointer;
     transition: all 0.3s;
@@ -68,17 +68,17 @@
 
     &.selected {
       border-color: #1890ff;
-      background-color: #e6f7ff;
+      background-color: hsl(var(--primary) / 10%);
     }
 
     h3 {
       font-size: 16px;
       margin-bottom: 8px;
-      color: rgba(0, 0, 0, 0.85);
+      color: hsl(var(--foreground));
     }
 
     .specs {
-      color: rgba(0, 0, 0, 0.65);
+      color: hsl(var(--muted-foreground));
       font-size: 14px;
     }
   }
@@ -93,7 +93,7 @@
     }
 
     &:hover {
-      background-color: #fafafa;
+      background-color: hsl(var(--accent));
     }
 
     td:last-child a {
@@ -123,19 +123,19 @@
     display: flex;
     justify-content: space-between;
     padding: 8px 12px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid hsl(var(--border));
 
     .package-name {
-      color: rgba(0, 0, 0, 0.85);
+      color: hsl(var(--foreground));
       font-weight: 500;
     }
 
     .package-version {
-      color: rgba(0, 0, 0, 0.65);
+      color: hsl(var(--muted-foreground));
     }
 
     &:hover {
-      background-color: #fafafa;
+      background-color: hsl(var(--accent));
     }
   }
 }
@@ -144,7 +144,7 @@
   margin-top: 16px;
   text-align: right;
   padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid hsl(var(--border));
 
   button {
     min-width: 100px;
@@ -187,7 +187,7 @@
     transition: background-color 0.3s;
 
     &:hover {
-      background-color: #fafafa;
+      background-color: hsl(var(--accent));
     }
 
     td:first-child {
@@ -228,8 +228,8 @@
 .dataset-section {
   margin-top: 20px;
   padding: 16px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: hsl(var(--muted));
+  border: 1px solid hsl(var(--border));
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 
@@ -243,7 +243,7 @@
       .section-title {
         margin: 0;
         font-size: 16px;
-        color: #2d3748;
+        color: hsl(var(--foreground));
         font-weight: 500;
       }
 
@@ -261,22 +261,22 @@
 
     .divider {
       margin: 0;
-      border-color: #cbd5e0;
+      border-color: hsl(var(--border));
     }
   }
 
   .dataset-row {
     margin-top: 12px;
     padding: 12px;
-    background: white;
-    border: 1px solid #edf2f7;
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
     border-radius: 6px;
   }
 }
 // 添加样式调整
 .scheduling-config {
   padding: 16px;
-  background: #f8f9fa;
+  background: hsl(var(--muted));
   border-radius: 4px;
 
   .ant-picker {
@@ -286,7 +286,7 @@
 
 .output-config {
   .ant-input[readonly] {
-    background-color: #fff;
+    background-color: hsl(var(--input-background));
     cursor: pointer;
     &:hover {
       border-color: #40a9ff;
@@ -305,7 +305,7 @@
     transition: background-color 0.3s;
 
     &:hover {
-      background-color: #fafafa;
+      background-color: hsl(var(--accent));
     }
 
     td:first-child {
@@ -357,7 +357,7 @@
 }
 :deep(.ant-input[disabled]),
 :deep(.ant-select-disabled .ant-select-selector) {
-  background-color: #f5f5f5;
-  color: rgba(0, 0, 0, 0.65);
+  background-color: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
   cursor: not-allowed;
 }

@@ -24,7 +24,9 @@ import Step4 from '../step/Step4.vue';
 // 添加租户和用户信息（从 store 获取）
 const currentUserInfo = inject<Ref<any>>('currentUserInfo', ref(null));
 const currentTenantInfo = inject<Ref<any>>('selectedOrganization', ref(null));
-const tenantUid = computed(() => currentTenantInfo.value?.tenantUid || '');
+const tenantUid = computed(
+  () => currentTenantInfo.value?.tenantUid || 'default',
+);
 const userId = computed(() => currentUserInfo.value?.userId || '');
 
 const route = useRoute();

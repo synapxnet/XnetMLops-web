@@ -191,7 +191,7 @@
 
             <Empty v-else description="输入查询文本并点击检索按钮">
               <template #image>
-                <SearchOutlined style="font-size: 48px; color: #d9d9d9" />
+                <SearchOutlined style="font-size: 48px; color: hsl(var(--muted-foreground))" />
               </template>
             </Empty>
           </Spin>
@@ -336,7 +336,7 @@ onMounted(() => {
 .retrieval-test {
   padding: 16px;
   min-height: 100%;
-  background: #f5f5f5;
+  background: hsl(var(--background-deep));
 
   &__header {
     margin-bottom: 16px;
@@ -360,7 +360,7 @@ onMounted(() => {
   &__title {
     font-size: 24px;
     font-weight: 600;
-    color: #1f2937;
+    color: hsl(var(--foreground));
     margin: 0 0 8px 0;
     display: flex;
     align-items: center;
@@ -369,7 +369,7 @@ onMounted(() => {
 
   &__subtitle {
     font-size: 14px;
-    color: #6b7280;
+    color: hsl(var(--muted-foreground));
     margin: 0;
   }
 }
@@ -382,13 +382,13 @@ onMounted(() => {
 
 .switch-label {
   margin-left: 8px;
-  color: #6b7280;
+  color: hsl(var(--muted-foreground));
 }
 
 .query-history {
   margin-top: 24px;
   padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid hsl(var(--border));
 
   &__header {
     display: flex;
@@ -396,7 +396,7 @@ onMounted(() => {
     align-items: center;
     margin-bottom: 12px;
     font-weight: 500;
-    color: #374151;
+    color: hsl(var(--foreground));
   }
 
   &__list {
@@ -410,8 +410,8 @@ onMounted(() => {
     transition: all 0.2s;
 
     &:hover {
-      color: #1890ff;
-      border-color: #1890ff;
+      color: hsl(var(--primary));
+      border-color: hsl(var(--primary));
     }
   }
 }
@@ -437,7 +437,7 @@ onMounted(() => {
   display: flex;
   gap: 24px;
   padding: 16px;
-  background: #fafafa;
+  background: hsl(var(--muted));
   border-radius: 8px;
   margin-bottom: 16px;
 }
@@ -447,10 +447,10 @@ onMounted(() => {
 
   &--total {
     padding-left: 24px;
-    border-left: 1px solid #e5e7eb;
+    border-left: 1px solid hsl(var(--border));
 
     .latency-value {
-      color: #1890ff;
+      color: hsl(var(--primary));
       font-weight: 600;
     }
   }
@@ -459,14 +459,14 @@ onMounted(() => {
 .latency-label {
   display: block;
   font-size: 12px;
-  color: #9ca3af;
+  color: hsl(var(--muted-foreground));
   margin-bottom: 4px;
 }
 
 .latency-value {
   font-size: 16px;
   font-weight: 500;
-  color: #1f2937;
+  color: hsl(var(--foreground));
 }
 
 .result-list {
@@ -477,20 +477,20 @@ onMounted(() => {
 
 .result-item {
   padding: 16px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover {
-    border-color: #1890ff;
+    border-color: hsl(var(--primary));
     box-shadow: 0 2px 8px rgba(24, 144, 255, 0.1);
   }
 
   &--expanded {
-    border-color: #1890ff;
-    background: #f6f9ff;
+    border-color: hsl(var(--primary));
+    background: hsl(var(--primary) / 8%);
   }
 
   &__header {
@@ -507,7 +507,7 @@ onMounted(() => {
 
     .rank-number {
       font-weight: 600;
-      color: #1890ff;
+      color: hsl(var(--primary));
     }
   }
 
@@ -516,21 +516,21 @@ onMounted(() => {
     align-items: center;
     gap: 6px;
     font-size: 13px;
-    color: #6b7280;
+    color: hsl(var(--muted-foreground));
   }
 
   &__actions {
     display: flex;
     align-items: center;
     gap: 12px;
-    color: #9ca3af;
+    color: hsl(var(--muted-foreground));
 
     .anticon {
       cursor: pointer;
       transition: all 0.2s;
 
       &:hover {
-        color: #1890ff;
+        color: hsl(var(--primary));
       }
 
       &.rotated {
@@ -542,7 +542,7 @@ onMounted(() => {
   &__preview {
     font-size: 14px;
     line-height: 1.6;
-    color: #4b5563;
+    color: hsl(var(--foreground));
     word-break: break-all;
     white-space: pre-wrap;
   }
@@ -550,14 +550,14 @@ onMounted(() => {
   &__metadata {
     margin-top: 16px;
     padding-top: 16px;
-    border-top: 1px dashed #e5e7eb;
+    border-top: 1px dashed hsl(var(--border));
   }
 }
 
 .metadata-label {
   font-size: 12px;
   font-weight: 500;
-  color: #6b7280;
+  color: hsl(var(--muted-foreground));
   margin-bottom: 8px;
 }
 

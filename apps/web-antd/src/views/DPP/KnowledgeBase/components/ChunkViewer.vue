@@ -222,7 +222,7 @@ function handleClose() {
     align-items: center;
     margin-bottom: 20px;
     padding-bottom: 16px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid hsl(var(--border));
   }
 }
 
@@ -244,7 +244,7 @@ function handleClose() {
 
 .stat-label {
   font-size: 12px;
-  color: #9ca3af;
+  color: hsl(var(--muted-foreground));
 }
 
 .chunk-list {
@@ -255,20 +255,20 @@ function handleClose() {
 .chunk-item {
   padding: 16px;
   margin-bottom: 12px;
-  background: #fafafa;
+  background: hsl(var(--muted));
   border-radius: 8px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid hsl(var(--border));
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover {
-    border-color: #1890ff;
-    background: #f6f9ff;
+    border-color: hsl(var(--primary));
+    background: hsl(var(--primary) / 8%);
   }
 
   &--selected {
-    border-color: #1890ff;
-    background: #e6f7ff;
+    border-color: hsl(var(--primary));
+    background: hsl(var(--primary) / 12%);
   }
 
   &__header {
@@ -283,7 +283,7 @@ function handleClose() {
     align-items: center;
     gap: 6px;
     font-weight: 600;
-    color: #1f2937;
+    color: hsl(var(--foreground));
   }
 
   &__meta {
@@ -293,7 +293,7 @@ function handleClose() {
 
   &__content {
     font-size: 13px;
-    color: #4b5563;
+    color: hsl(var(--foreground));
     line-height: 1.6;
     word-break: break-all;
   }
@@ -301,9 +301,9 @@ function handleClose() {
   &__keywords {
     margin-top: 12px;
     padding-top: 12px;
-    border-top: 1px dashed #e5e7eb;
+    border-top: 1px dashed hsl(var(--border));
     font-size: 12px;
-    color: #6b7280;
+    color: hsl(var(--muted-foreground));
     display: flex;
     align-items: center;
     gap: 6px;
@@ -335,17 +335,17 @@ function handleClose() {
 
 .content-label {
   font-weight: 500;
-  color: #374151;
+  color: hsl(var(--foreground));
   margin-bottom: 8px;
 }
 
 .content-text {
   padding: 12px;
-  background: #f9fafb;
+  background: hsl(var(--muted));
   border-radius: 6px;
   font-size: 13px;
   line-height: 1.6;
-  color: #4b5563;
+  color: hsl(var(--foreground));
   white-space: pre-wrap;
   word-break: break-all;
   max-height: 300px;

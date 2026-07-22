@@ -479,7 +479,7 @@ onMounted(() => {
 .knowledge-base {
   padding: 16px;
   min-height: 100%;
-  background: #f5f5f5;
+  background: hsl(var(--background-deep));
 
   &__header {
     margin-bottom: 16px;
@@ -496,7 +496,7 @@ onMounted(() => {
   &__title {
     font-size: 24px;
     font-weight: 600;
-    color: #1f2937;
+    color: hsl(var(--foreground));
     margin: 0 0 8px 0;
     display: flex;
     align-items: center;
@@ -505,7 +505,7 @@ onMounted(() => {
 
   &__subtitle {
     font-size: 14px;
-    color: #6b7280;
+    color: hsl(var(--muted-foreground));
     margin: 0;
   }
 
@@ -554,13 +554,13 @@ onMounted(() => {
   &__name {
     font-size: 16px;
     font-weight: 600;
-    color: #1f2937;
+    color: hsl(var(--foreground));
     margin-bottom: 8px;
   }
 
   &__desc {
     font-size: 13px;
-    color: #6b7280;
+    color: hsl(var(--muted-foreground));
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -571,8 +571,8 @@ onMounted(() => {
     display: flex;
     justify-content: space-between;
     padding: 12px 0;
-    border-top: 1px solid #f0f0f0;
-    border-bottom: 1px solid #f0f0f0;
+    border-top: 1px solid hsl(var(--border));
+    border-bottom: 1px solid hsl(var(--border));
     margin-bottom: 12px;
   }
 
@@ -584,12 +584,12 @@ onMounted(() => {
     display: block;
     font-size: 18px;
     font-weight: 600;
-    color: #1f2937;
+    color: hsl(var(--foreground));
   }
 
   &__stat-label {
     font-size: 12px;
-    color: #9ca3af;
+    color: hsl(var(--muted-foreground));
   }
 
   &__footer {
@@ -597,7 +597,7 @@ onMounted(() => {
     justify-content: space-between;
     align-items: center;
     font-size: 12px;
-    color: #9ca3af;
+    color: hsl(var(--muted-foreground));
   }
 
   &__method {

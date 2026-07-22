@@ -149,8 +149,8 @@ const nodeStyle = computed(() => ({
 const handleStyle = {
   width: '12px',
   height: '12px',
-  background: '#fff',
-  border: '2px solid #b1b1b7',
+  background: 'hsl(var(--card))',
+  border: '2px solid hsl(var(--border))',
 };
 
 const iconMap: Record<string, any> = {
@@ -183,15 +183,15 @@ function getIcon(iconName?: string) {
 <style lang="scss" scoped>
 .workflow-node {
   min-width: 200px;
-  background: #fff;
-  border: 2px solid #e5e7eb;
+  background: hsl(var(--card));
+  border: 2px solid hsl(var(--border));
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 
   &:hover {
-    border-color: #d1d5db;
+    border-color: hsl(var(--border));
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
   }
 
@@ -242,7 +242,7 @@ function getIcon(iconName?: string) {
   &__title {
     font-size: 14px;
     font-weight: 600;
-    color: #1f2937;
+    color: hsl(var(--foreground));
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -250,7 +250,7 @@ function getIcon(iconName?: string) {
 
   &__description {
     font-size: 12px;
-    color: #6b7280;
+    color: hsl(var(--muted-foreground));
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -273,7 +273,7 @@ function getIcon(iconName?: string) {
   &__body {
     margin-top: 10px;
     padding-top: 10px;
-    border-top: 1px solid #f0f0f0;
+    border-top: 1px solid hsl(var(--border));
   }
 }
 

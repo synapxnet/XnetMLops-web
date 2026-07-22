@@ -526,8 +526,8 @@ function removeCondition(caseIndex: number, conditionIndex: number) {
 .node-config-panel {
   width: 320px;
   height: 100%;
-  background: #fff;
-  border-left: 1px solid #e5e7eb;
+  background: hsl(var(--card));
+  border-left: 1px solid hsl(var(--border));
   display: flex;
   flex-direction: column;
 
@@ -541,7 +541,7 @@ function removeCondition(caseIndex: number, conditionIndex: number) {
     align-items: center;
     justify-content: space-between;
     padding: 16px;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid hsl(var(--border));
   }
 
   &__title-row {
@@ -564,7 +564,7 @@ function removeCondition(caseIndex: number, conditionIndex: number) {
   &__title {
     font-size: 16px;
     font-weight: 600;
-    color: #1f2937;
+    color: hsl(var(--foreground));
   }
 
   &__content {
@@ -575,14 +575,14 @@ function removeCondition(caseIndex: number, conditionIndex: number) {
 
   &__footer {
     padding: 16px;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid hsl(var(--border));
   }
 }
 
 .condition-case {
   margin-bottom: 16px;
   padding: 12px;
-  background: #f9fafb;
+  background: hsl(var(--muted));
   border-radius: 8px;
 
   &__header {
@@ -591,7 +591,7 @@ function removeCondition(caseIndex: number, conditionIndex: number) {
     justify-content: space-between;
     margin-bottom: 12px;
     font-weight: 600;
-    color: #374151;
+    color: hsl(var(--foreground));
   }
 }
 

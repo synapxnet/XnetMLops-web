@@ -333,7 +333,7 @@ onMounted(() => {
 }
 
 .assistant-card :deep(.ant-card-actions) {
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid hsl(var(--border));
 }
 
 .assistant-card :deep(.ant-card-actions > li) {

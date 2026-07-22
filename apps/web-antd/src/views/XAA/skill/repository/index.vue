@@ -257,7 +257,7 @@ onMounted(async () => {
 .skill-repository {
   padding: 16px;
   min-height: 100%;
-  background: #f5f5f5;
+  background: hsl(var(--background-deep));
 
   &__header {
     margin-bottom: 16px;
@@ -274,7 +274,7 @@ onMounted(async () => {
   &__title {
     font-size: 24px;
     font-weight: 600;
-    color: #1f2937;
+    color: hsl(var(--foreground));
     margin: 0 0 8px 0;
     display: flex;
     align-items: center;
@@ -283,7 +283,7 @@ onMounted(async () => {
 
   &__subtitle {
     font-size: 14px;
-    color: #6b7280;
+    color: hsl(var(--muted-foreground));
     margin: 0;
   }
 

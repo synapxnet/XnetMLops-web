@@ -101,17 +101,17 @@ function handleSelect(category: SkillCategoryKey | null) {
     align-items: center;
     gap: 6px;
     padding: 8px 16px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid hsl(var(--border));
     border-radius: 20px;
     font-size: 14px;
-    color: #6b7280;
+    color: hsl(var(--muted-foreground));
     cursor: pointer;
     transition: all 0.2s ease;
-    background: #fff;
+    background: hsl(var(--card));
 
     &:hover {
-      border-color: #d1d5db;
-      background: #f9fafb;
+      border-color: hsl(var(--border));
+      background: hsl(var(--accent));
     }
 
     &--active {
@@ -128,9 +128,9 @@ function handleSelect(category: SkillCategoryKey | null) {
   &__count {
     font-size: 12px;
     padding: 0 6px;
-    background: #f0f0f0;
+    background: hsl(var(--muted));
     border-radius: 10px;
-    color: #8c8c8c;
+    color: hsl(var(--muted-foreground));
   }
 }
 </style>

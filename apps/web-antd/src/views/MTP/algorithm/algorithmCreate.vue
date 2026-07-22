@@ -1437,7 +1437,7 @@ const removeAlgorithm = () => {
   display: flex;
   align-items: center;
   padding: 8px 0;
-  color: #888;
+  color: hsl(var(--muted-foreground));
   font-size: 14px;
 }
 

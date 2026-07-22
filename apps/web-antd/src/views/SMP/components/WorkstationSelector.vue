@@ -174,7 +174,7 @@ defineExpose({
             placeholder="请选择已注册的服务器"
             style="width: 100%"
             show-search
-            :filter-option="(input: string, option: { label: string }) =>
+            :filter-option="(input: string, option: any) =>
               option.label.toLowerCase().includes(input.toLowerCase())"
           >
             <template #option="{ value, label, workstation }">

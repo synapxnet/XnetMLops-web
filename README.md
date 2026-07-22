@@ -4,22 +4,56 @@
 
 **XnetMLops 模型工程与智能体平台的 Web 控制台**
 
-[![Version](https://img.shields.io/badge/version-1.0.0-1677ff.svg)](https://www.xnetmlops.synapxnet.cn)
-[![Vue](https://img.shields.io/badge/Vue-3-42b883.svg)](https://vuejs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6.svg)](https://www.typescriptlang.org/)
-[![License](https://img.shields.io/badge/license-MIT-2ea44f.svg)](./LICENSE)
+[![Version](https://img.shields.io/badge/version-1.0.0-1677ff.svg)](https://www.xnetmlops.synapxnet.cn) [![Vue](https://img.shields.io/badge/Vue-3-42b883.svg)](https://vuejs.org/) [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6.svg)](https://www.typescriptlang.org/) [![License](https://img.shields.io/badge/license-MIT-2ea44f.svg)](./LICENSE)
 
-[在线体验](https://www.xnetmlops.synapxnet.cn) · [OpenXnet 开源社区](https://openxnet.synapxnet.com) · [查看许可](./LICENSE)
+[在线体验](https://www.xnetmlops.synapxnet.cn) · [后端仓库 XnetMLops](https://github.com/synapxnet/XnetMLops) · [OpenXnet 开源社区](https://openxnet.synapxnet.com) · [查看许可](./LICENSE)
 
 </div>
 
 ![XnetMLops 分析页](./docs/images/xnetmlops-overview.png)
 
+## 页面预览
+
+### DPP 数据处理
+
+| 数据集管理 | RAG 知识库 |
+| --- | --- |
+| ![XnetMLops 数据集管理](./docs/images/xnetmlops-dpp-datasets.png) | ![XnetMLops RAG 知识库](./docs/images/xnetmlops-dpp-knowledge-base.png) |
+
+### MTP 模型训练与 MEP 模型部署
+
+| 训练任务 | 模型部署 |
+| --- | --- |
+| ![XnetMLops 训练任务](./docs/images/xnetmlops-mtp-training.png) | ![XnetMLops 模型部署](./docs/images/xnetmlops-mep-deployments.png) |
+
+### SMP 系统管理与 XAA 智能体
+
+| 工作站资源 | 智能体工作流 |
+| --- | --- |
+| ![XnetMLops 工作站资源](./docs/images/xnetmlops-smp-workstations.png) | ![XnetMLops 智能体工作流](./docs/images/xnetmlops-xaa-workflows.png) |
+
+| 元技能仓库 | 智能助手 |
+| --- | --- |
+| ![XnetMLops 元技能仓库](./docs/images/xnetmlops-xaa-skills.png) | ![XnetMLops 智能助手](./docs/images/xnetmlops-xaa-assistants.png) |
+
+### 演示入口与项目信息
+
+| 演示登录 | 关于项目 |
+| --- | --- |
+| ![XnetMLops 演示登录](./docs/images/xnetmlops-login.png) | ![XnetMLops 关于项目](./docs/images/xnetmlops-about.png) |
+
 ## 项目简介
 
 XnetMLops Web 是由 **SynapXnet 团队**开源的模型工程控制台，为数据工程师、算法工程师、平台管理员和 AI 应用开发者提供统一工作区。界面覆盖数据处理、训练任务、模型服务、基础资源和智能体编排，让模型从实验走向服务的过程更可见、可控和可复用。
 
-项目基于 Vue 3、TypeScript、Vite、Ant Design Vue 与 Vben Admin 构建，通过模块化路由对 DPP、MTP、MEP、SMP、XAA 五个业务域进行组织。
+本仓库是平台前端，与 [XnetMLops](https://github.com/synapxnet/XnetMLops) 后端仓库共同组成企业级、多租户、前后端分离系统。项目基于 Vue 3、TypeScript、Vite、Ant Design Vue，并采用 [Vue Vben Admin 框架](https://github.com/vbenjs/vue-vben-admin) 构建，通过模块化路由组织 DPP、MTP、MEP、SMP、XAA 五个业务域。
+
+## 项目优势
+
+- **企业多租户**：以租户、部门、团队和权限边界支撑不同角色协同研发。
+- **前后端分离**：控制台与微服务独立发布，方便企业集成与按模块扩展。
+- **全流程闭环**：连接数据处理、定时训练、模型部署、推理服务与智能体编排。
+- **持续更新**：SynapXnet 团队会持续完善训练、部署、RAG、智能体体验与文档。
 
 ## 功能模块
 
@@ -93,4 +127,4 @@ pnpm build:antd
 
 ## 开源许可
 
-本项目基于 [MIT License](./LICENSE) 开源。前端基础工程沿用 Vben 的 MIT 授权，相关版权声明已保留在许可文件中。
+本项目基于 [MIT License](./LICENSE) 开源。前端采用 [Vue Vben Admin 框架](https://github.com/vbenjs/vue-vben-admin)，并依法保留上游项目的 MIT 版权与许可声明。

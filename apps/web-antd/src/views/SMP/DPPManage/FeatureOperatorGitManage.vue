@@ -259,7 +259,7 @@ const columns = [
           {
             type: 'link',
             onClick: () => editItem(record),
-            style: { color: canEdit ? '#1890ff' : '#bfbfbf' },
+            style: { color: canEdit ? '#1890ff' : 'hsl(var(--muted-foreground))' },
             disabled: !canEdit,
           },
           [h(EditOutlined), ' 编辑'],
@@ -270,7 +270,7 @@ const columns = [
             type: 'link',
             danger: true,
             onClick: () => confirmDelete(record),
-            style: { color: canEdit ? '#ff4d4f' : '#bfbfbf' },
+            style: { color: canEdit ? '#ff4d4f' : 'hsl(var(--muted-foreground))' },
             disabled: !canEdit,
           },
           [h(DeleteOutlined), ' 删除'],
@@ -666,7 +666,7 @@ watch(searchKey, () => {
           {{ formErrors.token }}
         </p>
         <p class="mt-1 text-xs text-gray-500">
-          示例: ghp_AbC123DeF456GhI789JkL012MnO345Pqr678
+          示例: &lt;github-personal-access-token&gt;
         </p>
       </div>
 

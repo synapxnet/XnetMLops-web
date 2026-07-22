@@ -369,7 +369,9 @@ const mapTaskDetail = (task: any): TaskDetail => {
 // 添加租户信息
 const currentUserInfo = inject<Ref<any>>('currentUserInfo', ref(null));
 const currentTenantInfo = inject<Ref<any>>('selectedOrganization', ref(null));
-const tenantUid = computed(() => currentTenantInfo.value?.tenantUid || '');
+const tenantUid = computed(
+  () => currentTenantInfo.value?.tenantUid || 'default',
+);
 const userId = computed(() => currentUserInfo.value?.userId || '');
 
 // 搜索相关逻辑
@@ -1240,7 +1242,7 @@ const fetchScheduleRecordsForTask = async (record: DataItem) => {
         },
       );
     } else {
-      console.error('获取调度记录失败:', response);
+      record.scheduleRecords = [];
     }
   } catch (error) {
     console.error(`获取任务 ${record.uid} 的调度记录失败:`, error);
@@ -1307,6 +1309,7 @@ const fetchData = async () => {
         schedulePollingTimer: undefined,
         scheduleCollapseActiveKey: [],
       }));
+      pagination.total = response.length;
 
       // 为每个任务获取执行记录
       await Promise.all(
@@ -1361,7 +1364,6 @@ const fetchData = async () => {
         }),
       );
 
-      pagination.total = response.length;
       initDependencies();
     }
   } catch {
@@ -2448,7 +2450,7 @@ const data = ref<DataItem[]>([]);
 
 .stage-item {
   padding: 8px 0;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid hsl(var(--border));
 }
 
 .stage-header {
@@ -2463,13 +2465,13 @@ const data = ref<DataItem[]>([]);
 
 .stage-duration {
   margin-left: auto;
-  color: #666;
+  color: hsl(var(--muted-foreground));
   font-size: 0.9em;
 }
 
 .stage-time {
   margin-top: 4px;
-  color: #888;
+  color: hsl(var(--muted-foreground));
   font-size: 0.85em;
 }
 

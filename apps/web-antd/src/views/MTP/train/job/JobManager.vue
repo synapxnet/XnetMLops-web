@@ -440,7 +440,7 @@ const stopTask = () => {
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
-  background-color: #f8f9fa;
+  background-color: hsl(var(--muted));
 }
 
 .header-card {
@@ -536,11 +536,11 @@ const stopTask = () => {
 }
 
 :deep(.ant-steps-item):hover {
-  background-color: #f0f7ff;
+  background-color: hsl(var(--primary) / 8%);
 }
 
 :deep(.ant-steps-item).active {
-  background-color: #e6f7ff;
+  background-color: hsl(var(--primary) / 12%);
   font-weight: 500;
 }
 
@@ -556,7 +556,7 @@ const stopTask = () => {
   align-items: center;
   margin-bottom: 15px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid hsl(var(--border));
   flex-wrap: wrap;
 }
 
@@ -569,7 +569,7 @@ const stopTask = () => {
 
 .step-time {
   font-size: 0.9rem;
-  color: #666;
+  color: hsl(var(--muted-foreground));
 }
 
 .metrics-grid {
@@ -580,10 +580,10 @@ const stopTask = () => {
 }
 
 .metric-card {
-  border: 1px solid #e8e8e8;
+  border: 1px solid hsl(var(--border));
   border-radius: 8px;
   padding: 12px;
-  background: white;
+  background: hsl(var(--card));
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
   transition:
     transform 0.2s,
@@ -597,7 +597,7 @@ const stopTask = () => {
 
 .metric-title {
   font-size: 0.9rem;
-  color: #666;
+  color: hsl(var(--muted-foreground));
   margin-bottom: 6px;
 }
 
@@ -616,7 +616,7 @@ const stopTask = () => {
 }
 
 .log-title {
-  color: #444;
+  color: hsl(var(--foreground));
   font-size: 1.1rem;
   margin-bottom: 0;
   display: flex;
@@ -635,7 +635,7 @@ const stopTask = () => {
 
 .log-stats {
   font-size: 0.85rem;
-  color: #666;
+  color: hsl(var(--muted-foreground));
 }
 
 .log-count {
@@ -699,7 +699,7 @@ const stopTask = () => {
 }
 
 .empty-logs {
-  color: #888;
+  color: hsl(var(--muted-foreground));
   font-style: italic;
   text-align: center;
   padding: 20px;
@@ -711,7 +711,7 @@ const stopTask = () => {
   gap: 10px;
   margin-top: 20px;
   padding-top: 15px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid hsl(var(--border));
 }
 
 .footer-actions button {

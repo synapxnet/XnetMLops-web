@@ -447,7 +447,7 @@ onMounted(() => {
                 <Space>
                   <span>主机名</span>
                   <Tooltip title="用于 Hadoop 等分布式系统的节点识别">
-                    <QuestionCircleOutlined style="color: #999" />
+                    <QuestionCircleOutlined class="text-muted-foreground" />
                   </Tooltip>
                 </Space>
               </template>
@@ -638,7 +638,7 @@ export default {
 .form-card :deep(.ant-card-head) {
   min-height: 40px;
   padding: 0 16px;
-  background: #fafafa;
+  background: hsl(var(--muted));
   border-radius: 8px 8px 0 0;
 }
 
@@ -662,7 +662,7 @@ export default {
 
 .form-card :deep(.ant-form-item-label > label) {
   font-size: 13px;
-  color: #666;
+  color: hsl(var(--muted-foreground));
 }
 
 .test-connection-section {
@@ -671,7 +671,7 @@ export default {
   align-items: center;
   gap: 12px;
   padding-top: 8px;
-  border-top: 1px dashed #e8e8e8;
+  border-top: 1px dashed hsl(var(--border));
   margin-top: 8px;
 }
 
@@ -681,7 +681,7 @@ export default {
 
 .gpu-config {
   padding: 12px;
-  background: linear-gradient(135deg, #f6ffed 0%, #e6f7ff 100%);
+  background: linear-gradient(135deg, hsl(var(--success) / 12%) 0%, hsl(var(--primary) / 10%) 100%);
   border-radius: 6px;
   margin-top: 8px;
 }
@@ -695,6 +695,6 @@ export default {
   justify-content: flex-end;
   gap: 12px;
   padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid hsl(var(--border));
 }
 </style>

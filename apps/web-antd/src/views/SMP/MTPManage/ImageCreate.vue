@@ -757,7 +757,7 @@ onMounted(() => {
 }
 
 :deep(.ant-input) {
-  border: 1px solid #d9d9d9;
+  border: 1px solid hsl(var(--border));
 }
 
 .dark .docker-editor-panel {

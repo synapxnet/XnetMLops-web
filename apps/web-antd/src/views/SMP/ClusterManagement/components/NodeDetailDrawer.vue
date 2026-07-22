@@ -195,35 +195,35 @@ function formatDate(dateStr?: string) {
 
 .uid-text {
   font-size: 11px;
-  color: #666;
+  color: hsl(var(--muted-foreground));
   word-break: break-all;
 }
 
 .section-title {
   font-weight: 600;
   margin-bottom: 8px;
-  color: #333;
+  color: hsl(var(--foreground));
 }
 
 .description-text {
-  color: #666;
+  color: hsl(var(--muted-foreground));
   line-height: 1.6;
 }
 
 .action-buttons {
   margin-top: 24px;
   padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid hsl(var(--border));
 }
 
 .empty-state {
   text-align: center;
   padding: 48px;
-  color: #999;
+  color: hsl(var(--muted-foreground));
 }
 
 code {
-  background: #f5f5f5;
+  background: hsl(var(--muted));
   padding: 2px 6px;
   border-radius: 4px;
   font-family: 'Monaco', 'Menlo', monospace;

@@ -625,7 +625,7 @@ function handleTabChange(key: string) {
 .log-content {
   max-height: 500px;
   overflow: auto;
-  background: #f5f5f5;
+  background: hsl(var(--muted));
   padding: 16px;
   border-radius: 4px;
   font-family: 'Consolas', 'Monaco', monospace;
