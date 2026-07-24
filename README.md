@@ -12,7 +12,7 @@
 
 </div>
 
-![XnetMLops 分析页](./docs/images/xnetmlops-overview.png)
+![XnetMLops MLOps 分析中心](./docs/images/xnetmlops-analytics-2026.png)
 
 ## 页面预览
 
