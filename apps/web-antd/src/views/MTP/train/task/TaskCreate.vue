@@ -7,6 +7,7 @@ import { computed, inject, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
+import { useTabs } from '@vben/hooks';
 
 import { Button, Card, message, Steps } from 'ant-design-vue';
 
@@ -31,6 +32,8 @@ const userId = computed(() => currentUserInfo.value?.userId || '');
 
 const route = useRoute();
 const router = useRouter();
+const { closeCurrentTab } = useTabs();
+const TASK_LIST_PATH = '/MTP/train/index';
 const isEditMode = ref(false);
 const isCopyMode = ref(false);
 const taskId = ref<null | string>(null);
@@ -135,9 +138,13 @@ const formState = ref<TaskFormState>({
   },
 });
 
-const close = () => {
-  // 使用 replace 避免历史记录问题，并强制刷新列表页
-  router.replace('/MTP/train/index');
+const returnToTaskList = async () => {
+  await closeCurrentTab();
+
+  // Direct links and disabled tab bars have no previous list tab to activate.
+  if (router.currentRoute.value.path !== TASK_LIST_PATH) {
+    await router.replace(TASK_LIST_PATH);
+  }
 };
 
 // 初始化：检查URL参数
@@ -309,8 +316,7 @@ const handleSubmit = async () => {
       await createTrainTask(formState.value, userId.value, tenantUid.value);
       message.success(isCopyMode.value ? '任务复制成功！' : '任务创建成功！');
     }
-    // 使用 replace 避免返回时出现空白页
-    router.replace('/MTP/train/index');
+    await returnToTaskList();
   } catch (error) {
     console.error('操作失败:', error);
     message.error(
@@ -367,7 +373,11 @@ const handleSubmit = async () => {
         >
           下一步
         </AButton>
-        <AButton type="primary" @click="close" v-if="currentStep === 0">
+        <AButton
+          type="primary"
+          @click="returnToTaskList"
+          v-if="currentStep === 0"
+        >
           取消
         </AButton>
         <AButton type="primary" v-if="currentStep === 3" @click="handleSubmit">

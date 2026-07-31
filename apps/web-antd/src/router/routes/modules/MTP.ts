@@ -71,7 +71,8 @@ const routes: RouteRecordRaw[] = [
         meta: {
           icon: '',
           hideInMenu: true,
-          title: $t('page.MTP.modeltrain'),
+          keepAlive: false,
+          title: $t('任务配置'),
         },
         name: 'MTP:train:task',
         path: '/MTP/train/task',
