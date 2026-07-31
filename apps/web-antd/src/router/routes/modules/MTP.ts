@@ -34,6 +34,7 @@ const routes: RouteRecordRaw[] = [
         // 二级级主页设置
         meta: {
           icon: '',
+          keepAlive: true,
           menuVisibleWithForbidden: true,
           title: $t('page.MTP.modeltrain'),
         },

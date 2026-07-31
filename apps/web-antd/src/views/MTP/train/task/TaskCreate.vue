@@ -32,7 +32,7 @@ const userId = computed(() => currentUserInfo.value?.userId || '');
 
 const route = useRoute();
 const router = useRouter();
-const { closeCurrentTab } = useTabs();
+const { closeCurrentTab, refreshTab } = useTabs();
 const TASK_LIST_PATH = '/MTP/train/index';
 const isEditMode = ref(false);
 const isCopyMode = ref(false);
@@ -145,6 +145,8 @@ const returnToTaskList = async () => {
   if (router.currentRoute.value.path !== TASK_LIST_PATH) {
     await router.replace(TASK_LIST_PATH);
   }
+
+  await refreshTab();
 };
 
 // 初始化：检查URL参数
