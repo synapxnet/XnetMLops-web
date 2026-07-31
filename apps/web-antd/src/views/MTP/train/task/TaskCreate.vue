@@ -3,7 +3,7 @@ import type { ComponentPublicInstance, Ref } from 'vue';
 
 import type { TaskFormState } from '../taskcommon/task';
 
-import { computed, inject, nextTick, onMounted, ref } from 'vue';
+import { computed, inject, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
@@ -32,7 +32,7 @@ const userId = computed(() => currentUserInfo.value?.userId || '');
 
 const route = useRoute();
 const router = useRouter();
-const { closeCurrentTab, refreshTab } = useTabs();
+const { closeCurrentTab } = useTabs();
 const TASK_LIST_PATH = '/MTP/train/index';
 const isEditMode = ref(false);
 const isCopyMode = ref(false);
@@ -146,8 +146,7 @@ const returnToTaskList = async () => {
     await router.replace(TASK_LIST_PATH);
   }
 
-  await nextTick();
-  await refreshTab();
+  router.go(0);
 };
 
 // 初始化：检查URL参数
