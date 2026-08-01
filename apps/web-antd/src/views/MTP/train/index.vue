@@ -16,6 +16,11 @@ import {
 import { useRouter } from 'vue-router';
 
 import {
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+} from '@ant-design/icons-vue';
+import {
   Button,
   Card,
   Collapse,
@@ -1720,10 +1725,14 @@ const data = ref<DataItem[]>([]);
     <div class="mb-6 flex items-center justify-between">
       <h1 class="text-xl font-bold">训练任务管理</h1>
       <div class="flex gap-2">
-        <Button type="primary" @click="handleRefresh" icon="reload">
+        <Button type="primary" @click="handleRefresh">
+          <template #icon><ReloadOutlined /></template>
           刷新
         </Button>
-        <Button type="primary" @click="handleAdd" icon="plus">新增任务</Button>
+        <Button type="primary" @click="handleAdd">
+          <template #icon><PlusOutlined /></template>
+          新增任务
+        </Button>
       </div>
     </div>
 
@@ -1790,7 +1799,10 @@ const data = ref<DataItem[]>([]);
         </div>
 
         <div class="flex items-end">
-          <Button type="primary" @click="fetchData" class="w-full">搜索</Button>
+          <Button type="primary" @click="fetchData" class="w-full">
+            <template #icon><SearchOutlined /></template>
+            搜索
+          </Button>
         </div>
       </div>
     </div>
