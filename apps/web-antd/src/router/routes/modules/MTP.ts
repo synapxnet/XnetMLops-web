@@ -33,8 +33,9 @@ const routes: RouteRecordRaw[] = [
       {
         // 二级级主页设置
         meta: {
+          activePath: '/MTP/train/index',
           icon: '',
-          keepAlive: true,
+          keepAlive: false,
           menuVisibleWithForbidden: true,
           title: $t('page.MTP.modeltrain'),
         },
@@ -70,9 +71,11 @@ const routes: RouteRecordRaw[] = [
       {
         // 二级级主页设置
         meta: {
+          activePath: '/MTP/train/index',
           icon: '',
           hideInMenu: true,
           keepAlive: false,
+          maxNumOfOpenTab: 1,
           title: $t('任务配置'),
         },
         name: 'MTP:train:task',
@@ -120,9 +123,12 @@ const routes: RouteRecordRaw[] = [
       {
         // 任务详情页面（不在菜单显示）
         meta: {
+          activePath: '/MTP/train/index',
           icon: '',
           hideInMenu: true,
-          title: $t('page.MTP.modeltrain'),
+          keepAlive: false,
+          maxNumOfOpenTab: 1,
+          title: $t('任务执行详情'),
         },
         name: 'MTP:train:job',
         path: '/MTP/train/job',

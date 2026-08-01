@@ -16,6 +16,7 @@ import { $t, setupI18n } from '#/locales';
 import { initComponentAdapter } from './adapter/component';
 import App from './app.vue';
 import { router } from './router';
+import { sanitizeTabbarSession } from './utils/tabbar-session';
 
 import 'element-plus/dist/index.css';
 
@@ -44,6 +45,7 @@ async function bootstrap(namespace: string) {
   await setupI18n(app);
 
   // 配置 pinia-tore
+  sanitizeTabbarSession(namespace);
   await initStores(app, { namespace });
 
   // 安装权限指令

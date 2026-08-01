@@ -90,7 +90,7 @@ function transformComponent(
   <div class="relative h-full">
     <IFrameRouterView />
     <RouterView v-slot="{ Component, route }">
-      <Transition :name="getTransitionName(route)" appear mode="out-in">
+      <Transition :name="getTransitionName(route)" appear>
         <KeepAlive
           v-if="keepAlive"
           :exclude="getExcludeCachedTabs"

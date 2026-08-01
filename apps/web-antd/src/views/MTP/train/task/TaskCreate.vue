@@ -145,8 +145,6 @@ const returnToTaskList = async () => {
   if (router.currentRoute.value.path !== TASK_LIST_PATH) {
     await router.replace(TASK_LIST_PATH);
   }
-
-  router.go(0);
 };
 
 // 初始化：检查URL参数
