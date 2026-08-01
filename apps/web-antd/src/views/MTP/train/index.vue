@@ -381,9 +381,9 @@ const userId = computed(() => currentUserInfo.value?.userId || '');
 
 // 搜索相关逻辑
 const searchName = ref('');
-const searchType = ref('');
-const searchStatus = ref('');
-const searchScheduleStatus = ref('');
+const searchType = ref<string>();
+const searchStatus = ref<string>();
+const searchScheduleStatus = ref<string>();
 
 const platformOptions = computed(() => {
   return [...new Set(data.value.map((item) => item.task_type))];
@@ -1737,20 +1737,22 @@ const data = ref<DataItem[]>([]);
     </div>
 
     <div class="search-container mb-6 rounded-lg bg-white p-4 shadow">
-      <div class="grid grid-cols-1 gap-4 md:grid-cols-5">
-        <div>
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <div class="min-w-0">
           <label class="mb-2 block font-medium">任务名称</label>
           <Input
             v-model:value="searchName"
+            class="w-full"
             placeholder="搜索任务名称"
             allow-clear
           />
         </div>
 
-        <div>
+        <div class="min-w-0">
           <label class="mb-2 block font-medium">任务类型</label>
           <Select
             v-model:value="searchType"
+            class="w-full"
             placeholder="选择任务类型"
             allow-clear
           >
@@ -1764,10 +1766,11 @@ const data = ref<DataItem[]>([]);
           </Select>
         </div>
 
-        <div>
+        <div class="min-w-0">
           <label class="mb-2 block font-medium">任务状态</label>
           <Select
             v-model:value="searchStatus"
+            class="w-full"
             placeholder="选择任务状态"
             allow-clear
           >
@@ -1781,10 +1784,11 @@ const data = ref<DataItem[]>([]);
           </Select>
         </div>
 
-        <div>
+        <div class="min-w-0">
           <label class="mb-2 block font-medium">调度状态</label>
           <Select
             v-model:value="searchScheduleStatus"
+            class="w-full"
             placeholder="选择调度状态"
             allow-clear
           >
