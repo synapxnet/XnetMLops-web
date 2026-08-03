@@ -105,6 +105,26 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
   return client;
 }
 
+/**
+ * 创建保留公共 ToolResponse 包络的 MEP Agent 请求客户端。
+ *
+ * @param serviceBaseURL MEP 原有 API 地址
+ * @returns 证据、探针和动作请求客户端
+ */
+function createAgentRequestClient(serviceBaseURL: string) {
+  const baseURL = serviceBaseURL.replace(/\/api\/[^/]+\/?$/, '').replace(/\/mep\/?$/, '');
+  const client = new RequestClient({ baseURL, responseReturn: 'data', timeout: 65_000 });
+  client.addRequestInterceptor({
+    fulfilled: async (config) => {
+      const token = useAccessStore().accessToken;
+      config.headers.Authorization = token ? `Bearer ${token}` : null;
+      config.headers['Accept-Language'] = preferences.app.locale;
+      return config;
+    },
+  });
+  return client;
+}
+
 export const requestClient = createRequestClient(apiURL, {
   responseReturn: 'data',
 });
@@ -128,5 +148,7 @@ export const mepRequestClient = createRequestClient(mepApiURL, {
 export const xaaRequestClient = createRequestClient(xaaApiURL, {
   responseReturn: 'data',
 });
+
+export const agentMepRequestClient = createAgentRequestClient(mepApiURL);
 
 export const baseRequestClient = new RequestClient({ baseURL: apiURL });

@@ -34,6 +34,12 @@ XnetMLops Web は **SynapXnet チーム**が公開するモデルエンジニア
 
 [XnetMLops バックエンド](https://github.com/synapxnet/XnetMLops) と組み合わせることで、企業向けマルチテナント、フロントエンド・バックエンド分離システムを構成します。Vue 3、TypeScript、Vite、Ant Design Vue、および [Vue Vben Admin](https://github.com/vbenjs/vue-vben-admin) を採用しています。
 
+## GOAI Competition 1.0.0
+
+`GOAI-Competition` ブランチは `/agent/incidents/:incidentId/model-evidence` を追加し、デプロイ期待状態、Runtime readiness、Revision、モデル契約、推論 Probe を表示します。ロールバック画面は `resourceVersion` を再取得し、Dry Run と実 Action を区別して永続 Action を有界バックオフで追跡します。
+
+[ルート引数、承認 UI、検証結果](./docs/goai-handoff/HANDOFF-GOAI-COMPETITION-1.0.0.md) · [XnetMLops バックエンド](https://github.com/synapxnet/XnetMLops/tree/GOAI-Competition)
+
 ## 特長
 
 - テナント、部門、チーム、権限を横断する企業向けマルチテナント。

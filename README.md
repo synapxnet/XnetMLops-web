@@ -50,6 +50,12 @@ XnetMLops Web 是由 **SynapXnet 团队**开源的模型工程控制台，为数
 
 本仓库是平台前端，与 [XnetMLops](https://github.com/synapxnet/XnetMLops) 后端仓库共同组成企业级、多租户、前后端分离系统。项目基于 Vue 3、TypeScript、Vite、Ant Design Vue，并采用 [Vue Vben Admin 框架](https://github.com/vbenjs/vue-vben-admin) 构建，通过模块化路由组织 DPP、MTP、MEP、SMP、XAA 五个业务域。
 
+## GOAI Competition 1.0.0
+
+`GOAI-Competition` 分支新增模型证据深链 `/agent/incidents/:incidentId/model-evidence`，展示部署期望状态、Runtime readiness、修订、模型契约与推理探针。回滚抽屉强制刷新 `resourceVersion`，区分 Dry Run 与真实动作，并以退避轮询恢复持久化 Action，终态停止、页面隐藏暂停。
+
+[查看页面参数、审批交互和验证记录](./docs/goai-handoff/HANDOFF-GOAI-COMPETITION-1.0.0.md) · [XnetMLops 后端比赛分支](https://github.com/synapxnet/XnetMLops/tree/GOAI-Competition)
+
 ## 项目优势
 
 - **企业多租户**：以租户、部门、团队和权限边界支撑不同角色协同研发。

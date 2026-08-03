@@ -34,6 +34,12 @@ XnetMLops Web is the open-source model engineering console maintained by the **S
 
 Together with the [XnetMLops backend](https://github.com/synapxnet/XnetMLops), it forms an enterprise-grade, multi-tenant, frontend/backend-separated system. The frontend uses Vue 3, TypeScript, Vite, Ant Design Vue, and the [Vue Vben Admin framework](https://github.com/vbenjs/vue-vben-admin).
 
+## GOAI Competition 1.0.0
+
+The `GOAI-Competition` branch adds `/agent/incidents/:incidentId/model-evidence` for desired deployment state, runtime readiness, revisions, model contracts, and inference probes. The rollback drawer refreshes `resourceVersion`, distinguishes dry runs from real actions, and resumes persistent Actions with bounded backoff polling that stops at terminal states and pauses while hidden.
+
+[Route parameters, approval UX, and verification](./docs/goai-handoff/HANDOFF-GOAI-COMPETITION-1.0.0.md) · [XnetMLops backend branch](https://github.com/synapxnet/XnetMLops/tree/GOAI-Competition)
+
 ## Highlights
 
 - Enterprise multi-tenancy across tenants, departments, teams, and permissions.
