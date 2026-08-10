@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { VbenFormSchema } from '@vben/common-ui';
+
 import { computed } from 'vue';
 
 import { AuthenticationCodeLogin, z } from '@vben/common-ui';
@@ -11,7 +12,7 @@ defineOptions({ name: 'CodeLogin' });
 
 const CODE_LENGTH = 6;
 const authStore = useAuthStore();
-const DEMO_PHONE = '12345678900';
+const DEMO_PHONE = '17870171303';
 const DEMO_VERIFICATION_CODE = '000000';
 /**
  * 表单配置
@@ -30,12 +31,9 @@ const formSchema = computed((): VbenFormSchema[] => {
       rules: z
         .string()
         .min(1, { message: $t('authentication.mobileTip') })
-        .refine(
-          (v) => /^\d{11}$/.test(v),
-          {
-            message: $t('authentication.mobileErrortip'),
-          },
-        ),
+        .refine((v) => /^\d{11}$/.test(v), {
+          message: $t('authentication.mobileErrortip'),
+        }),
     },
     {
       component: 'VbenPinInput',

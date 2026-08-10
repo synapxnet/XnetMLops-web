@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import type { NotificationItem } from '@vben/layouts';
 
+import type { OrganizationTreeNode } from '#/api/core';
+
 import { computed, onMounted, provide, ref, watch } from 'vue';
 
 import { AuthenticationLoginExpiredModal } from '@vben/common-ui';
@@ -16,11 +18,10 @@ import { preferences } from '@vben/preferences';
 import { useAccessStore, useUserStore } from '@vben/stores';
 import { openWindow } from '@vben/utils';
 
-import { useAuthStore } from '#/store';
+import { getOrganizationTreeApi } from '#/api/core';
 import AssistantFloatingWindow from '#/components/AssistantFloatingWindow/index.vue';
+import { useAuthStore } from '#/store';
 import LoginForm from '#/views/_core/authentication/login.vue';
-
-import { getOrganizationTree } from '../views/SMP/api/deptTreeData';
 
 const OPENXNET_URL = 'https://openxnet.synapxnet.com';
 const FRONTEND_REPOSITORY_URL = 'https://github.com/synapxnet/XnetMLops-web';
@@ -128,98 +129,48 @@ watch(
     immediate: true,
   },
 );
-// 定义组织树数据结构
-interface DeptTreeDataItem {
-  label: string;
-  value: string; // 使用 uid
-  children?: DeptTreeDataItem[];
+interface SelectedOrganization {
+  deptUid: null | string;
+  level: number;
+  teamUid: null | string;
+  tenantUid: null | string;
 }
 
-// 组织树数据（从后端获取）
-const organizationTree = ref<DeptTreeDataItem[]>([]);
+const organizationTree = ref<OrganizationTreeNode[]>([]);
+const selectedOrganization = ref<SelectedOrganization>({
+  deptUid: null,
+  level: 0,
+  teamUid: null,
+  tenantUid: null,
+});
 
-// 获取组织树数据
-const fetchOrganizationTree = async () => {
+/** 加载当前用户被后端明确授权的组织树。 */
+async function fetchOrganizationTree() {
   try {
-    const treeData = await getOrganizationTree();
-    organizationTree.value = transformOrgTree(treeData);
-
-    // +++ 新增：在树数据加载后恢复选择 +++
-    restoreSelectedOrg();
-  } catch (error) {
-    console.error('获取组织树失败', error);
+    organizationTree.value = await getOrganizationTreeApi();
+  } catch {
+    console.error('获取组织树失败');
     organizationTree.value = [];
   }
-};
-
-// 优化转换函数（根据实际数据结构）
-const transformOrgTree = (tree: any[]): DeptTreeDataItem[] => {
-  if (!tree || !Array.isArray(tree)) return [];
-
-  return tree.map((item) => ({
-    label: item.label,
-    value: item.value,
-    // 处理子节点（空数组转为 undefined）
-    children:
-      item.children && item.children.length > 0
-        ? transformOrgTree(item.children)
-        : undefined,
-  }));
-};
-
-// 创建响应式引用
-const selectedOrg = ref({
-  level: 0,
-  tenantUid: null,
-  deptUid: null,
-  teamUid: null,
-});
-// 提供组织树数据
-provide('organizationTree', organizationTree);
-// 提供数据
-provide('selectedOrganization', selectedOrg);
-// 提供当前用户信息
-const userInfo = computed(() => userStore.userInfo);
-provide('currentUserInfo', userInfo);
-
-// 修改 handleDepartmentChange
-function handleDepartmentChange(value: string[]) {
-  const [tenantUid, deptUid, teamUid] = value;
-
-  selectedOrg.value = {
-    level: value.length,
-    tenantUid: tenantUid || null,
-    deptUid: deptUid || null,
-    teamUid: teamUid || null,
-  };
-  console.log('选择的选择:', selectedOrg.value);
-
-  // 保存到本地存储
-  localStorage.setItem(
-    'selectedOrganization',
-    JSON.stringify(selectedOrg.value),
-  );
 }
 
-const restoreSelectedOrg = () => {
-  const savedOrg = localStorage.getItem('selectedOrganization');
-  if (savedOrg) {
-    try {
-      selectedOrg.value = JSON.parse(savedOrg);
-      console.log('恢复的组织选择:', selectedOrg.value);
-    } catch (error) {
-      console.error('解析保存的组织数据失败', error);
-      localStorage.removeItem('selectedOrganization');
-    }
-  }
-};
-// 修改初始化逻辑
-onMounted(() => {
-  // +++ 先恢复选择状态 +++
-  restoreSelectedOrg();
-  // 再获取组织树数据（获取完成后会再次恢复）
-  fetchOrganizationTree();
-});
+/** 更新当前会话的组织范围，不在浏览器中持久化跨账号权限状态。 */
+function handleDepartmentChange(value: string[] = []) {
+  const [tenantUid, deptUid, teamUid] = value;
+  selectedOrganization.value = {
+    deptUid: deptUid || null,
+    level: value.length,
+    teamUid: teamUid || null,
+    tenantUid: tenantUid || null,
+  };
+}
+
+const userInfo = computed(() => userStore.userInfo);
+provide('currentUserInfo', userInfo);
+provide('organizationTree', organizationTree);
+provide('selectedOrganization', selectedOrganization);
+
+onMounted(fetchOrganizationTree);
 </script>
 
 <template>

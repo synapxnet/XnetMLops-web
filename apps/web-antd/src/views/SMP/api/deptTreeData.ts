@@ -1,10 +1,6 @@
-import type { ApiResponse, DeptTreeDataItem } from './types';
+import { getOrganizationTreeApi } from '#/api/core';
 
-import { smpRequestClient } from '#/api/request'; // 根据实际路径调整
-
-// 获取组织树
-export function getOrganizationTree(): Promise<
-  ApiResponse<DeptTreeDataItem[]>
-> {
-  return smpRequestClient.get('/smp/dept-tree-data');
+/** 获取当前登录用户可见的组织树，禁止读取全量租户。 */
+export function getOrganizationTree() {
+  return getOrganizationTreeApi();
 }

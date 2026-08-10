@@ -1,13 +1,13 @@
-import { xaaRequestClient } from '#/api/request';
-
 import type {
+  CreateSkillRequest,
   Skill,
   SkillCategory,
-  SkillInstallation,
-  CreateSkillRequest,
-  UpdateSkillRequest,
   SkillCategoryKey,
+  SkillInstallation,
+  UpdateSkillRequest,
 } from '../skill/types';
+
+import { xaaRequestClient } from '#/api/request';
 
 // ==================== 技能管理 API ====================
 
@@ -38,6 +38,20 @@ export async function fetchRepositorySkills(
   category?: SkillCategoryKey,
 ): Promise<Skill[]> {
   let url = `/skills/repository`;
+  if (category) {
+    url += `?category=${category}`;
+  }
+  const response = await xaaRequestClient.get(url);
+  return response;
+}
+
+/**
+ * 获取当前登录用户可见的 OpenXnet 企业候选。
+ */
+export async function fetchOpenXnetCandidates(
+  category?: SkillCategoryKey,
+): Promise<Skill[]> {
+  let url = `/skills/repository/openxnet-candidates`;
   if (category) {
     url += `?category=${category}`;
   }
