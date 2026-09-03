@@ -11,6 +11,7 @@
       </div>
       <div class="skill-card__badges">
         <Tag v-if="skill.isOfficial" color="blue" size="small">官方</Tag>
+        <Tag v-if="skill.status === 'draft'" color="gold" size="small">企业候选</Tag>
         <Tag v-if="installed" color="green" size="small">已安装</Tag>
       </div>
     </div>
@@ -30,13 +31,16 @@
       </div>
       <div class="skill-card__actions" @click.stop>
         <Button
-          v-if="!installed"
+          v-if="!installed && skill.status === 'published'"
           type="primary"
           size="small"
           :loading="installing"
           @click="handleInstall"
         >
           安装
+        </Button>
+        <Button v-else-if="skill.status === 'draft'" size="small" disabled>
+          待认证
         </Button>
         <Button
           v-else

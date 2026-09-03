@@ -234,8 +234,9 @@ const fetchAlgorithms = async () => {
   }
 };
 
-// 从后端获取数据集列表
 const datasetOptions = ref<any[]>([]);
+
+/** 从后端读取真实数据集版本与记录数，供训练任务选择。 */
 const fetchDatasets = async () => {
   try {
     const data = await fetchDatasetList();
@@ -246,8 +247,9 @@ const fetchDatasets = async () => {
       bucket_identifier: item.bucket_identifier,
       dataset_name: item.dataset_file,
       dataset_uid: item.uid,
-      type: getTypeLabel(item.type),
-      version: `${Math.floor(Math.random() * 100)}.${Math.floor(Math.random() * 10)} MB`,
+      type: item.type,
+      rowCount: item.rowCount,
+      sourceProductVersion: item.sourceProductVersion || '-',
     }));
   } catch (error) {
     console.error('获取数据集列表失败:', error);
@@ -255,7 +257,7 @@ const fetchDatasets = async () => {
   }
 };
 
-// 获取类型标签
+/** 将数据集类型编码转换为用户可读标签。 */
 const getTypeLabel = (type: string) => {
   switch (type) {
     case '1': {
@@ -266,6 +268,9 @@ const getTypeLabel = (type: string) => {
     }
     case '3': {
       return '音频';
+    }
+    case 'POSTGRESQL_DATA_PRODUCT': {
+      return 'DataOps 数据产品';
     }
     default: {
       return '未知';
@@ -300,7 +305,8 @@ const datasetColumns = ref([
     width: 40,
   },
   { title: '数据集名称', dataIndex: 'dataset_file' },
-  { title: '版本', dataIndex: 'version' },
+  { title: '产品版本', dataIndex: 'sourceProductVersion' },
+  { title: '记录数', dataIndex: 'rowCount' },
   { title: '类型', dataIndex: 'type' },
 ]);
 

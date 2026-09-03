@@ -116,8 +116,8 @@ import SkillDetail from './components/SkillDetail.vue';
 import type { Skill, SkillCategory, SkillCategoryKey } from '../types';
 import {
   fetchRepositorySkills,
+  fetchOpenXnetCandidates,
   fetchSkillCategories,
-  searchSkills,
   installSkill,
   uninstallSkill,
   fetchInstalledSkills,
@@ -139,7 +139,11 @@ const uninstallingId = ref<number | null>(null);
 
 // 计算属性
 const filteredSkills = computed(() => {
-  return skills.value;
+  const keyword = searchKeyword.value.trim().toLowerCase();
+  if (!keyword) return skills.value;
+  return skills.value.filter((skill) => [skill.name, skill.description, skill.tags, skill.uid]
+    .filter(Boolean)
+    .some((value) => String(value).toLowerCase().includes(keyword)));
 });
 
 const categoryCounts = computed(() => {
@@ -164,19 +168,35 @@ async function loadCategories() {
   }
 }
 
+/** 加载已发布技能与 OpenXnet 企业候选；无输入，合并去重后更新仓库列表。 */
 async function loadSkills() {
   loading.value = true;
   try {
-    if (searchKeyword.value) {
-      skills.value = await searchSkills(searchKeyword.value, selectedCategory.value || undefined);
-    } else {
-      skills.value = await fetchRepositorySkills(selectedCategory.value || undefined);
-    }
+    const category = selectedCategory.value || undefined;
+    const [publishedSkills, draftSkills] = await Promise.all([
+      fetchRepositorySkills(category),
+      fetchOpenXnetCandidates(category),
+    ]);
+    const openXnetCandidates = draftSkills.filter(isOpenXnetCandidate);
+    const merged = new Map<number, Skill>();
+    [...openXnetCandidates, ...publishedSkills].forEach((skill) => merged.set(skill.id, skill));
+    skills.value = [...merged.values()];
   } catch (error) {
     message.error('加载技能列表失败');
     console.error('Failed to load skills:', error);
   } finally {
     loading.value = false;
+  }
+}
+
+/** 判断草稿是否来自 OpenXnet 企业 Skill 导入契约；输入技能，返回来源匹配结果。 */
+function isOpenXnetCandidate(skill: Skill): boolean {
+  if (skill.status !== 'draft' || !skill.configJson) return false;
+  try {
+    const config = JSON.parse(skill.configJson) as Record<string, unknown>;
+    return config.source === 'openxnet' && config.schema === 'openxnet.mlops.skill-import.v1';
+  } catch {
+    return false;
   }
 }
 
@@ -206,6 +226,10 @@ function handleSkillClick(skill: Skill) {
 }
 
 async function handleInstall(skill: Skill) {
+  if (skill.status !== 'published') {
+    message.warning('企业候选需完成认证和发布后才能安装');
+    return;
+  }
   installingId.value = skill.id;
   try {
     await installSkill(skill.id);

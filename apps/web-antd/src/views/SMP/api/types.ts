@@ -60,6 +60,17 @@ export interface DatasetItem {
   dept_uid?: null | string;
   level: number;
   encryption: boolean;
+  sourcePlatform?: string;
+  sourceProductName?: string;
+  sourceProductVersion?: string;
+  sourceUri?: string;
+  rowCount?: number;
+  byteSize?: number;
+  schemaDigestSha256?: string;
+  artifactDigestSha256?: string;
+  lineageReference?: string;
+  importStatus?: string;
+  importedAt?: string;
   created_at?: string;
   updated_at?: string;
 }

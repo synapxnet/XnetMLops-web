@@ -22,6 +22,33 @@ import { refreshTokenApi } from './core';
 const { apiURL, smpApiURL, dppApiURL, mtpApiURL, mepApiURL, xaaApiURL } =
   useAppConfig(import.meta.env, import.meta.env.PROD);
 
+const ORGANIZATION_SCOPE_KEY = 'synapxnet:organization-scope';
+
+interface OrganizationScope {
+  deptUid: null | string;
+  teamUid: null | string;
+  tenantUid: null | string;
+}
+
+/** 读取当前页签内的组织范围，解析失败时按未授权处理。 */
+function readOrganizationScope(): null | OrganizationScope {
+  try {
+    const raw = globalThis.sessionStorage?.getItem(ORGANIZATION_SCOPE_KEY);
+    return raw ? (JSON.parse(raw) as OrganizationScope) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 将已选租户、部门和团队写入业务请求头，供服务端二次校验。 */
+function appendOrganizationScopeHeaders(headers: Record<string, any>) {
+  const scope = readOrganizationScope();
+  if (!scope?.tenantUid || !scope.deptUid || !scope.teamUid) return;
+  headers['X-Tenant-Uid'] = scope.tenantUid;
+  headers['X-Dept-Uid'] = scope.deptUid;
+  headers['X-Team-Uid'] = scope.teamUid;
+}
+
 function createRequestClient(baseURL: string, options?: RequestClientOptions) {
   const client = new RequestClient({
     ...options,
@@ -66,6 +93,7 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
       if (userStore.userInfo?.userId) {
         config.headers['X-User-Id'] = userStore.userInfo.userId;
       }
+      appendOrganizationScopeHeaders(config.headers);
       return config;
     },
   });
@@ -105,6 +133,33 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
   return client;
 }
 
+/**
+ * 创建保留公共 ToolResponse 包络的 MEP Agent 请求客户端。
+ *
+ * @param serviceBaseURL MEP 原有 API 地址
+ * @returns 证据、探针和动作请求客户端
+ */
+function createAgentRequestClient(serviceBaseURL: string) {
+  const baseURL = serviceBaseURL
+    .replace(/\/api\/[^/]+\/?$/, '')
+    .replace(/\/mep\/?$/, '');
+  const client = new RequestClient({
+    baseURL,
+    responseReturn: 'data',
+    timeout: 65_000,
+  });
+  client.addRequestInterceptor({
+    fulfilled: async (config) => {
+      const token = useAccessStore().accessToken;
+      config.headers.Authorization = token ? `Bearer ${token}` : null;
+      config.headers['Accept-Language'] = preferences.app.locale;
+      appendOrganizationScopeHeaders(config.headers);
+      return config;
+    },
+  });
+  return client;
+}
+
 export const requestClient = createRequestClient(apiURL, {
   responseReturn: 'data',
 });
@@ -128,5 +183,7 @@ export const mepRequestClient = createRequestClient(mepApiURL, {
 export const xaaRequestClient = createRequestClient(xaaApiURL, {
   responseReturn: 'data',
 });
+
+export const agentMepRequestClient = createAgentRequestClient(mepApiURL);
 
 export const baseRequestClient = new RequestClient({ baseURL: apiURL });

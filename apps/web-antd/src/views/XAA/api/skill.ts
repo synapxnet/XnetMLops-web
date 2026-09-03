@@ -46,6 +46,20 @@ export async function fetchRepositorySkills(
 }
 
 /**
+ * 获取当前登录用户可见的 OpenXnet 企业候选。
+ */
+export async function fetchOpenXnetCandidates(
+  category?: SkillCategoryKey,
+): Promise<Skill[]> {
+  let url = `/skills/repository/openxnet-candidates`;
+  if (category) {
+    url += `?category=${category}`;
+  }
+  const response = await xaaRequestClient.get(url);
+  return response;
+}
+
+/**
  * 搜索技能
  */
 export async function searchSkills(

@@ -11,7 +11,7 @@ defineOptions({ name: 'CodeLogin' });
 
 const CODE_LENGTH = 6;
 const authStore = useAuthStore();
-const DEMO_PHONE = '12345678900';
+const DEMO_PHONE = '17870171303';
 const DEMO_VERIFICATION_CODE = '000000';
 /**
  * 表单配置

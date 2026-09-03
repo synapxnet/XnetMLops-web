@@ -1551,7 +1551,7 @@ const downstreamTasks = ref<
   Record<string, Array<{ name: string; type: string }>>
 >({});
 
-// 初始化依赖数据
+// 初始化依赖容器；没有后端关系时保持空列表，禁止展示伪造任务。
 const initDependencies = () => {
   data.value.forEach((item) => {
     if (!upstreamState.dependencies[item.uid]) {
@@ -1559,11 +1559,7 @@ const initDependencies = () => {
     }
 
     if (!downstreamTasks.value[item.uid]) {
-      downstreamTasks.value[item.uid] = [
-        { name: '下游任务A', type: '数据任务' },
-        { name: '下游任务B', type: '训练任务' },
-        { name: '下游任务C', type: '训练任务' },
-      ];
+      downstreamTasks.value[item.uid] = [];
     }
   });
 };

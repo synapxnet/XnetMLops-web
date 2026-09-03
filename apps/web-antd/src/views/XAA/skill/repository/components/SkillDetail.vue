@@ -16,6 +16,7 @@
           <div class="skill-detail__title">
             {{ skill.name }}
             <Tag v-if="skill.isOfficial" color="blue">官方</Tag>
+            <Tag v-if="skill.status === 'draft'" color="gold">企业候选</Tag>
           </div>
           <div class="skill-detail__meta">
             <span>
@@ -37,7 +38,7 @@
       <!-- 操作按钮 -->
       <div class="skill-detail__actions">
         <Button
-          v-if="!installed"
+          v-if="!installed && skill.status === 'published'"
           type="primary"
           size="large"
           block
@@ -46,6 +47,9 @@
         >
           <template #icon><DownloadOutlined /></template>
           安装技能
+        </Button>
+        <Button v-else-if="skill.status === 'draft'" size="large" block disabled>
+          完成认证与发布后可安装
         </Button>
         <Button
           v-else

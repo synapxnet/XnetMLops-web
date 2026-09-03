@@ -1,609 +1,516 @@
 <script lang="ts" setup>
-// 添加必要的导入
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import type { Ref } from 'vue';
+
+import { computed, inject, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import {
+  Alert,
   Button,
-  Card,
   Descriptions,
   DescriptionsItem,
+  Empty,
   Input,
-  message,
+  Modal,
   Select,
   SelectOption,
+  Space,
+  Statistic,
   Table,
-  TabPane,
-  Tabs,
+  Tag,
+  Tooltip,
+  TypographyText,
+  message,
 } from 'ant-design-vue';
+import {
+  CloudDownloadOutlined,
+  DeleteOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+} from '@ant-design/icons-vue';
 
-// 导入API函数
-import { deleteDataset, fetchDatasetList } from '../../SMP/api/dataset';
+import type { DatasetItem } from '../../SMP/api/types';
+
+import {
+  deleteDataset,
+  fetchDataOpsProducts,
+  fetchDatasetList,
+  importDataOpsProduct,
+  type DataOpsProduct,
+} from '../../SMP/api/dataset';
+
+interface SelectedOrganization {
+  deptUid: null | string;
+  level: number;
+  teamUid: null | string;
+  tenantUid: null | string;
+}
 
 const router = useRouter();
+const currentUserInfo = inject<Ref<any>>('currentUserInfo', ref(null));
+const selectedOrganization = inject<Ref<SelectedOrganization>>(
+  'selectedOrganization',
+  ref({ deptUid: null, level: 0, teamUid: null, tenantUid: null }),
+);
 
-// 定义数据集详情数据结构
-interface DatasetDetail {
-  id: number;
-  name: string;
-  type: string;
-  zone: string;
-  encryption: boolean;
-  subDataArea: boolean;
-  bucket: string;
-  description?: string;
-}
-
-interface DataItem {
-  id: number;
-  tabActiveKey: string;
-  name: string;
-  platform: string;
-  version: string;
-  creator: string;
-  createdAt: string;
-  detail: DatasetDetail;
-}
+const loading = ref(false);
+const importing = ref(false);
+const productLoading = ref(false);
+const importVisible = ref(false);
+const datasets = ref<DatasetItem[]>([]);
+const dataOpsProducts = ref<DataOpsProduct[]>([]);
+const searchName = ref('');
+const sourceFilter = ref('');
 
 const columns = [
-  { title: '数据集名称', dataIndex: 'name', key: 'name' },
-  { title: '类型', dataIndex: 'platform', key: 'platform' },
-  { title: '大小', dataIndex: 'version', key: 'version' },
-  { title: '修改者', dataIndex: 'creator', key: 'creator' },
-  { title: '更新时间', dataIndex: 'createdAt', key: 'createdAt' },
-  { title: '操作', key: 'operation' },
+  { dataIndex: 'dataset_file', key: 'name', title: '数据集名称', width: 270 },
+  { key: 'source', title: '来源', width: 150 },
+  { key: 'version', title: '产品版本', width: 220 },
+  { key: 'rowCount', title: '记录数', width: 110 },
+  { key: 'organization', title: '所属组织', width: 180 },
+  { key: 'status', title: '导入状态', width: 110 },
+  { key: 'updatedAt', title: '更新时间', width: 170 },
+  { key: 'actions', title: '操作', width: 130, fixed: 'right' as const },
 ];
 
-// 数据集列表数据
-const data = ref<DataItem[]>([]);
-// 当前展开的行keys
-const expandedRowKeys = ref<number[]>([]);
-// 加载状态
-const loading = ref(false);
+const productColumns = [
+  { key: 'version', title: 'DataOps 产品版本', width: 250 },
+  { key: 'status', title: '状态', width: 100 },
+  { key: 'rows', title: '记录数', width: 110 },
+  { key: 'labels', title: '标签分布', width: 180 },
+  { key: 'action', title: '操作', width: 110, fixed: 'right' as const },
+];
 
-// 从API加载数据集
-const loadDatasets = async () => {
+const importedVersions = computed(
+  () => new Set(datasets.value.map((dataset) => dataset.sourceProductVersion).filter(Boolean)),
+);
+const filteredDatasets = computed(() =>
+  datasets.value.filter((dataset) => {
+    const nameMatched = dataset.dataset_file
+      .toLowerCase()
+      .includes(searchName.value.trim().toLowerCase());
+    const sourceMatched = sourceFilter.value
+      ? getSourceLabel(dataset) === sourceFilter.value
+      : true;
+    return nameMatched && sourceMatched;
+  }),
+);
+const totalRows = computed(() =>
+  datasets.value.reduce((total, dataset) => total + Number(dataset.rowCount || 0), 0),
+);
+const dataOpsDatasetCount = computed(
+  () => datasets.value.filter((dataset) => dataset.sourcePlatform === 'XnetDataOps').length,
+);
+
+/** 从 MLOps 后端加载全部真实数据集元数据。 */
+async function loadDatasets() {
   loading.value = true;
   try {
-    const datasets = await fetchDatasetList();
-
-    // 转换数据格式
-    data.value = datasets.map((ds) => ({
-      id: ds.id,
-      tabActiveKey: '0',
-      name: ds.dataset_file,
-      platform: getTypeLabel(ds.type),
-      version: `${Math.floor(Math.random() * 100)}.${Math.floor(Math.random() * 10)} MB`, // 模拟大小
-      creator: `用户${ds.userId}`,
-      createdAt: ds.created_at ? new Date(ds.created_at).toLocaleString() : new Date().toLocaleString(),
-      detail: {
-        id: ds.id,
-        name: ds.dataset_file,
-        type: ds.type,
-        zone: ds.zone,
-        encryption: ds.encryption,
-        subDataArea: ds.subdata_area,
-        bucket: ds.bucket_name,
-        description: ds.description,
-      },
-    }));
-
-    // 检查是否需要展开新数据集
-    const query = router.currentRoute.value.query;
-    if (query.expanded === 'true' && query.newDatasetId) {
-      const newId = Number.parseInt(query.newDatasetId as string);
-      expandedRowKeys.value = [newId];
-
-      // 清除查询参数
-      router.replace({ path: '/DPP/dataset/index', query: {} });
-    }
-  } catch (error) {
-    console.error('加载数据集失败:', error);
-    message.error('加载数据集失败');
+    datasets.value = await fetchDatasetList();
+  } catch (error: any) {
+    message.error(`加载数据集失败: ${error?.message || '未知错误'}`);
   } finally {
     loading.value = false;
   }
-};
+}
 
-// 获取类型标签
-const getTypeLabel = (type: string) => {
-  switch (type) {
-    case '1': {
-      return '文本';
-    }
-    case '2': {
-      return '图像';
-    }
-    case '3': {
-      return '音频';
-    }
-    default: {
-      return '未知';
-    }
-  }
-};
-
-// 初始化加载数据
-onMounted(() => {
-  loadDatasets();
-  watch(
-    () => router.currentRoute.value.query,
-    (query) => {
-      if (query.expanded === 'true' && query.newDatasetId) {
-        const newId = Number(query.newDatasetId);
-        nextTick(() => {
-          expandedRowKeys.value = [newId];
-        });
-        setTimeout(() => {
-          router.replace({ path: '/DPP/dataset/index', query: {} });
-        }, 300);
-      }
-    },
-    { immediate: true },
-  );
-});
-const handleExpand = (expanded: boolean, record: DataItem) => {
-  expandedRowKeys.value = expanded
-    ? [...expandedRowKeys.value, record.id]
-    : expandedRowKeys.value.filter((id) => id !== record.id);
-};
-// 添加搜索相关逻辑
-const searchName = ref('');
-const searchType = ref('');
-
-// 获取所有任务类型选项
-const platformOptions = computed(() => {
-  return [...new Set(data.value.map((item) => item.platform))];
-});
-
-// 过滤后的数据
-const filteredData = computed(() => {
-  return data.value.filter((item) => {
-    const nameMatch = (item.name || '')
-      .toLowerCase()
-      .includes((searchName.value || '').toLowerCase());
-    const typeMatch = searchType.value
-      ? item.platform === searchType.value
-      : true;
-    return nameMatch && typeMatch;
-  });
-});
-
-const handleAdd = () => {
+/** 打开普通文件数据集创建页面。 */
+function createFileDataset() {
   router.push({ path: '/DPP/dataset/datafileCreate' });
-};
+}
 
-// 点击数据集名称跳转到修改页面
-const handleNameClick = (record: DataItem) => {
+/** 加载 DataOps 产品并打开导入窗口。 */
+async function openDataOpsImport() {
+  importVisible.value = true;
+  productLoading.value = true;
+  try {
+    dataOpsProducts.value = await fetchDataOpsProducts();
+  } catch (error: any) {
+    message.error(`读取 DataOps 数据产品失败: ${error?.message || '未知错误'}`);
+  } finally {
+    productLoading.value = false;
+  }
+}
+
+/** 使用当前企业组织身份导入已发布的数据产品。 */
+async function importProduct(product: DataOpsProduct) {
+  const organization = selectedOrganization.value;
+  const userId = currentUserInfo.value?.userId;
+  if (!userId || !organization.tenantUid || !organization.teamUid) {
+    message.error('请先在顶部组织选择器中选择具体团队');
+    return;
+  }
+  importing.value = true;
+  try {
+    await importDataOpsProduct(product.productVersion, {
+      deptUid: organization.deptUid,
+      level: organization.level,
+      teamName: organization.teamUid,
+      teamUid: organization.teamUid,
+      tenantUid: organization.tenantUid,
+      userId,
+    });
+    message.success('DataOps 数据产品已导入 MLOps');
+    await loadDatasets();
+  } catch (error: any) {
+    message.error(`导入失败: ${error?.message || '未知错误'}`);
+  } finally {
+    importing.value = false;
+  }
+}
+
+/** 打开数据集详情页面。 */
+function openDataset(dataset: DatasetItem) {
   router.push({
     path: '/DPP/dataset/datafileModify',
-    query: { id: record.id },
+    query: { id: dataset.id },
   });
-};
+}
 
-// 点击查看目录按钮跳转到文件管理页面
-const handleViewDirectory = (record: DataItem) => {
-  router.push({
-    path: '/DPP/dataset/datafileManager',
-    query: {
-      id: record.id,
-      name: record.name,
-      type: record.platform,
+/** 删除前要求用户二次确认，并在完成后刷新列表。 */
+function confirmDelete(dataset: DatasetItem) {
+  Modal.confirm({
+    cancelText: '取消',
+    content: `确认删除数据集“${dataset.dataset_file}”吗？`,
+    okButtonProps: { danger: true },
+    okText: '删除',
+    title: '删除数据集',
+    async onOk() {
+      await deleteDataset(dataset.id);
+      message.success('数据集已删除');
+      await loadDatasets();
     },
   });
-};
+}
 
-const state = reactive({
-  selectedRowKeys: [] as number[],
-  loading: false,
-});
+/** 返回数据集的真实来源平台名称。 */
+function getSourceLabel(dataset: DatasetItem) {
+  return dataset.sourcePlatform || (dataset.type === 'POSTGRESQL_DATA_PRODUCT' ? 'XnetDataOps' : '本地上传');
+}
 
-// 计算是否有选中的行
-const hasSelected = computed(() => state.selectedRowKeys.length > 0);
+/** 返回数据集来源对应的语义颜色。 */
+function getSourceColor(dataset: DatasetItem) {
+  return getSourceLabel(dataset) === 'XnetDataOps' ? 'cyan' : 'default';
+}
 
-// 处理选择变化
-const onSelectChange = (selectedRowKeys: number[]) => {
-  state.selectedRowKeys = selectedRowKeys;
-};
+/** 返回导入状态对应的语义颜色。 */
+function getImportStatusColor(status?: string) {
+  return {
+    failed: 'error',
+    importing: 'processing',
+    ready: 'success',
+  }[status || ''] || 'default';
+}
 
-// 批量删除函数
-const handleBatchDelete = async (ids?: number[]) => {
-  const deleteIds = ids || state.selectedRowKeys;
-  if (deleteIds.length === 0) return;
+/** 返回导入状态的中文文本。 */
+function getImportStatusLabel(status?: string) {
+  return {
+    failed: '失败',
+    importing: '导入中',
+    ready: '可训练',
+  }[status || ''] || '普通数据集';
+}
 
-  state.loading = true;
+/** 格式化记录数并为缺失值返回短横线。 */
+function formatCount(value?: number) {
+  return value == null ? '-' : Number(value).toLocaleString('zh-CN');
+}
 
-  try {
-    // 调用API删除
-    await Promise.all(deleteIds.map((id) => deleteDataset(id)));
+/** 格式化后端时间为当前浏览器本地时间。 */
+function formatTime(value?: string) {
+  return value ? new Date(value).toLocaleString('zh-CN') : '-';
+}
 
-    message.success('删除数据集成功');
-    // 重新加载数据
-    await loadDatasets();
-  } catch (error) {
-    console.error('删除数据集失败', error);
-    message.error('删除数据集失败');
-  } finally {
-    state.loading = false;
-    // 清空选中状态
-    if (!ids) {
-      state.selectedRowKeys = [];
-    }
-  }
-};
+/** 缩短摘要显示并保留首尾识别信息。 */
+function shortDigest(value?: string) {
+  return value ? `${value.slice(0, 10)}...${value.slice(-6)}` : '-';
+}
 
-// 单条删除函数
-const handleSingleDelete = async (id: number) => {
-  try {
-    await deleteDataset(id);
-    message.success('删除数据集成功');
-    await loadDatasets();
-  } catch (error) {
-    console.error('删除数据集失败', error);
-    message.error('删除数据集失败');
-  }
-};
-// 添加下游任务状态管理（示例数据）
-const downstreamTasks = ref<
-  Record<number, Array<{ name: string; type: string }>>
->({});
-
-// 初始化下游任务数据（示例）
-// 注意：这里需要在实际项目中替换为真实数据
-const initDownstreamTasks = () => {
-  downstreamTasks.value = {};
-  data.value.forEach((item) => {
-    downstreamTasks.value[item.id] = [
-      { name: '下游任务A', type: '数据任务' },
-      { name: '下游任务B', type: '训练任务' },
-      { name: '下游任务C', type: '训练任务' },
-    ];
-  });
-};
-
-// 监听数据变化重新初始化下游任务
-watch(data, initDownstreamTasks, { immediate: true });
+onMounted(loadDatasets);
 </script>
 
 <template>
-  <Card class="p-4 shadow">
-    <!-- 顶部操作区域 -->
-    <div class="mb-4 flex w-full justify-between">
+  <div class="dataset-page">
+    <header class="page-header">
       <div>
-        <Button type="primary" @click="handleAdd">新增数据集</Button>
-        <Button
-          type="primary"
-          danger
-          :disabled="!hasSelected"
-          :loading="state.loading"
-          @click="handleBatchDelete"
-          style="margin-left: 8px"
-        >
-          批量删除
-        </Button>
-        <span style="margin-left: 8px">
-          <template v-if="hasSelected">
-            {{ `已选择 ${state.selectedRowKeys.length} 项` }}
-          </template>
-        </span>
+        <h1>数据集</h1>
+        <p>管理本地数据与 XnetDataOps 发布的版本化训练数据产品。</p>
       </div>
+      <Space wrap>
+        <Button :loading="loading" @click="loadDatasets">
+          <template #icon><ReloadOutlined /></template>
+          刷新
+        </Button>
+        <Button @click="createFileDataset">
+          <template #icon><PlusOutlined /></template>
+          新增文件数据集
+        </Button>
+        <Button type="primary" @click="openDataOpsImport">
+          <template #icon><CloudDownloadOutlined /></template>
+          从 DataOps 导入
+        </Button>
+      </Space>
+    </header>
 
-      <!-- 搜索区域 -->
-      <div class="flex space-x-2">
-        <Input
-          v-model:value="searchName"
-          placeholder="搜索数据集名称"
-          allow-clear
-          style="width: 200px"
-        />
-        <Select
-          v-model:value="searchType"
-          placeholder="筛选类型"
-          allow-clear
-          style="width: 120px"
-        >
-          <SelectOption
-            v-for="type in platformOptions"
-            :key="type"
-            :value="type"
-          >
-            {{ type }}
-          </SelectOption>
+    <Alert
+      class="source-alert"
+      message="导入边界"
+      description="MLOps 只接受 DataOps 已发布版本，并保存来源、行数、Schema 摘要、制品摘要与血缘引用。"
+      show-icon
+      type="info"
+    />
+
+    <section class="metric-band" aria-label="数据集摘要">
+      <Statistic title="数据集总数" :value="datasets.length" />
+      <Statistic title="DataOps 数据产品" :value="dataOpsDatasetCount" />
+      <Statistic title="已登记训练记录" :value="formatCount(totalRows)" />
+    </section>
+
+    <section class="dataset-section">
+      <div class="toolbar">
+        <Input v-model:value="searchName" allow-clear placeholder="搜索数据集名称" />
+        <Select v-model:value="sourceFilter" allow-clear placeholder="全部来源">
+          <SelectOption value="XnetDataOps">XnetDataOps</SelectOption>
+          <SelectOption value="本地上传">本地上传</SelectOption>
         </Select>
       </div>
-    </div>
 
-    <!-- 数据集表格 -->
-    <Table
-      :columns="columns"
-      @expand="handleExpand"
-      :row-selection="{
-        selectedRowKeys: state.selectedRowKeys,
-        onChange: onSelectChange,
-      }"
-      :data-source="filteredData"
-      :expanded-row-keys="expandedRowKeys"
-      row-key="id"
-      :loading="loading"
-      class="custom-table"
-      bordered
-    >
-      <template #bodyCell="{ column, record }">
-        <template v-if="column.key === 'name'">
-          <a @click="handleNameClick(record)">{{ record.name }}</a>
-        </template>
-        <template v-if="column.key === 'operation'">
-          <Button type="link" size="small" @click="handleViewDirectory(record)">
-            查看目录
-          </Button>
-          <span class="divider"></span>
-          <Button
-            type="link"
-            size="small"
-            @click="handleSingleDelete(record.id)"
-          >
-            删除
-          </Button>
-        </template>
-      </template>
-
-      <!-- 展开行内容 -->
-      <template #expandedRowRender="{ record }">
-        <Tabs
-          :active-key="record.tabActiveKey"
-          @update:active-key="(key) => (record.tabActiveKey = key)"
-        >
-          <TabPane key="0" tab="基本信息">
-            <div class="p-4">
-              <Descriptions bordered :column="2" layout="horizontal">
-                <DescriptionsItem label="数据集名称">
-                  {{ record.detail.name }}
-                </DescriptionsItem>
-                <DescriptionsItem label="数据类型">
-                  {{ record.platform }}
-                </DescriptionsItem>
-
-                <DescriptionsItem label="数据区域">
-                  {{
-                    record.detail.zone === '1'
-                      ? '南京'
-                      : record.detail.zone === '2'
-                        ? '江西'
-                        : '广东'
-                  }}
-                </DescriptionsItem>
-                <DescriptionsItem label="是否需要加密">
-                  {{ record.detail.encryption ? '是' : '否' }}
-                </DescriptionsItem>
-
-                <DescriptionsItem label="子数据域">
-                  {{ record.detail.subDataArea ? '是' : '否' }}
-                </DescriptionsItem>
-                <DescriptionsItem label="存储桶">
-                  {{ record.detail.bucket }}
-                </DescriptionsItem>
-
-                <DescriptionsItem label="描述" :span="2">
-                  {{ record.detail.description || '暂无描述' }}
-                </DescriptionsItem>
-              </Descriptions>
+      <Table
+        :columns="columns"
+        :data-source="filteredDatasets"
+        :loading="loading"
+        :pagination="{ pageSize: 12, showSizeChanger: false }"
+        :row-key="(record: DatasetItem) => record.id"
+        :scroll="{ x: 1250 }"
+        size="middle"
+      >
+        <template #emptyText><Empty description="暂无数据集" /></template>
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'name'">
+            <Button class="dataset-name" type="link" @click="openDataset(record as DatasetItem)">
+              {{ record.dataset_file }}
+            </Button>
+          </template>
+          <template v-else-if="column.key === 'source'">
+            <Tag :color="getSourceColor(record as DatasetItem)">{{ getSourceLabel(record as DatasetItem) }}</Tag>
+          </template>
+          <template v-else-if="column.key === 'version'">
+            <TypographyText>{{ record.sourceProductVersion || '-' }}</TypographyText>
+          </template>
+          <template v-else-if="column.key === 'rowCount'">
+            <TypographyText strong>{{ formatCount(record.rowCount) }}</TypographyText>
+          </template>
+          <template v-else-if="column.key === 'organization'">
+            <div class="organization-cell">
+              <span>{{ record.team_name || record.team_uid }}</span>
+              <small>{{ record.tenant_uid }}</small>
             </div>
-          </TabPane>
+          </template>
+          <template v-else-if="column.key === 'status'">
+            <Tag :color="getImportStatusColor(record.importStatus)">
+              {{ getImportStatusLabel(record.importStatus) }}
+            </Tag>
+          </template>
+          <template v-else-if="column.key === 'updatedAt'">
+            {{ formatTime(record.importedAt || record.updated_at || record.created_at) }}
+          </template>
+          <template v-else-if="column.key === 'actions'">
+            <Space>
+              <Button size="small" type="link" @click="openDataset(record as DatasetItem)">详情</Button>
+              <Tooltip title="删除数据集">
+                <Button danger size="small" type="text" @click="confirmDelete(record as DatasetItem)">
+                  <template #icon><DeleteOutlined /></template>
+                </Button>
+              </Tooltip>
+            </Space>
+          </template>
+        </template>
+        <template #expandedRowRender="{ record }">
+          <Descriptions bordered size="small" :column="2">
+            <DescriptionsItem label="来源 URI">{{ record.sourceUri || '-' }}</DescriptionsItem>
+            <DescriptionsItem label="血缘引用">{{ record.lineageReference || '-' }}</DescriptionsItem>
+            <DescriptionsItem label="Schema 摘要">
+              <TypographyText :copyable="record.schemaDigestSha256 ? { text: record.schemaDigestSha256 } : false">
+                {{ shortDigest(record.schemaDigestSha256) }}
+              </TypographyText>
+            </DescriptionsItem>
+            <DescriptionsItem label="制品摘要">
+              <TypographyText :copyable="record.artifactDigestSha256 ? { text: record.artifactDigestSha256 } : false">
+                {{ shortDigest(record.artifactDigestSha256) }}
+              </TypographyText>
+            </DescriptionsItem>
+            <DescriptionsItem label="数据区域">{{ record.zone_label || record.zone }}</DescriptionsItem>
+            <DescriptionsItem label="创建者">{{ record.userId }}</DescriptionsItem>
+            <DescriptionsItem label="描述" :span="2">{{ record.description || '-' }}</DescriptionsItem>
+          </Descriptions>
+        </template>
+      </Table>
+    </section>
 
-          <TabPane key="1" tab="关联任务">
-            <Card class="p-4 shadow">
-              <div class="downstream-tasks">
-                <div
-                  v-if="downstreamTasks[record.id]?.length"
-                  class="task-list"
-                >
-                  <div class="task-header">
-                    <div class="header-item" style="width: 40%">任务名称</div>
-                    <div class="header-item" style="width: 40%">任务类型</div>
-                  </div>
-
-                  <div
-                    v-for="(task, index) in downstreamTasks[record.id]"
-                    :key="index"
-                    class="task-item"
-                  >
-                    <div style="width: 40%">{{ task.name }}</div>
-                    <div style="width: 40%">{{ task.type }}</div>
-                  </div>
-                </div>
-
-                <div v-else class="no-tasks">
-                  当前数据集没有被任何下游任务依赖
-                </div>
-              </div>
-            </Card>
-          </TabPane>
-        </Tabs>
-      </template>
-    </Table>
-  </Card>
+    <Modal
+      v-model:open="importVisible"
+      :footer="null"
+      title="从 XnetDataOps 导入"
+      width="920px"
+    >
+      <Alert
+        class="import-alert"
+        message="当前组织归属由登录网关注入"
+        show-icon
+        type="warning"
+      />
+      <Table
+        :columns="productColumns"
+        :data-source="dataOpsProducts"
+        :loading="productLoading"
+        :pagination="false"
+        :row-key="(record: DataOpsProduct) => record.productVersion"
+        :scroll="{ x: 780 }"
+        size="middle"
+      >
+        <template #emptyText><Empty description="DataOps 暂无可用数据产品" /></template>
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'version'">
+            <div class="product-cell">
+              <strong>{{ record.productVersion }}</strong>
+              <span>{{ record.productName }}</span>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'status'">
+            <Tag :color="record.status === 'published' ? 'success' : 'warning'">
+              {{ record.status === 'published' ? '已发布' : '未发布' }}
+            </Tag>
+          </template>
+          <template v-else-if="column.key === 'rows'">{{ formatCount(record.rowCount) }}</template>
+          <template v-else-if="column.key === 'labels'">
+            正 {{ formatCount(record.positiveCount) }} / 负 {{ formatCount(record.negativeCount) }}
+          </template>
+          <template v-else-if="column.key === 'action'">
+            <Button
+              :disabled="record.status !== 'published' || importedVersions.has(record.productVersion)"
+              :loading="importing"
+              size="small"
+              type="primary"
+              @click="importProduct(record as DataOpsProduct)"
+            >
+              {{ importedVersions.has(record.productVersion) ? '已导入' : '导入' }}
+            </Button>
+          </template>
+        </template>
+      </Table>
+    </Modal>
+  </div>
 </template>
 
 <style scoped>
-/* 表格边框样式 */
-.custom-table {
-  border: 1px solid var(--ant-color-border);
-  border-radius: 4px;
+.dataset-page {
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 24px;
 }
 
-/* 表头样式 */
-.custom-table :deep(.ant-table-thead) > tr > th {
-  font-weight: 600;
-}
-
-/* 表格单元格边框 */
-.custom-table :deep(.ant-table-tbody) > tr > td {
-  border-right: 1px solid var(--ant-color-border);
-}
-
-/* 最后单元格去掉右边框 */
-.custom-table :deep(.ant-table-tbody) > tr > td:last-child {
-  border-right: none;
-}
-
-/* 添加链接样式 */
-.custom-table :deep(.ant-table-tbody) a {
-  color: var(--ant-color-primary);
-  cursor: pointer;
-}
-.custom-table :deep(.ant-table-tbody) a:hover {
-  color: var(--ant-color-primary-hover);
-}
-/* 添加卡片样式 */
-.mb-6 {
-  margin-bottom: 1.5rem;
-}
-
-/* 描述列表样式 */
-:deep(.ant-descriptions-item-label) {
-  font-weight: 600;
-  width: 150px;
-}
-
-/* 预格式化文本样式 */
-pre {
-  padding: 8px;
-  border-radius: 4px;
-  overflow: auto;
-  max-height: 150px;
-  margin: 0;
-}
-
-/* 分隔线样式 */
-.section-divider {
+.page-header {
   display: flex;
-  align-items: center;
-  margin: 24px 0 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
 }
 
-.divider-line {
-  flex-grow: 1;
-  height: 1px;
-  background-color: var(--ant-color-border);
+.page-header h1 {
+  margin: 0;
+  color: var(--ant-color-text);
+  font-size: 24px;
+  line-height: 32px;
+  letter-spacing: 0;
 }
 
-.divider-title {
-  padding: 0 12px;
+.page-header p {
+  margin: 6px 0 0;
+  color: var(--ant-color-text-secondary);
+}
+
+.source-alert {
+  margin-top: 20px;
+}
+
+.metric-band {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 24px 0;
+  padding: 20px 0;
+  border-top: 1px solid var(--ant-color-border-secondary);
+  border-bottom: 1px solid var(--ant-color-border-secondary);
+}
+
+.metric-band :deep(.ant-statistic) {
+  padding: 0 24px;
+  border-right: 1px solid var(--ant-color-border-secondary);
+}
+
+.metric-band :deep(.ant-statistic:first-child) {
+  padding-left: 0;
+}
+
+.metric-band :deep(.ant-statistic:last-child) {
+  border-right: 0;
+}
+
+.toolbar {
+  display: grid;
+  grid-template-columns: minmax(240px, 420px) 180px;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.dataset-name {
+  max-width: 250px;
+  height: auto;
+  overflow: hidden;
+  padding: 0;
   font-weight: 600;
-  color: var(--ant-color-primary);
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* 添加上游依赖样式 */
-/* 添加依赖项样式 */
-.dependency-item {
-  border: 1px solid var(--ant-color-border);
+
+.organization-cell,
+.product-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.dependency-selectors {
-  display: flex;
+.organization-cell small,
+.product-cell span {
+  color: var(--ant-color-text-secondary);
+  font-size: 12px;
+}
+
+.import-alert {
   margin-bottom: 16px;
 }
 
-.action-buttons {
-  display: flex;
-  justify-content: flex-end;
-}
+@media (max-width: 820px) {
+  .dataset-page {
+    padding: 16px;
+  }
 
-.selected-info {
-  padding: 12px 16px;
-  border: 1px solid var(--ant-color-primary-border);
-  border-radius: 4px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
+  .page-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
 
-.selected-text {
-  font-weight: 500;
-}
+  .metric-band {
+    grid-template-columns: 1fr;
+    row-gap: 18px;
+  }
 
-.delete-btn {
-  color: var(--ant-color-error);
-  padding: 0;
-}
+  .metric-band :deep(.ant-statistic) {
+    padding: 0;
+    border-right: 0;
+  }
 
-.confirmed-mode,
-.edit-mode {
-  transition: all 0.3s ease;
-}
-
-.no-dependencies {
-  border: 1px dashed var(--ant-color-border);
-  border-radius: 4px;
-}
-.upstream-dependency {
-  padding: 16px;
-}
-
-.dependency-selectors {
-  display: flex;
-  margin-bottom: 16px;
-}
-
-.action-buttons {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.selected-info {
-  padding: 12px 16px;
-  border: 1px solid var(--ant-color-primary-border);
-  border-radius: 4px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.selected-text {
-  font-weight: 500;
-}
-
-.delete-btn {
-  color: var(--ant-color-error);
-  padding: 0;
-}
-
-.confirmed-mode,
-.edit-mode {
-  transition: all 0.3s ease;
-}
-/* 添加下游任务样式 */
-.downstream-tasks {
-  padding: 16px;
-}
-
-.task-header {
-  display: flex;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--ant-color-primary-border);
-  font-weight: 600;
-}
-
-.task-item {
-  display: flex;
-  padding: 12px;
-  border-bottom: 1px solid var(--ant-color-border);
-}
-
-.no-tasks {
-  padding: 24px;
-  text-align: center;
-  color: var(--ant-color-text-tertiary);
-  font-size: 16px;
-}
-
-/* 添加分隔线样式 */
-.divider {
-  display: inline-block;
-  height: 12px;
-  width: 1px;
-  background-color: var(--ant-color-border);
-  margin: 0 8px;
-  vertical-align: middle;
+  .toolbar {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

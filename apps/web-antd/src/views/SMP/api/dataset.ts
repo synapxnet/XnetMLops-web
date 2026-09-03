@@ -3,6 +3,29 @@ import type { DatasetItem } from './types';
 import { message } from 'ant-design-vue';
 
 import { dppRequestClient } from '#/api/request'; // 根据实际路径调整
+
+export interface DataOpsProduct {
+  artifactDigestSha256: string;
+  createdAt: string;
+  lineageReference: string;
+  negativeCount: number;
+  positiveCount: number;
+  productName: string;
+  productVersion: string;
+  publishedAt?: string;
+  rowCount: number;
+  schemaDigestSha256: string;
+  status: 'building' | 'published' | 'retired' | 'validated';
+}
+
+export interface DataOpsImportIdentity {
+  deptUid?: null | string;
+  level: number;
+  teamName?: string;
+  teamUid: string;
+  tenantUid: string;
+  userId: string;
+}
 /**
  * 创建数据集
  */
@@ -28,7 +51,8 @@ export const createDataset = async (
     return response;
   } catch (error) {
     console.error('创建数据集失败:', error);
-    if (error.error.includes('countByDatasetFile')) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorMessage.includes('countByDatasetFile')) {
       message.error('数据集文件已存在');
     } else {
       message.error('创建数据集失败，请重试');
@@ -46,6 +70,32 @@ export const fetchDatasetList = async (): Promise<DatasetItem[]> => {
     console.error('获取数据集列表失败:', error);
     throw error;
   }
+};
+
+/** 查询 XnetDataOps 可供 MLOps 导入的数据产品。 */
+export const fetchDataOpsProducts = async (): Promise<DataOpsProduct[]> => {
+  return dppRequestClient.get<DataOpsProduct[]>('/dpp/dataops-products');
+};
+
+/** 使用当前组织身份导入一个已发布的 DataOps 数据产品。 */
+export const importDataOpsProduct = async (
+  productVersion: string,
+  identity: DataOpsImportIdentity,
+): Promise<DatasetItem> => {
+  return dppRequestClient.post<DatasetItem>(
+    `/dpp/dataops-products/${encodeURIComponent(productVersion)}/import`,
+    undefined,
+    {
+      headers: {
+        'X-Dept-Id': identity.deptUid || '',
+        'X-Organization-Level': String(identity.level),
+        'X-Team-Id': identity.teamUid,
+        'X-Team-Name': identity.teamName || identity.teamUid,
+        'X-Tenant-Id': identity.tenantUid,
+        'X-User-Id': identity.userId,
+      },
+    },
+  );
 };
 
 export const deleteDataset = async (id: number): Promise<void> => {
