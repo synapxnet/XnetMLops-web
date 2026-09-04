@@ -44,8 +44,8 @@ const routes: RouteRecordRaw[] = [
       },
       {
         meta: {
+          hideInMenu: true,
           icon: '',
-          menuVisibleWithForbidden: true,
           title: $t('推荐模型训练'),
         },
         name: 'MTP:recommendation-training',

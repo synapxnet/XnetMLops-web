@@ -1,7 +1,12 @@
 <script lang="ts" setup>
-import type { DeploymentLog, ModelDeployment, ServiceMetrics } from '../api/types';
+import type {
+  DeploymentLog,
+  ModelDeployment,
+  ServiceMetricSummary,
+  ServiceMetrics,
+} from '../api/types';
 
-import { h, onMounted, onUnmounted, ref } from 'vue';
+import { computed, h, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import {
@@ -22,6 +27,7 @@ import {
   Col,
   Descriptions,
   DescriptionsItem,
+  Empty,
   message,
   Progress,
   Row,
@@ -39,6 +45,7 @@ import {
 import {
   fetchDeploymentDetail,
   fetchDeploymentLogs,
+  fetchDeploymentMetricSummary,
   fetchDeploymentMetrics,
   restartDeployment,
   scaleDeployment,
@@ -53,6 +60,7 @@ const route = useRoute();
 const deployment = ref<ModelDeployment | null>(null);
 const logs = ref<DeploymentLog[]>([]);
 const metrics = ref<ServiceMetrics[]>([]);
+const metricSummary = ref<null | ServiceMetricSummary>(null);
 
 const loading = ref(true);
 const logsLoading = ref(false);
@@ -99,12 +107,37 @@ const loadMetrics = async () => {
   if (!deployment.value) return;
   try {
     metricsLoading.value = true;
-    metrics.value = await fetchDeploymentMetrics(deployment.value.id);
+    const [history, summary] = await Promise.all([
+      fetchDeploymentMetrics(deployment.value.id),
+      fetchDeploymentMetricSummary(deployment.value.id),
+    ]);
+    metrics.value = history;
+    metricSummary.value = summary;
   } catch (error) {
     console.error('加载监控指标失败:', error);
   } finally {
     metricsLoading.value = false;
   }
+};
+
+/** 计算历史采样的成功率；输入服务采样，返回 0-100 百分比。 */
+const historySuccessRate = (item: ServiceMetrics) => {
+  if (!item.request_count) return 0;
+  return Math.max(
+    0,
+    Math.round(
+      ((item.request_count - item.error_count) * 10_000) / item.request_count,
+    ) / 100,
+  );
+};
+
+/** 格式化指标时间；输入 ISO 或数据库时间，返回本地无 12 小时制文本。 */
+const formatMetricTime = (value?: string) => {
+  if (!value) return '--';
+  const timestamp = new Date(value);
+  return Number.isNaN(timestamp.getTime())
+    ? value
+    : timestamp.toLocaleString('zh-CN', { hour12: false });
 };
 
 // 操作
@@ -171,12 +204,55 @@ const logColumns = [
     key: 'level',
     width: 80,
     customRender: ({ record }: { record: DeploymentLog }) => {
-      const colorMap: Record<string, string> = { info: 'blue', warn: 'orange', error: 'red' };
-      return h(Tag, { color: colorMap[record.level] }, () => record.level.toUpperCase());
+      const colorMap: Record<string, string> = {
+        info: 'blue',
+        warn: 'orange',
+        error: 'red',
+      };
+      return h(Tag, { color: colorMap[record.level] }, () =>
+        record.level.toUpperCase(),
+      );
     },
   },
   { title: '消息', dataIndex: 'message', key: 'message', ellipsis: true },
 ];
+
+// 历史指标表格列
+const metricColumns = [
+  { title: '采样时间', dataIndex: 'timestamp', key: 'timestamp', width: 190 },
+  {
+    title: '请求数',
+    dataIndex: 'request_count',
+    key: 'request_count',
+    width: 100,
+  },
+  {
+    title: '成功率',
+    dataIndex: 'success_rate',
+    key: 'success_rate',
+    width: 110,
+  },
+  {
+    title: '平均延迟',
+    dataIndex: 'avg_response_time',
+    key: 'avg_response_time',
+    width: 120,
+  },
+  { title: 'CPU', dataIndex: 'cpu_usage', key: 'cpu_usage', width: 90 },
+  { title: '内存', dataIndex: 'memory_usage', key: 'memory_usage', width: 90 },
+];
+
+// 规范化历史指标表格数据
+const metricRows = computed(() =>
+  metrics.value.map((item, index) => ({
+    ...item,
+    key: `${item.timestamp}-${index}`,
+    success_rate: `${historySuccessRate(item).toFixed(2)}%`,
+    avg_response_time: `${item.avg_response_time ?? 0} ms`,
+    cpu_usage: `${item.cpu_usage ?? 0}%`,
+    memory_usage: `${item.memory_usage ?? 0}%`,
+  })),
+);
 
 // Tab切换
 const handleTabChange = (key: string) => {
@@ -224,13 +300,17 @@ onUnmounted(() => {
                   :is="statusConfig[deployment.status]?.icon"
                   :spin="deployment.status === 'deploying'"
                 />
-                {{ statusConfig[deployment.status]?.label || deployment.status }}
+                {{
+                  statusConfig[deployment.status]?.label || deployment.status
+                }}
               </Tag>
             </div>
             <p class="text-gray-500">
-              模型: {{ deployment.model_name }} v{{ deployment.model_version }} |
-              节点: {{ deployment.node_name }} |
-              创建时间: {{ deployment.created_at }}
+              模型: {{ deployment.model_name }} v{{
+                deployment.model_version
+              }}
+              | 节点: {{ deployment.node_name }} | 创建时间:
+              {{ deployment.created_at }}
             </p>
           </div>
           <Space>
@@ -251,7 +331,10 @@ onUnmounted(() => {
               重启
             </Button>
             <Button
-              v-if="deployment.status === 'stopped' || deployment.status === 'failed'"
+              v-if="
+                deployment.status === 'stopped' ||
+                deployment.status === 'failed'
+              "
               type="primary"
               @click="handleStart"
             >
@@ -272,15 +355,29 @@ onUnmounted(() => {
             <TabPane key="info" tab="基本信息">
               <Skeleton :loading="loading" active>
                 <Descriptions v-if="deployment" bordered :column="2">
-                  <DescriptionsItem label="部署名称">{{ deployment.name }}</DescriptionsItem>
+                  <DescriptionsItem label="部署名称">{{
+                    deployment.name
+                  }}</DescriptionsItem>
                   <DescriptionsItem label="模型来源">
-                    <Tag :color="deployment.model_source === 'mtp' ? 'blue' : 'green'">
-                      {{ deployment.model_source === 'mtp' ? 'MTP训练' : '大模型' }}
+                    <Tag
+                      :color="
+                        deployment.model_source === 'mtp' ? 'blue' : 'green'
+                      "
+                    >
+                      {{
+                        deployment.model_source === 'mtp' ? 'MTP训练' : '大模型'
+                      }}
                     </Tag>
                   </DescriptionsItem>
-                  <DescriptionsItem label="模型名称">{{ deployment.model_name }}</DescriptionsItem>
-                  <DescriptionsItem label="模型版本">{{ deployment.model_version }}</DescriptionsItem>
-                  <DescriptionsItem label="容器名称">{{ deployment.container_name }}</DescriptionsItem>
+                  <DescriptionsItem label="模型名称">{{
+                    deployment.model_name
+                  }}</DescriptionsItem>
+                  <DescriptionsItem label="模型版本">{{
+                    deployment.model_version
+                  }}</DescriptionsItem>
+                  <DescriptionsItem label="容器名称">{{
+                    deployment.container_name
+                  }}</DescriptionsItem>
                   <DescriptionsItem label="容器ID">
                     <code>{{ deployment.container_id || '未分配' }}</code>
                   </DescriptionsItem>
@@ -289,18 +386,30 @@ onUnmounted(() => {
                   </DescriptionsItem>
                   <DescriptionsItem label="服务端点" :span="2">
                     <a
-                      v-if="deployment.endpoint && deployment.status === 'running'"
+                      v-if="
+                        deployment.endpoint && deployment.status === 'running'
+                      "
                       :href="deployment.endpoint"
                       target="_blank"
                     >
                       {{ deployment.endpoint }}
                     </a>
-                    <span v-else class="text-gray-400">{{ deployment.endpoint || '未分配' }}</span>
+                    <span v-else class="text-gray-400">{{
+                      deployment.endpoint || '未分配'
+                    }}</span>
                   </DescriptionsItem>
-                  <DescriptionsItem label="端口">{{ deployment.port }}</DescriptionsItem>
-                  <DescriptionsItem label="副本数">{{ deployment.replicas }}</DescriptionsItem>
-                  <DescriptionsItem label="创建者">{{ deployment.created_by }}</DescriptionsItem>
-                  <DescriptionsItem label="创建时间">{{ deployment.created_at }}</DescriptionsItem>
+                  <DescriptionsItem label="端口">{{
+                    deployment.port
+                  }}</DescriptionsItem>
+                  <DescriptionsItem label="副本数">{{
+                    deployment.replicas
+                  }}</DescriptionsItem>
+                  <DescriptionsItem label="创建者">{{
+                    deployment.created_by
+                  }}</DescriptionsItem>
+                  <DescriptionsItem label="创建时间">{{
+                    deployment.created_at
+                  }}</DescriptionsItem>
                 </Descriptions>
               </Skeleton>
             </TabPane>
@@ -341,14 +450,27 @@ onUnmounted(() => {
                   </DescriptionsItem>
                   <DescriptionsItem label="SSL">
                     <Badge
-                      :status="deployment.nginx_config?.ssl_enabled ? 'success' : 'default'"
-                      :text="deployment.nginx_config?.ssl_enabled ? '已启用' : '未启用'"
+                      :status="
+                        deployment.nginx_config?.ssl_enabled
+                          ? 'success'
+                          : 'default'
+                      "
+                      :text="
+                        deployment.nginx_config?.ssl_enabled
+                          ? '已启用'
+                          : '未启用'
+                      "
                     />
                   </DescriptionsItem>
                 </Descriptions>
-                <div v-if="deployment?.nginx_config?.custom_config" class="mt-4">
+                <div
+                  v-if="deployment?.nginx_config?.custom_config"
+                  class="mt-4"
+                >
                   <h4 class="mb-2 font-semibold">自定义配置:</h4>
-                  <pre class="rounded bg-gray-100 dark:bg-gray-800 p-4">{{ deployment.nginx_config.custom_config }}</pre>
+                  <pre class="rounded bg-gray-100 p-4 dark:bg-gray-800">{{
+                    deployment.nginx_config.custom_config
+                  }}</pre>
                 </div>
               </Skeleton>
             </TabPane>
@@ -358,8 +480,12 @@ onUnmounted(() => {
                 <Descriptions v-if="deployment" bordered :column="2">
                   <DescriptionsItem label="状态">
                     <Badge
-                      :status="deployment.health_check?.enabled ? 'success' : 'default'"
-                      :text="deployment.health_check?.enabled ? '已启用' : '未启用'"
+                      :status="
+                        deployment.health_check?.enabled ? 'success' : 'default'
+                      "
+                      :text="
+                        deployment.health_check?.enabled ? '已启用' : '未启用'
+                      "
                     />
                   </DescriptionsItem>
                   <DescriptionsItem label="检查路径">
@@ -375,6 +501,130 @@ onUnmounted(() => {
                     {{ deployment.health_check?.retries || 3 }}
                   </DescriptionsItem>
                 </Descriptions>
+              </Skeleton>
+            </TabPane>
+
+            <TabPane key="metrics" tab="指标">
+              <div class="metrics-toolbar">
+                <Space v-if="metricSummary">
+                  <Badge
+                    :status="
+                      metricSummary.status === 'HEALTHY' ? 'success' : 'error'
+                    "
+                    :text="metricSummary.status === 'HEALTHY' ? '健康' : '异常'"
+                  />
+                  <Tag>{{
+                    metricSummary.source === 'LIVE_RECOMMENDATION_PROBE'
+                      ? '实时探针'
+                      : '持久化采样'
+                  }}</Tag>
+                  <span class="metrics-time">{{
+                    formatMetricTime(metricSummary.recorded_at)
+                  }}</span>
+                </Space>
+                <span v-else></span>
+                <Button :loading="metricsLoading" @click="loadMetrics">
+                  <ReloadOutlined />
+                  刷新
+                </Button>
+              </div>
+              <Skeleton :loading="metricsLoading && !metricSummary" active>
+                <template v-if="metricSummary">
+                  <div class="metric-grid">
+                    <div class="metric-tile metric-tile--latency">
+                      <Statistic
+                        title="P99"
+                        :value="metricSummary.p99_response_time_ms ?? '--'"
+                        suffix="ms"
+                      />
+                    </div>
+                    <div class="metric-tile metric-tile--success">
+                      <Statistic
+                        title="成功率"
+                        :value="metricSummary.success_rate"
+                        :precision="2"
+                        suffix="%"
+                      />
+                    </div>
+                    <div class="metric-tile metric-tile--average">
+                      <Statistic
+                        title="平均延迟"
+                        :value="metricSummary.average_response_time_ms ?? '--'"
+                        suffix="ms"
+                      />
+                    </div>
+                    <div class="metric-tile metric-tile--requests">
+                      <Statistic
+                        title="监控请求"
+                        :value="metricSummary.request_count"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="metric-contract">
+                    <div>
+                      <span>P95</span>
+                      <strong
+                        >{{
+                          metricSummary.p95_response_time_ms ?? '--'
+                        }}
+                        ms</strong
+                      >
+                    </div>
+                    <div>
+                      <span>错误数</span>
+                      <strong>{{ metricSummary.error_count }}</strong>
+                    </div>
+                    <div>
+                      <span>候选数</span>
+                      <strong>{{
+                        metricSummary.candidate_count ?? '--'
+                      }}</strong>
+                    </div>
+                    <div>
+                      <span>算法版本</span>
+                      <strong>{{ metricSummary.algorithm_id || '--' }}</strong>
+                    </div>
+                    <div>
+                      <span>产品版本</span>
+                      <strong>{{
+                        metricSummary.product_version || '--'
+                      }}</strong>
+                    </div>
+                    <div>
+                      <span>响应契约</span>
+                      <Tag
+                        :color="
+                          metricSummary.contract_status === 'MATCHED'
+                            ? 'green'
+                            : 'red'
+                        "
+                      >
+                        {{ metricSummary.contract_status || '--' }}
+                      </Tag>
+                    </div>
+                  </div>
+
+                  <div
+                    v-if="metricSummary.model_digest_sha256"
+                    class="metric-digest-row"
+                  >
+                    <span>模型摘要</span>
+                    <code :title="metricSummary.model_digest_sha256">{{
+                      metricSummary.model_digest_sha256
+                    }}</code>
+                  </div>
+
+                  <Table
+                    v-if="metricRows.length > 0"
+                    class="metrics-history"
+                    :columns="metricColumns"
+                    :data-source="metricRows"
+                    :pagination="false"
+                    size="small"
+                  />
+                </template>
+                <Empty v-else description="暂无指标数据" />
               </Skeleton>
             </TabPane>
 
@@ -401,11 +651,19 @@ onUnmounted(() => {
                 <Progress
                   type="circle"
                   :percent="deployment.status === 'running' ? 100 : 0"
-                  :status="deployment.status === 'running' ? 'success' : deployment.status === 'failed' ? 'exception' : 'normal'"
+                  :status="
+                    deployment.status === 'running'
+                      ? 'success'
+                      : deployment.status === 'failed'
+                        ? 'exception'
+                        : 'normal'
+                  "
                 />
               </div>
               <p class="text-lg font-semibold">
-                {{ statusConfig[deployment.status]?.label || deployment.status }}
+                {{
+                  statusConfig[deployment.status]?.label || deployment.status
+                }}
               </p>
             </div>
           </Skeleton>
@@ -422,7 +680,10 @@ onUnmounted(() => {
             </Button>
             <Button
               block
-              :disabled="deployment?.status !== 'running' || (deployment?.replicas || 1) <= 1"
+              :disabled="
+                deployment?.status !== 'running' ||
+                (deployment?.replicas || 1) <= 1
+              "
               @click="() => handleScale((deployment?.replicas || 1) - 1)"
             >
               缩容 (-1副本)
@@ -458,5 +719,109 @@ onUnmounted(() => {
 pre {
   white-space: pre-wrap;
   word-wrap: break-word;
+}
+
+.metrics-toolbar {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  min-height: 32px;
+}
+
+.metrics-time {
+  color: hsl(var(--muted-foreground));
+  font-size: 12px;
+}
+
+.metric-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.metric-tile {
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  min-height: 104px;
+  padding: 18px;
+}
+
+.metric-tile--latency {
+  border-top: 3px solid #1677ff;
+}
+
+.metric-tile--success {
+  border-top: 3px solid #22a06b;
+}
+
+.metric-tile--average {
+  border-top: 3px solid #7c5cff;
+}
+
+.metric-tile--requests {
+  border-top: 3px solid #d89614;
+}
+
+.metric-contract {
+  border-bottom: 1px solid hsl(var(--border));
+  border-top: 1px solid hsl(var(--border));
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 18px;
+  padding: 16px 0;
+}
+
+.metric-contract > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.metric-contract span,
+.metric-digest-row > span {
+  color: hsl(var(--muted-foreground));
+  font-size: 12px;
+}
+
+.metric-contract strong {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metric-digest-row {
+  align-items: center;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 72px minmax(0, 1fr);
+  padding: 14px 0;
+}
+
+.metric-digest-row code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metrics-history {
+  margin-top: 6px;
+}
+
+@media (max-width: 1200px) {
+  .metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .metric-grid,
+  .metric-contract {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

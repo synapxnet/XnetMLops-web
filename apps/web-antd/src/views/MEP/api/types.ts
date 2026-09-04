@@ -185,3 +185,24 @@ export interface ServiceMetrics {
   avg_response_time: number;
   timestamp: string;
 }
+
+// 部署详情页实时聚合指标
+export interface ServiceMetricSummary {
+  source: 'LIVE_RECOMMENDATION_PROBE' | 'PERSISTED_SERVICE_METRICS';
+  status: 'DEGRADED' | 'HEALTHY';
+  request_count: number;
+  success_count: number;
+  error_count: number;
+  success_rate: number;
+  average_response_time_ms: number | null;
+  p95_response_time_ms?: number;
+  p99_response_time_ms?: number;
+  cpu_usage?: number;
+  memory_usage?: number;
+  candidate_count?: number;
+  contract_status?: 'DEGRADED' | 'MATCHED';
+  algorithm_id?: string;
+  product_version?: string;
+  model_digest_sha256?: string;
+  recorded_at: string;
+}

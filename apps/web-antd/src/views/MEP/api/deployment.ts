@@ -2,6 +2,7 @@ import type {
   DeploymentLog,
   ModelDeployment,
   MTPOutputModel,
+  ServiceMetricSummary,
   ServiceMetrics,
 } from './types';
 
@@ -185,6 +186,23 @@ export const fetchDeploymentMetrics = async (
     return response;
   } catch (error) {
     console.error('获取监控指标失败:', error);
+    throw error;
+  }
+};
+
+/**
+ * 获取部署实时聚合指标
+ */
+export const fetchDeploymentMetricSummary = async (
+  deploymentId: number,
+): Promise<ServiceMetricSummary> => {
+  try {
+    const response = await mepRequestClient.get<ServiceMetricSummary>(
+      `/deployments/${deploymentId}/metrics/summary`,
+    );
+    return toSnakeCaseKeys(response);
+  } catch (error) {
+    console.error('获取实时指标失败:', error);
     throw error;
   }
 };
