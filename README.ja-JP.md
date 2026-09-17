@@ -16,7 +16,7 @@
 
 既定の `display` ブランチは従来の展示用コードを保持しています。**GOAI v1.3.0 リリース**と決勝用ソースは以下から参照できます。この README 更新で本ブランチのアプリケーションコードは更新されません。
 
-**[リリース説明](https://github.com/synapxnet/XnetMLops-web/releases/tag/v1.3.0) · [ソース ZIP](https://github.com/synapxnet/XnetMLops-web/releases/download/v1.3.0/XnetMLops-web-v1.3.0-0a0ce65a-source.zip) · [v1.3.0 固定ソース](https://github.com/synapxnet/XnetMLops-web/tree/v1.3.0) · [ビルド・交付ガイド](https://github.com/synapxnet/XnetMLops-web/blob/0a0ce65a4b654b372355800057f30e8fc551b883/docs/GOAI-FINALS-V1.3.0-SOURCE-DELIVERY.md)**
+**[リリース説明](https://github.com/synapxnet/XnetMLops-web/releases/tag/v1.3.0) · [ソース ZIP](https://github.com/synapxnet/XnetMLops-web/releases/download/v1.3.0/XnetMLops-web-v1.3.0-source.zip) · [v1.3.0 固定ソース](https://github.com/synapxnet/XnetMLops-web/tree/v1.3.0) · [プログラム検証基準の交付ガイド](https://github.com/synapxnet/XnetMLops-web/blob/0a0ce65a4b654b372355800057f30e8fc551b883/docs/GOAI-FINALS-V1.3.0-SOURCE-DELIVERY.md)**
 
 [対応するバックエンド v1.3.0](https://github.com/synapxnet/XnetMLops/releases/tag/v1.3.0) · [OpenXnet v1.3.0](https://github.com/synapxnet/OpenXnet/releases/tag/v1.3.0)
 
@@ -24,7 +24,9 @@ GOAI 版には常駐 Agent パネル、統一ログインとナビゲーショ�
 
 [常駐 Agent ランタイム](https://github.com/synapxnet/OpenXnet/tree/c841ef841da8477fc312e27cd390aecac8ed2d7e/services/platform-resident-agent)は独立したプラットフォームサービスとして動作し、OpenXnet AgentTeams と協働します。プラットフォーム ID、モデル設定、委任権限の構成が必要です。既存アシスタントがあるだけで、常駐ランタイムの設定完了を意味しません。
 
-検証結果：ビルド 11/11、対象テスト 31 件、ページテンプレート 69 件のチェックが成功しました。全量 vue-tsc、実環境との結合試験、オンライン全ページ受入試験は本ソース交付では未実施です。 リリースの公開はオンラインサービスの再配備や本番認証を意味しません。構成と制限は交付ガイドをご確認ください。
+プログラム基準の検証結果：ビルド 11/11、対象テスト 31 件、ページテンプレート 69 件のチェックが成功しました。全量 vue-tsc、実環境との結合試験、オンライン全ページ受入試験は本ソース交付では未実施です。 リリースの公開はオンラインサービスの再配備や本番認証を意味しません。構成と制限は交付ガイドをご確認ください。
+
+プログラム検証の基準：[0a0ce65a](https://github.com/synapxnet/XnetMLops-web/commit/0a0ce65a4b654b372355800057f30e8fc551b883)。GOAI リリースの以後の変更は README 文書のみです。改訂ソース ZIP の確認にはリリース添付のチェックサムを使用してください。
 
 > **以下は過去の画面画像です。** 展示用の参考画像であり、v1.3.0 の最新 UI 受入証跡や実環境での制御実行記録ではありません。
 

@@ -16,7 +16,7 @@
 
 This default `display` branch retains the earlier showcase code. The **GOAI v1.3.0 release** and current finals source are available through the links below; this documentation update does not upgrade this branch's application code.
 
-**[Release notes](https://github.com/synapxnet/XnetMLops-web/releases/tag/v1.3.0) · [Download source ZIP](https://github.com/synapxnet/XnetMLops-web/releases/download/v1.3.0/XnetMLops-web-v1.3.0-0a0ce65a-source.zip) · [Pinned v1.3.0 source](https://github.com/synapxnet/XnetMLops-web/tree/v1.3.0) · [Build and delivery guide](https://github.com/synapxnet/XnetMLops-web/blob/0a0ce65a4b654b372355800057f30e8fc551b883/docs/GOAI-FINALS-V1.3.0-SOURCE-DELIVERY.md)**
+**[Release notes](https://github.com/synapxnet/XnetMLops-web/releases/tag/v1.3.0) · [Download source ZIP](https://github.com/synapxnet/XnetMLops-web/releases/download/v1.3.0/XnetMLops-web-v1.3.0-source.zip) · [Pinned v1.3.0 source](https://github.com/synapxnet/XnetMLops-web/tree/v1.3.0) · [Validated program baseline guide](https://github.com/synapxnet/XnetMLops-web/blob/0a0ce65a4b654b372355800057f30e8fc551b883/docs/GOAI-FINALS-V1.3.0-SOURCE-DELIVERY.md)**
 
 [Matching backend v1.3.0](https://github.com/synapxnet/XnetMLops/releases/tag/v1.3.0) · [OpenXnet v1.3.0](https://github.com/synapxnet/OpenXnet/releases/tag/v1.3.0)
 
@@ -24,7 +24,9 @@ The GOAI release includes a resident Agent panel, unified login/navigation, mode
 
 The [resident Agent runtime](https://github.com/synapxnet/OpenXnet/tree/c841ef841da8477fc312e27cd390aecac8ed2d7e/services/platform-resident-agent) runs as a separate platform service and cooperates with OpenXnet AgentTeams; it requires platform identity, model configuration and delegated permissions. The built-in assistant alone is not proof of a configured resident runtime.
 
-Validation: 11/11 build tasks, 31 targeted tests and 69 page-template checks passed. Full vue-tsc, live integration and page-by-page online acceptance were not performed in this source delivery. Publishing this version does not redeploy online services or certify production readiness. See the delivery guide for configuration and limitations.
+Program baseline validation: 11/11 build tasks, 31 targeted tests and 69 page-template checks passed. Full vue-tsc, live integration and page-by-page online acceptance were not performed in this source delivery. Publishing this version does not redeploy online services or certify production readiness. See the delivery guide for configuration and limitations.
+
+Program validation baseline: [0a0ce65a](https://github.com/synapxnet/XnetMLops-web/commit/0a0ce65a4b654b372355800057f30e8fc551b883). The GOAI release's subsequent changes are limited to README documentation; use the release asset checksums for the revised source archive.
 
 > **Historical UI screenshots below:** these showcase images are retained for context. They are not the current v1.3.0 UI acceptance evidence or a record of live governance execution.
 
