@@ -6,11 +6,27 @@
 
 **モデル開発、配備、リソース、RAG、エージェントの Web コンソール**
 
-[![Version](https://img.shields.io/badge/version-1.0.0-1677ff.svg)](https://www.xnetmlops.synapxnet.cn) [![Vue](https://img.shields.io/badge/Vue-3-42b883.svg)](https://vuejs.org/) [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6.svg)](https://www.typescriptlang.org/) [![License](https://img.shields.io/badge/license-MIT-2ea44f.svg)](./LICENSE)
+[![GOAI release](https://img.shields.io/badge/GOAI_release-1.3.0-1677ff.svg)](https://github.com/synapxnet/XnetMLops-web/releases/tag/v1.3.0) [![Vue](https://img.shields.io/badge/Vue-3-42b883.svg)](https://vuejs.org/) [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6.svg)](https://www.typescriptlang.org/) [![License](https://img.shields.io/badge/license-MIT-2ea44f.svg)](./LICENSE)
 
 [オンラインデモ](https://www.xnetmlops.synapxnet.cn) · [バックエンド: XnetMLops](https://github.com/synapxnet/XnetMLops) · [OpenXnet](https://openxnet.synapxnet.com) · [ライセンス](./LICENSE)
 
 </div>
+
+## GOAI v1.3.0 — リリースとダウンロード
+
+既定の `display` ブランチは従来の展示用コードを保持しています。**GOAI v1.3.0 リリース**と決勝用ソースは以下から参照できます。この README 更新で本ブランチのアプリケーションコードは更新されません。
+
+**[リリース説明](https://github.com/synapxnet/XnetMLops-web/releases/tag/v1.3.0) · [ソース ZIP](https://github.com/synapxnet/XnetMLops-web/releases/download/v1.3.0/XnetMLops-web-v1.3.0-0a0ce65a-source.zip) · [GOAI ソース](https://github.com/synapxnet/XnetMLops-web/tree/GOAI-Competition) · [ビルド・交付ガイド](https://github.com/synapxnet/XnetMLops-web/blob/0a0ce65a4b654b372355800057f30e8fc551b883/docs/GOAI-FINALS-V1.3.0-SOURCE-DELIVERY.md)**
+
+[対応するバックエンド v1.3.0](https://github.com/synapxnet/XnetMLops/releases/tag/v1.3.0) · [OpenXnet v1.3.0](https://github.com/synapxnet/OpenXnet/releases/tag/v1.3.0)
+
+GOAI 版には常駐 Agent パネル、統一ログインとナビゲーション、モデルの証拠、ワークフロー入出力契約、ダウンロード進捗、配備能力の状態を含みます。製品の入口は `apps/web-antd` です。
+
+[常駐 Agent ランタイム](https://github.com/synapxnet/OpenXnet/tree/c841ef841da8477fc312e27cd390aecac8ed2d7e/services/platform-resident-agent)は独立したプラットフォームサービスとして動作し、OpenXnet AgentTeams と協働します。プラットフォーム ID、モデル設定、委任権限の構成が必要です。既存アシスタントがあるだけで、常駐ランタイムの設定完了を意味しません。
+
+検証結果：ビルド 11/11、対象テスト 31 件、ページテンプレート 69 件のチェックが成功しました。全量 vue-tsc、実環境との結合試験、オンライン全ページ受入試験は本ソース交付では未実施です。 リリースの公開はオンラインサービスの再配備や本番認証を意味しません。構成と制限は交付ガイドをご確認ください。
+
+> **以下は過去の画面画像です。** 展示用の参考画像であり、v1.3.0 の最新 UI 受入証跡や実環境での制御実行記録ではありません。
 
 ![XnetMLops MLOps 分析センター](./docs/images/xnetmlops-analytics-2026.png)
 

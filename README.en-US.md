@@ -6,11 +6,27 @@
 
 **Web console for model engineering, serving, resources, RAG, and agents**
 
-[![Version](https://img.shields.io/badge/version-1.0.0-1677ff.svg)](https://www.xnetmlops.synapxnet.cn) [![Vue](https://img.shields.io/badge/Vue-3-42b883.svg)](https://vuejs.org/) [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6.svg)](https://www.typescriptlang.org/) [![License](https://img.shields.io/badge/license-MIT-2ea44f.svg)](./LICENSE)
+[![GOAI release](https://img.shields.io/badge/GOAI_release-1.3.0-1677ff.svg)](https://github.com/synapxnet/XnetMLops-web/releases/tag/v1.3.0) [![Vue](https://img.shields.io/badge/Vue-3-42b883.svg)](https://vuejs.org/) [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6.svg)](https://www.typescriptlang.org/) [![License](https://img.shields.io/badge/license-MIT-2ea44f.svg)](./LICENSE)
 
 [Live Demo](https://www.xnetmlops.synapxnet.cn) · [Backend: XnetMLops](https://github.com/synapxnet/XnetMLops) · [OpenXnet](https://openxnet.synapxnet.com) · [License](./LICENSE)
 
 </div>
+
+## GOAI v1.3.0 — release and downloads
+
+This default `display` branch retains the earlier showcase code. The **GOAI v1.3.0 release** and current finals source are available through the links below; this documentation update does not upgrade this branch's application code.
+
+**[Release notes](https://github.com/synapxnet/XnetMLops-web/releases/tag/v1.3.0) · [Download source ZIP](https://github.com/synapxnet/XnetMLops-web/releases/download/v1.3.0/XnetMLops-web-v1.3.0-0a0ce65a-source.zip) · [GOAI source branch](https://github.com/synapxnet/XnetMLops-web/tree/GOAI-Competition) · [Build and delivery guide](https://github.com/synapxnet/XnetMLops-web/blob/0a0ce65a4b654b372355800057f30e8fc551b883/docs/GOAI-FINALS-V1.3.0-SOURCE-DELIVERY.md)**
+
+[Matching backend v1.3.0](https://github.com/synapxnet/XnetMLops/releases/tag/v1.3.0) · [OpenXnet v1.3.0](https://github.com/synapxnet/OpenXnet/releases/tag/v1.3.0)
+
+The GOAI release includes a resident Agent panel, unified login/navigation, model evidence, workflow input/output contracts, download progress and deployment capability states. Its product entry is `apps/web-antd`.
+
+The [resident Agent runtime](https://github.com/synapxnet/OpenXnet/tree/c841ef841da8477fc312e27cd390aecac8ed2d7e/services/platform-resident-agent) runs as a separate platform service and cooperates with OpenXnet AgentTeams; it requires platform identity, model configuration and delegated permissions. The built-in assistant alone is not proof of a configured resident runtime.
+
+Validation: 11/11 build tasks, 31 targeted tests and 69 page-template checks passed. Full vue-tsc, live integration and page-by-page online acceptance were not performed in this source delivery. Publishing this version does not redeploy online services or certify production readiness. See the delivery guide for configuration and limitations.
+
+> **Historical UI screenshots below:** these showcase images are retained for context. They are not the current v1.3.0 UI acceptance evidence or a record of live governance execution.
 
 ![XnetMLops analytics center](./docs/images/xnetmlops-analytics-2026.png)
 
