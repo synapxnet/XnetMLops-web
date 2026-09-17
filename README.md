@@ -8,7 +8,7 @@
 
 [![GOAI release](https://img.shields.io/badge/GOAI_release-1.3.0-1677ff.svg)](https://github.com/synapxnet/XnetMLops-web/releases/tag/v1.3.0) [![Vue](https://img.shields.io/badge/Vue-3-42b883.svg)](https://vuejs.org/) [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6.svg)](https://www.typescriptlang.org/) [![License](https://img.shields.io/badge/license-MIT-2ea44f.svg)](./LICENSE)
 
-[在线体验](https://www.xnetmlops.synapxnet.cn) · [后端仓库 XnetMLops](https://github.com/synapxnet/XnetMLops) · [OpenXnet 开源社区](https://openxnet.synapxnet.com) · [查看许可](./LICENSE)
+[在线体验](https://goai.xnetmlops.synapxnet.online) · [后端仓库 XnetMLops](https://github.com/synapxnet/XnetMLops/tree/v1.3.0) · [OpenXnet 开源社区](https://openxnet.synapxnet.com) · [查看许可](./LICENSE)
 
 </div>
 
@@ -16,7 +16,7 @@
 
 当前默认 `display` 分支保留原展示代码。**GOAI v1.3.0 发布版**及决赛源码请通过下方入口获取；本次 README 更新不代表默认分支业务代码已升级。
 
-**[发布说明](https://github.com/synapxnet/XnetMLops-web/releases/tag/v1.3.0) · [下载源码 ZIP](https://github.com/synapxnet/XnetMLops-web/releases/download/v1.3.0/XnetMLops-web-v1.3.0-0a0ce65a-source.zip) · [GOAI 源码分支](https://github.com/synapxnet/XnetMLops-web/tree/GOAI-Competition) · [构建与交付文档](https://github.com/synapxnet/XnetMLops-web/blob/0a0ce65a4b654b372355800057f30e8fc551b883/docs/GOAI-FINALS-V1.3.0-SOURCE-DELIVERY.md)**
+**[发布说明](https://github.com/synapxnet/XnetMLops-web/releases/tag/v1.3.0) · [下载源码 ZIP](https://github.com/synapxnet/XnetMLops-web/releases/download/v1.3.0/XnetMLops-web-v1.3.0-0a0ce65a-source.zip) · [v1.3.0 固定源码](https://github.com/synapxnet/XnetMLops-web/tree/v1.3.0) · [构建与交付文档](https://github.com/synapxnet/XnetMLops-web/blob/0a0ce65a4b654b372355800057f30e8fc551b883/docs/GOAI-FINALS-V1.3.0-SOURCE-DELIVERY.md)**
 
 [配套后端 v1.3.0](https://github.com/synapxnet/XnetMLops/releases/tag/v1.3.0) · [OpenXnet v1.3.0](https://github.com/synapxnet/OpenXnet/releases/tag/v1.3.0)
 
@@ -64,7 +64,7 @@ GOAI 版包含驻场 Agent 面板、统一登录与导航、模型证据、工�
 
 XnetMLops Web 是由 **SynapXnet 团队**开源的模型工程控制台，为数据工程师、算法工程师、平台管理员和 AI 应用开发者提供统一工作区。界面覆盖数据处理、训练任务、模型服务、基础资源和智能体编排，让模型从实验走向服务的过程更可见、可控和可复用。
 
-本仓库是平台前端，与 [XnetMLops](https://github.com/synapxnet/XnetMLops) 后端仓库共同组成企业级、多租户、前后端分离系统。项目基于 Vue 3、TypeScript、Vite、Ant Design Vue，并采用 [Vue Vben Admin 框架](https://github.com/vbenjs/vue-vben-admin) 构建，通过模块化路由组织 DPP、MTP、MEP、SMP、XAA 五个业务域。
+本仓库是平台前端，与 [XnetMLops](https://github.com/synapxnet/XnetMLops/tree/v1.3.0) 后端仓库共同组成企业级、多租户、前后端分离系统。项目基于 Vue 3、TypeScript、Vite、Ant Design Vue，并采用 [Vue Vben Admin 框架](https://github.com/vbenjs/vue-vben-admin) 构建，通过模块化路由组织 DPP、MTP、MEP、SMP、XAA 五个业务域。
 
 ## 项目优势
 
@@ -104,36 +104,42 @@ flowchart LR
 - Pinia + Vue Router
 - pnpm 9.15.7
 
-## 快速开始
+## 开发与构建（v1.3.0）
 
-### 环境要求
-
-- Node.js 20+
-- pnpm 9.15.7
-
-### 本地开发
+使用 Node.js **20.10+**、pnpm **9.15.7**，前端为 Vue 3、TypeScript、Vite/Turbo 与 Ant Design Vue/Vben。实际产品入口是 `apps/web-antd`；`playground`、`web-ele` 和 `web-naive` 不是 MLOps 发布入口。
 
 ```bash
+git clone --branch v1.3.0 --single-branch https://github.com/synapxnet/XnetMLops-web.git
+cd XnetMLops-web
 corepack enable
-pnpm install
-pnpm dev:antd
-```
-
-### 生产构建
-
-```bash
+corepack prepare pnpm@9.15.7 --activate
+pnpm install --frozen-lockfile
 pnpm build:antd
 ```
 
-部署前请根据目标环境检查 `apps/web-antd` 下的环境变量和 API 地址配置。不要将真实密钥、生产令牌或服务器凭据提交到仓库。
+静态产物位于 `apps/web-antd/dist`。若依赖安装时禁用了生命周期脚本，先执行 `pnpm -r --if-present run stub` 再构建。本地开发前，先将 `apps/web-antd/vite.config.mts` 代理目标改为自己的后端，再运行 `pnpm dev:antd`（配置端口 `5666`）。仓库代理目标是研发示例，不是公开演示地址。
 
-## 在线体验
+部署时同时配置 `apps/web-antd/.env.production` 的 API 前缀与同源反向代理。当前线上 `_app.config.js` 只观察到 `VITE_GLOB_API_URL`，不能认为改这一项就能切换全部服务。后端通用 Nginx 模板使用不同的 `/api/<service>/` 形式，使用前须对齐前端路径重写与后端 Controller 前缀。前端配置不能公开访问令牌或模型密钥。
 
-- 访问地址：<https://www.xnetmlops.synapxnet.cn>
-- 演示手机号：`12345678900`
-- 演示验证码：`000000`
+## 演示接入与 API 路由
 
-固定验证码仅用于公开演示。生产部署应接入安全的身份认证与验证码服务。
+- GOAI 演示入口：<https://goai.xnetmlops.synapxnet.online/#/auth/login>。
+- 公开演示手机号：**`17870171303`**；验证码：**`000000`**（仅限演示环境，已由项目方确认并授权公开）。登录方式为 **11 位手机号 + 6 位验证码**，提交到 `POST /api/auth/login`；不是密码登录，也不是 OpenXnet AgentTeams 的演示访问码输入框。
+- 2026-09-18 只读核验：入口 HTTP 200、标题 `XnetMLops`；登录后读取 `/api/resident/v1/status` 返回 `platform=mlops`、`agentId=agt-mlops-resident-v130`，未登录读取为 401。该检查证明平台身份和访问控制，不代表重新完成全业务流程验收。
+
+Web API 均使用演示入口的同源地址：
+
+| 服务 | 前端 API base | 后端服务端口 |
+| --- | --- | --- |
+| Auth | `/api` | `8181` |
+| DPP | `/dpp` | `8182` |
+| MTP | `/mtp` | `8183` |
+| MEP | `/mep` | `8184` |
+| SMP | `/smp` | `8185` |
+| XAA | `/xaa` | `8186` |
+
+
+驻场 API base 为 `/api/resident/v1`。平台登录凭据、驻场 Agent 的模型服务密钥、OpenXnet AgentTeams 演示访问码是三类不同配置；业务操作仍受租户/团队权限和执行审批约束。
 
 ## SynapXnet 开源生态
 

@@ -8,7 +8,7 @@
 
 [![GOAI release](https://img.shields.io/badge/GOAI_release-1.3.0-1677ff.svg)](https://github.com/synapxnet/XnetMLops-web/releases/tag/v1.3.0) [![Vue](https://img.shields.io/badge/Vue-3-42b883.svg)](https://vuejs.org/) [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6.svg)](https://www.typescriptlang.org/) [![License](https://img.shields.io/badge/license-MIT-2ea44f.svg)](./LICENSE)
 
-[オンラインデモ](https://www.xnetmlops.synapxnet.cn) · [バックエンド: XnetMLops](https://github.com/synapxnet/XnetMLops) · [OpenXnet](https://openxnet.synapxnet.com) · [ライセンス](./LICENSE)
+[オンラインデモ](https://goai.xnetmlops.synapxnet.online) · [バックエンド: XnetMLops](https://github.com/synapxnet/XnetMLops/tree/v1.3.0) · [OpenXnet](https://openxnet.synapxnet.com) · [ライセンス](./LICENSE)
 
 </div>
 
@@ -16,7 +16,7 @@
 
 既定の `display` ブランチは従来の展示用コードを保持しています。**GOAI v1.3.0 リリース**と決勝用ソースは以下から参照できます。この README 更新で本ブランチのアプリケーションコードは更新されません。
 
-**[リリース説明](https://github.com/synapxnet/XnetMLops-web/releases/tag/v1.3.0) · [ソース ZIP](https://github.com/synapxnet/XnetMLops-web/releases/download/v1.3.0/XnetMLops-web-v1.3.0-0a0ce65a-source.zip) · [GOAI ソース](https://github.com/synapxnet/XnetMLops-web/tree/GOAI-Competition) · [ビルド・交付ガイド](https://github.com/synapxnet/XnetMLops-web/blob/0a0ce65a4b654b372355800057f30e8fc551b883/docs/GOAI-FINALS-V1.3.0-SOURCE-DELIVERY.md)**
+**[リリース説明](https://github.com/synapxnet/XnetMLops-web/releases/tag/v1.3.0) · [ソース ZIP](https://github.com/synapxnet/XnetMLops-web/releases/download/v1.3.0/XnetMLops-web-v1.3.0-0a0ce65a-source.zip) · [v1.3.0 固定ソース](https://github.com/synapxnet/XnetMLops-web/tree/v1.3.0) · [ビルド・交付ガイド](https://github.com/synapxnet/XnetMLops-web/blob/0a0ce65a4b654b372355800057f30e8fc551b883/docs/GOAI-FINALS-V1.3.0-SOURCE-DELIVERY.md)**
 
 [対応するバックエンド v1.3.0](https://github.com/synapxnet/XnetMLops/releases/tag/v1.3.0) · [OpenXnet v1.3.0](https://github.com/synapxnet/OpenXnet/releases/tag/v1.3.0)
 
@@ -48,7 +48,7 @@ GOAI 版には常駐 Agent パネル、統一ログインとナビゲーショ�
 
 XnetMLops Web は **SynapXnet チーム**が公開するモデルエンジニアリングコンソールです。データエンジニア、ML エンジニア、プラットフォーム管理者、AI アプリ開発者に、データ処理、学習、モデルサービス、リソース、RAG、エージェントの統合ワークスペースを提供します。
 
-[XnetMLops バックエンド](https://github.com/synapxnet/XnetMLops) と組み合わせることで、企業向けマルチテナント、フロントエンド・バックエンド分離システムを構成します。Vue 3、TypeScript、Vite、Ant Design Vue、および [Vue Vben Admin](https://github.com/vbenjs/vue-vben-admin) を採用しています。
+[XnetMLops バックエンド](https://github.com/synapxnet/XnetMLops/tree/v1.3.0) と組み合わせることで、企業向けマルチテナント、フロントエンド・バックエンド分離システムを構成します。Vue 3、TypeScript、Vite、Ant Design Vue、および [Vue Vben Admin](https://github.com/vbenjs/vue-vben-admin) を採用しています。
 
 ## 特長
 
@@ -69,24 +69,42 @@ XnetMLops Web は **SynapXnet チーム**が公開するモデルエンジニア
 | XAA | アシスタント、会話、ワークフロー、スキル、編成 |
 | 概要・認証 | プラットフォーム指標、デモログイン、アクセス制御 |
 
-## 開発
+## 開発とビルド（v1.3.0）
+
+Node.js **20.10+**、pnpm **9.15.7**、Vue 3、TypeScript、Vite/Turbo、Ant Design Vue/Vben を使用します。製品の入口は `apps/web-antd` です。`playground`、`web-ele`、`web-naive` は MLOps のリリース入口ではありません。
 
 ```bash
+git clone --branch v1.3.0 --single-branch https://github.com/synapxnet/XnetMLops-web.git
+cd XnetMLops-web
 corepack enable
-pnpm install
-pnpm dev:antd
+corepack prepare pnpm@9.15.7 --activate
+pnpm install --frozen-lockfile
 pnpm build:antd
 ```
 
-Node.js 20+ と pnpm 9.15.7 を使用してください。本番の認証情報やトークンをコミットしないでください。
+静的成果物は `apps/web-antd/dist` に出力されます。依存関係のライフサイクルスクリプトを無効にした場合は、先に `pnpm -r --if-present run stub` を実行してください。開発時は `apps/web-antd/vite.config.mts` のプロキシ先を自分のバックエンドに合わせてから、`pnpm dev:antd` を実行します（設定ポート：`5666`）。既定のプロキシ先は開発用の例で、公開デモの接続先ではありません。
 
-## デモ
+`apps/web-antd/.env.production` の API 接頭辞と配備先の同一オリジンプロキシを合わせて設定します。実稼働 `_app.config.js` で確認した API 設定は `VITE_GLOB_API_URL` のみで、このファイルだけを変更して全サービスが切り替わるとは限りません。バックエンドの汎用 Nginx テンプレートは異なる `/api/<service>/` 形式なので、利用前にパス変換と Controller の接頭辞を整合させてください。フロントエンド設定にトークンやモデルキーを公開しないでください。
 
-- URL: <https://www.xnetmlops.synapxnet.cn>
-- 電話番号: `12345678900`
-- 確認コード: `000000`
+## デモ接続と API 経路
 
-固定確認コードは公開デモ専用です。本番環境では安全な認証方式を使用してください。
+- GOAI デモ：<https://goai.xnetmlops.synapxnet.online/#/auth/login>。
+- 公開デモアカウント：**`17870171303`**、確認コード：**`000000`**（デモ環境専用、プロジェクト管理者が公開を承認）。ログインは **11 桁の携帯番号と 6 桁の確認コード**を `POST /api/auth/login` に送信します。パスワード方式でも OpenXnet AgentTeams のアクセスコード入力でもありません。
+- 2026-09-18 の検証で、サイトは HTTP 200、タイトルは `XnetMLops` でした。認証後の `/api/resident/v1/status` は `platform=mlops`、`agentId=agt-mlops-resident-v130` を返し、未認証では 401 でした。これはプラットフォーム識別とアクセス制御の確認で、業務全体の再受入試験ではありません。
+
+Web API はデモと同じオリジンを使用します。
+
+| サービス | フロントエンド API base | バックエンドのサービスポート |
+| --- | --- | --- |
+| Auth | `/api` | `8181` |
+| DPP | `/dpp` | `8182` |
+| MTP | `/mtp` | `8183` |
+| MEP | `/mep` | `8184` |
+| SMP | `/smp` | `8185` |
+| XAA | `/xaa` | `8186` |
+
+
+常駐 API base は `/api/resident/v1` です。プラットフォームのログイン情報、常駐 Agent のモデルキー、OpenXnet AgentTeams のデモアクセスコードは別の認証情報です。機能の利用には引き続きテナント・チーム権限と実行承認が必要です。
 
 ## ライセンスと上流プロジェクト
 
