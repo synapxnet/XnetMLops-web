@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
+import { Alert as SourceAlert } from 'ant-design-vue';
 import { ref, onMounted, nextTick, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import {
@@ -521,7 +523,12 @@ const retryDeploy = () => {
 
 // ==================== 生命周期 ====================
 
-onMounted(async () => {
+const sourceLoading = ref(false);
+const sourceError = ref('');
+/** 读取已有集群失败时保留错误并阻止部署空配置。Keep read failures visible and prevent deployment from empty configuration. */
+const initializePage = async () => {
+  sourceError.value = '';
+  sourceLoading.value = true;
   await loadHadoopVersions();
 
   const id = route.query.id;
@@ -543,9 +550,12 @@ onMounted(async () => {
       }
     } catch (error) {
       console.error('加载集群信息失败:', error);
+      sourceError.value = error instanceof Error ? error.message : 'Hadoop Master暂不可用';
     }
   }
-});
+  sourceLoading.value = false;
+};
+onMounted(initializePage);
 
 onUnmounted(() => {
   stopLogRefresh();
@@ -553,7 +563,10 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="deploy-master-container">
+  <BusinessPage domain="资源配置" description="管理组织内的数据连接、仓库、工作站与计算资源。">
+  <SourceAlert v-if="sourceError" type="error" show-icon message="Hadoop Master 未加载" :description="sourceError"><template #action><Button @click="initializePage">重试</Button></template></SourceAlert>
+  <div v-if="sourceLoading" class="py-8">正在加载 Master…</div>
+  <div v-if="!sourceError && !sourceLoading" class="deploy-master-container">
     <!-- 顶部导航 -->
     <div class="page-header">
       <Button type="text" @click="goBack">
@@ -933,6 +946,8 @@ onUnmounted(() => {
       </div>
     </Card>
   </div>
+
+  </BusinessPage>
 </template>
 
 <style scoped>

@@ -71,8 +71,8 @@ export interface DeployNode {
   cpuCores: number;
   memoryGb: number;
   gpuInfo: string | null;
-  dockerVersion: string;
-  nginxStatus: 'running' | 'stopped';
+  dockerVersion: null | string;
+  nginxStatus: 'running' | 'stopped' | 'unknown';
   labels: string | string[];
   description: string;
   createdBy: string;

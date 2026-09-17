@@ -1,500 +1,88 @@
-<script lang="ts" setup>
-import { computed, reactive, ref } from 'vue';
+<!-- Copyright (C) 2026 Synapxnet. All rights reserved.
+Synapxnet Proprietary and Confidential. Unauthorized copying, distribution or use is forbidden.
+模型输出与真实运行摘要。Model outputs and recorded run summaries.
+Author: maoyo | Department: 研发部 | Date: 2026-09-13 | Version: 1.0.0 | Security Level: INTERNAL
+__version__: 1.0.0 | __author__: maoyo | __copyright__: Copyright 2026 Synapxnet
+__maintainer__: maoyo | __email__: synapxnet@gmail.com -->
+<script setup lang="ts">
+import type { Ref } from 'vue';
+import type { ModelEvidenceRun } from '../model-evidence/model';
+import { computed, inject, onBeforeUnmount, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-
-import { Button, Card, message, Table } from 'ant-design-vue';
+import { Alert, Button, Descriptions, DescriptionsItem, Drawer, Empty, Input, Select, Space, Table, Tag } from 'ant-design-vue';
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
+import { fetchModelEvidence } from '../model-evidence/api';
+import { fetchModelArtifacts, type ModelArtifact } from '../api/modelArtifact';
 
 const router = useRouter();
-// 定义任务详情数据结构
-interface TaskDetail {
-  taskStep1: {
-    describe: string;
-    encryption: string;
-    image: string;
-    podType: string;
-    resources: string;
-    taskName: string;
-    taskType: string;
-    taskZone: string;
-    trainType: string;
-  };
-  taskStep2: {
-    algorithmName: string;
-    algorithmVersion: string;
-    datasets: Array<{
-      id: string;
-      name: string;
-      selectedName: string;
-    }>;
-    taskroute: string;
-  };
-  taskStep3: {
-    customVariables: Array<{
-      id: string;
-      name: string;
-      value: string;
-    }>;
-    trainConfig: {
-      content: string;
-      format: string;
-    };
-  };
-  taskStep4: {
-    notificationConfig: {
-      isActive: boolean;
-      notificationContent: string;
-      notificationTitle: string;
-      notificationUserID: string;
-    };
-    outputConfig: {
-      autoPublish: boolean;
-      isActive: boolean;
-      outputPath: string;
-      outputType: string;
-    };
-    scheduleConfig: {
-      cronExpression: string;
-      dailyTime: string;
-      dateRange: string[];
-      hourlyMinute: string;
-      intervalDuration: number;
-      intervalType: string;
-      intervalUnit: string;
-      isActive: boolean;
-      offsetTime: string;
-      weeklyDays: string[];
-      weeklyTime: string;
-    };
-  };
-}
-interface DataItem {
-  tabActiveKey: string;
-  key: number;
-  name: string;
-  platform: string;
-  version: string;
-  upgradeNum: number;
-  creator: string;
-  createdAt: string;
-  detail?: TaskDetail;
-}
-
-interface InnerDataItem {
-  key: number;
-  date: string;
-  name: string;
-  upgradeNum: string;
-}
-
+const organization = inject<Ref<{ tenantUid: null | string }>>('selectedOrganization', ref({ tenantUid: null }));
+const runs = ref<ModelEvidenceRun[]>([]);
+const artifacts = ref<ModelArtifact[]>([]);
+const query = ref('');
+const status = ref<string>();
+const loading = ref(false);
+const error = ref('');
+const selected = ref<ModelEvidenceRun>();
+const detailOpen = ref(false);
+let generation = 0;
 const columns = [
-  { title: '数据集名称', dataIndex: 'name', key: 'name' },
-  { title: '版本', dataIndex: 'platform', key: 'platform' },
-  { title: '大小', dataIndex: 'version', key: 'version' },
-  { title: '修改者', dataIndex: 'upgradeNum', key: 'upgradeNum' },
-  { title: '更新时间', dataIndex: 'creator', key: 'creator' },
-  { title: '描述', dataIndex: 'createdAt', key: 'createdAt' },
-  { title: '操作', key: 'operation' },
+  { title: '模型 / 运行', key: 'run', dataIndex: 'runUid', width: 240 },
+  { title: '数据版本', dataIndex: 'productVersion', width: 180 },
+  { title: '状态', key: 'status', width: 140 },
+  { title: '模型摘要', key: 'digest', width: 220 },
+  { title: '完成时间', dataIndex: 'completedAt', width: 200 },
+  { title: '操作', key: 'actions', width: 180 },
 ];
-// 创建任务详情数据
-const createTaskDetail = (): TaskDetail => ({
-  taskStep1: {
-    taskName: '1',
-    taskType: '1',
-    encryption: '1',
-    taskZone: '0',
-    podType: '0',
-    resources: 'GPU-V100',
-    trainType: '0',
-    image: 'TensorFlow 2.9@v2.9.0',
-    describe: 'ss',
-  },
-  taskStep2: {
-    algorithmName: '神经网络',
-    algorithmVersion: 'v2.1.3',
-    datasets: [
-      {
-        id: 'a89239b1-2cef-434f-a412-c5004fcdc151',
-        name: 'dis',
-        selectedName: 'IMDB',
-      },
-    ],
-    taskroute: 'main.py',
-  },
-  taskStep3: {
-    customVariables: [
-      {
-        id: '0412b02e-781b-4253-b8cd-adf48bce70c5',
-        name: 'ss',
-        value: 'ss',
-      },
-    ],
-    trainConfig: {
-      content: 'uuu',
-      format: 'txt',
-    },
-  },
-  taskStep4: {
-    scheduleConfig: {
-      intervalType: 'daily',
-      cronExpression: '',
-      dailyTime: '',
-      dateRange: [],
-      hourlyMinute: '',
-      intervalDuration: 1,
-      intervalUnit: 'hours',
-      offsetTime: '',
-      weeklyDays: [],
-      weeklyTime: '',
-      isActive: false,
-    },
-    outputConfig: {
-      autoPublish: true,
-      isActive: true,
-      outputPath: '数据输出',
-      outputType: '数据输出',
-    },
-    notificationConfig: {
-      notificationContent: '',
-      notificationTitle: '',
-      notificationUserID: '',
-      isActive: false,
-    },
-  },
-});
-const data: DataItem[] = [];
-for (let i = 0; i < 3; ++i) {
-  data.push({
-    tabActiveKey: '3',
-    key: i,
-    name: `Screem ${i + 1}`,
-    platform: 'iOS',
-    version: '10.3.4.5654',
-    upgradeNum: 500,
-    creator: 'Jack',
-    createdAt: '2014-12-24 23:12:00',
-    detail: createTaskDetail(),
-  });
+const statuses: Record<string, string> = { succeeded: '训练已完成', failed: '训练失败', running: '训练中', unknown: '状态未知' };
+/** 仅筛选当前授权组织的记录。Filter only current authorized organization records. */
+function filteredRuns() { return runs.value.filter((run) => `${run.runUid} ${run.productVersion}`.toLowerCase().includes(query.value.toLowerCase()) && (!status.value || run.status === status.value)); }
+const visibleRuns = computed(filteredRuns);
+
+/** 读取真实输出摘要，清除旧范围并拒绝迟到响应。Read real output summaries and reject stale scope responses. */
+async function loadOutputs() {
+  const request = ++generation; const tenantUid = organization.value.tenantUid;
+  runs.value = []; artifacts.value = []; selected.value = undefined; detailOpen.value = false; error.value = '';
+  if (!tenantUid) { loading.value = false; return; }
+  loading.value = true;
+  try {
+    const [evidence, registered] = await Promise.all([fetchModelEvidence(tenantUid), fetchModelArtifacts(tenantUid)]);
+    if (request !== generation) return;
+    if (evidence.scope?.tenantUid !== tenantUid || !Array.isArray(evidence.runs)) throw new Error('scope');
+    runs.value = evidence.runs;
+    artifacts.value = Array.isArray(registered) ? registered : [];
+  } catch { if (request === generation) error.value = '模型输出读取失败。请检查服务与组织权限后重试。'; }
+  finally { if (request === generation) loading.value = false; }
 }
-
-const executeRecordData = [
-  { title: '算法名称', dataIndex: 'algorithmName', key: 'algorithmName' },
-  { title: '状态', dataIndex: 'taskType', key: 'taskType' },
-  { title: '周期时间', dataIndex: 'scheduleTime', key: 'scheduleTime' },
-  { title: '开始时间', dataIndex: 'taskStartTime', key: 'taskStartTime' },
-  { title: '结束时间', dataIndex: 'taskEndTime', key: 'taskEndTime' },
-  {
-    title: '执行时间',
-    dataIndex: 'taskExecutionTime',
-    key: 'taskExecutionTime',
-  },
-  {
-    title: '操作',
-    dataIndex: 'operation',
-    key: 'operation',
-  },
-];
-
-const innerData: InnerDataItem[] = [];
-for (let i = 0; i < 3; ++i) {
-  innerData.push({
-    key: i,
-    date: '2014-12-24 23:12:00',
-    name: `This is production name ${i + 1}`,
-    upgradeNum: 'Upgraded: 56',
-  });
-}
-
-// 添加搜索相关逻辑
-const searchName = ref('');
-const searchType = ref('');
-
-// 获取所有任务类型选项
-const platformOptions = [...new Set(data.map((item) => item.platform))];
-
-// 过滤后的数据
-const filteredData = computed(() => {
-  return data.filter((item) => {
-    const nameMatch = item.name
-      .toLowerCase()
-      .includes(searchName.value.toLowerCase());
-    const typeMatch = searchType.value
-      ? item.platform === searchType.value
-      : true;
-    return nameMatch && typeMatch;
-  });
-});
-const handleAdd = () => {
-  router.push({ path: '/MTP/modeloutput/outputcreate' });
-};
-const handleNameClick = (record: DataItem) => {
-  router.push({
-    path: '/MTP/train/task',
-    query: { id: record.key }, // 传递任务ID
-  });
-};
-
-// 查看目录
-const handleViewDirectory = (record: DataItem) => {
-  message.info(`查看目录功能待实现，记录ID: ${record.key}`);
-};
-
-// 删除
-const handleDelete = (record: DataItem) => {
-  message.info(`删除功能待实现，记录ID: ${record.key}`);
-};
-
-const state = reactive({
-  selectedRowKeys: [] as number[], // 存储选中行的key
-  loading: false, // 删除按钮的加载状态
-});
-
-// 计算是否有选中的行
-const hasSelected = computed(() => state.selectedRowKeys.length > 0);
-
-// 处理选择变化
-const onSelectChange = (selectedRowKeys: number[]) => {
-  state.selectedRowKeys = selectedRowKeys;
-};
-
-// 批量删除函数
-const handleBatchDelete = () => {
-  state.loading = true;
-  // 模拟异步删除操作
-  setTimeout(() => {
-    // 实际项目中这里应该是调用API删除
-    // 这里从数据源中移除选中的行
-    const newData = data.filter(
-      (item) => !state.selectedRowKeys.includes(item.key),
-    );
-    data.splice(0, data.length, ...newData); // 更新原始数据
-
-    state.loading = false;
-    state.selectedRowKeys = [];
-  }, 1000);
-};
+/** 查看输出摘要，不公开原始文件路径。Open output summaries without exposing raw file paths. */
+function showDetails(run: ModelEvidenceRun) { selected.value = run; detailOpen.value = true; }
+/** 保留既有新增输出入口。Preserve the existing output creation entry. */
+function createOutput() { void router.push('/MTP/modeloutput/outputcreate'); }
+/** 打开已有证据比较工作台。Open the existing evidence comparison workspace. */
+function compareModels() { void router.push('/MTP/model-evidence'); }
+/** 卸载后丢弃未完成请求。Discard pending requests after unmount. */
+function invalidateRequests() { generation += 1; }
+watch(organization, loadOutputs, { deep: true, immediate: true });
+onBeforeUnmount(invalidateRequests);
 </script>
 <template>
-  <Card class="p-4 shadow">
-    <div class="mb-4 flex w-full justify-between">
-      <div>
-        <Button type="primary" @click="handleAdd"> 新增输出 </Button>
-        <Button
-          type="primary"
-          danger
-          :disabled="!hasSelected"
-          :loading="state.loading"
-          @click="handleBatchDelete"
-          style="margin-left: 8px"
-        >
-          批量删除
-        </Button>
-        <span style="margin-left: 8px">
-          <template v-if="hasSelected">
-            {{ `已选择 ${state.selectedRowKeys.length} 项` }}
-          </template>
-        </span>
-      </div>
-    </div>
-
-    <Table
-      :columns="columns"
-      :row-selection="{
-        selectedRowKeys: state.selectedRowKeys,
-        onChange: onSelectChange,
-      }"
-      row-key="key"
-      :data-source="filteredData"
-      class="custom-table"
-      bordered
-    >
+  <BusinessPage domain="模型研发" description="查看训练产生的模型摘要、数据版本与完成记录，继续比较迭代结果。">
+    <div class="output-toolbar"><Space wrap><Input v-model:value="query" allow-clear placeholder="搜索运行或数据版本" aria-label="搜索模型输出" style="width: 260px" /><Select v-model:value="status" allow-clear placeholder="全部状态" aria-label="模型输出状态" style="width: 150px" :options="[{ label: '已完成', value: 'succeeded' }, { label: '运行中', value: 'running' }, { label: '失败', value: 'failed' }]" /></Space><Space wrap><Button :loading="loading" @click="loadOutputs">刷新</Button><Button @click="createOutput">新增输出</Button><Button type="primary" @click="compareModels">比较模型证据</Button></Space></div>
+    <Alert v-if="error" type="error" show-icon :message="error" class="mb-4"><template #action><Button size="small" @click="loadOutputs">重试</Button></template></Alert>
+    <Alert type="info" show-icon message="当前组织的训练证据与已登记模型制品。制品 UID 可用于后续部署和审计。" class="mb-4" />
+    <Table :columns="columns" :data-source="visibleRuns" :loading="loading" :scroll="{ x: 1160 }" row-key="runUid">
+      <template #emptyText><Empty :description="error ? '数据暂不可用' : '当前范围暂无模型输出'" /></template>
       <template #bodyCell="{ column, record }">
-        <template v-if="column.key === 'name'">
-          <a @click="handleNameClick(record)">{{ record.name }}</a>
-        </template>
-        <template v-if="column.key === 'operation'">
-          <Button type="link" size="small" @click="handleViewDirectory(record)">
-            查看目录
-          </Button>
-          <span class="divider"></span>
-          <Button type="link" size="small" @click="handleDelete(record)">
-            删除
-          </Button>
-        </template>
+        <template v-if="column.key === 'run'"><Button type="link" @click="showDetails(record as ModelEvidenceRun)">{{ record.runUid }}</Button></template>
+        <template v-else-if="column.key === 'status'"><Tag :color="record.status === 'succeeded' ? 'blue' : 'default'">{{ statuses[record.status] || '状态未知' }}</Tag></template>
+        <template v-else-if="column.key === 'digest'"><span :title="record.modelDigestSha256">{{ record.modelDigestSha256 ? record.modelDigestSha256.slice(0, 20) + '…' : '尚未记录' }}</span></template>
+        <template v-else-if="column.key === 'actions'"><Button type="link" @click="showDetails(record as ModelEvidenceRun)">详情</Button><Button disabled title="文件目录尚未接入" type="text">目录</Button><Button disabled title="训练证据为只读记录" type="text">删除</Button></template>
       </template>
-      <template #expandedRowRender="{ record }"> </template>
     </Table>
-  </Card>
+    <section v-if="artifacts.length" class="mt-6"><h3 class="mb-3 text-base font-semibold">已登记模型制品</h3><Table :pagination="false" :data-source="artifacts" :columns="[{ title: '制品名称', dataIndex: 'outputName' }, { title: '框架', dataIndex: 'framework' }, { title: '领域', dataIndex: 'domain' }, { title: '文件', key: 'file' }, { title: '登记时间', dataIndex: 'createdAt' }]" row-key="uid"><template #bodyCell="{ column, record }"><span v-if="column.key === 'file'">{{ record.artifactPath ? '已归档到 HDFS' : '仅元数据' }}</span></template></Table></section>
+    <Drawer v-model:open="detailOpen" title="模型输出详情" width="580">
+      <Descriptions v-if="selected" :column="1" bordered><DescriptionsItem label="运行">{{ selected.runUid }}</DescriptionsItem><DescriptionsItem label="数据版本">{{ selected.productVersion }}</DescriptionsItem><DescriptionsItem label="模型 SHA-256"><span style="overflow-wrap:anywhere">{{ selected.modelDigestSha256 || '尚未记录' }}</span></DescriptionsItem><DescriptionsItem label="测试样本">{{ selected.sampleCounts?.test ?? '未知' }}</DescriptionsItem><DescriptionsItem label="指标"><pre>{{ JSON.stringify(selected.metrics, null, 2) }}</pre></DescriptionsItem></Descriptions>
+      <p class="xnet-muted mt-4">这里只展示已记录证据。完整评测套件和真实部署验证仍需补齐。</p>
+    </Drawer>
+  </BusinessPage>
 </template>
-<style scoped>
-/* 表格边框样式 */
-.custom-table {
-  border: 1px solid var(--ant-color-border);
-  border-radius: 4px;
-}
-
-/* 表头样式 */
-.custom-table :deep(.ant-table-thead) > tr > th {
-  font-weight: 600;
-}
-
-/* 表格单元格边框 */
-.custom-table :deep(.ant-table-tbody) > tr > td {
-  border-right: 1px solid var(--ant-color-border);
-}
-
-/* 最后单元格去掉右边框 */
-.custom-table :deep(.ant-table-tbody) > tr > td:last-child {
-  border-right: none;
-}
-
-/* 添加链接样式 */
-.custom-table :deep(.ant-table-tbody) a {
-  color: var(--ant-color-primary);
-  cursor: pointer;
-}
-.custom-table :deep(.ant-table-tbody) a:hover {
-  color: var(--ant-color-primary-hover);
-}
-/* 添加卡片样式 */
-.mb-6 {
-  margin-bottom: 1.5rem;
-}
-
-/* 描述列表样式 */
-:deep(.ant-descriptions-item-label) {
-  font-weight: 600;
-  width: 150px;
-}
-
-/* 预格式化文本样式 */
-pre {
-  padding: 8px;
-  border-radius: 4px;
-  overflow: auto;
-  max-height: 150px;
-  margin: 0;
-}
-
-/* 分隔线样式 */
-.section-divider {
-  display: flex;
-  align-items: center;
-  margin: 24px 0 16px;
-}
-
-.divider-line {
-  flex-grow: 1;
-  height: 1px;
-  background-color: var(--ant-color-border);
-}
-
-.divider-title {
-  padding: 0 12px;
-  font-weight: 600;
-  color: var(--ant-color-primary);
-  white-space: nowrap;
-}
-/* 添加上游依赖样式 */
-/* 添加依赖项样式 */
-.dependency-item {
-  border: 1px solid var(--ant-color-border);
-}
-
-.dependency-selectors {
-  display: flex;
-  margin-bottom: 16px;
-}
-
-.action-buttons {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.selected-info {
-  padding: 12px 16px;
-  border: 1px solid var(--ant-color-primary-border);
-  border-radius: 4px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.selected-text {
-  font-weight: 500;
-}
-
-.delete-btn {
-  color: var(--ant-color-error);
-  padding: 0;
-}
-
-.confirmed-mode,
-.edit-mode {
-  transition: all 0.3s ease;
-}
-
-.no-dependencies {
-  border: 1px dashed var(--ant-color-border);
-  border-radius: 4px;
-}
-.upstream-dependency {
-  padding: 16px;
-}
-
-.dependency-selectors {
-  display: flex;
-  margin-bottom: 16px;
-}
-
-.action-buttons {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.selected-info {
-  padding: 12px 16px;
-  border: 1px solid var(--ant-color-primary-border);
-  border-radius: 4px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.selected-text {
-  font-weight: 500;
-}
-
-.delete-btn {
-  color: var(--ant-color-error);
-  padding: 0;
-}
-
-.confirmed-mode,
-.edit-mode {
-  transition: all 0.3s ease;
-}
-/* 添加下游任务样式 */
-.downstream-tasks {
-  padding: 16px;
-}
-
-.task-header {
-  display: flex;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--ant-color-primary-border);
-  font-weight: 600;
-}
-
-.task-item {
-  display: flex;
-  padding: 12px;
-  border-bottom: 1px solid var(--ant-color-border);
-}
-
-.no-tasks {
-  padding: 24px;
-  text-align: center;
-  color: var(--ant-color-text-tertiary);
-  font-size: 16px;
-}
-</style>
+<style scoped>.output-toolbar { display:flex; justify-content:space-between; flex-wrap:wrap; gap:16px; margin-bottom:20px; }</style>

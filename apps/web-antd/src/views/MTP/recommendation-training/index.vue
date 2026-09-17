@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import type { Ref } from 'vue';
 
 import { computed, inject, onMounted, ref, watch } from 'vue';
@@ -189,6 +190,7 @@ onMounted(loadPageData);
 </script>
 
 <template>
+  <BusinessPage domain="模型研发" description="连接算法、训练记录与模型证据，让每一次迭代都有据可循。" existing-title>
   <div class="training-page">
     <header class="page-header">
       <div>
@@ -212,8 +214,8 @@ onMounted(loadPageData);
     <section class="metric-band" aria-label="推荐训练摘要">
       <Statistic title="可训练数据集" :value="eligibleDatasets.length" />
       <Statistic title="成功运行" :value="successfulRuns.length" />
-      <Statistic title="最新测试 AUC" :value="formatMetric(latestMetrics.test_metrics?.auc)" />
-      <Statistic title="最新测试 F1" :value="formatMetric(latestMetrics.test_metrics?.f1)" />
+      <Statistic title="最新测试 AUC" :value="latestMetrics.test_metrics?.auc ?? 0" :formatter="() => formatMetric(latestMetrics.test_metrics?.auc)" />
+      <Statistic title="最新测试 F1" :value="latestMetrics.test_metrics?.f1 ?? 0" :formatter="() => formatMetric(latestMetrics.test_metrics?.f1)" />
     </section>
 
     <section class="run-control">
@@ -307,6 +309,8 @@ onMounted(loadPageData);
       </Table>
     </section>
   </div>
+
+  </BusinessPage>
 </template>
 
 <style scoped>

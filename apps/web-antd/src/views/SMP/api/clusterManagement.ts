@@ -92,11 +92,13 @@ export interface ClusterTypeConfig {
 // ==================== API 函数 ====================
 
 /**
- * 获取集群拓扑数据
+ * 获取并校验集群拓扑，拒绝不完整响应。Read and validate topology, rejecting incomplete responses.
  */
 export async function getClusterTopology(clusterType: ClusterType): Promise<ClusterTopology> {
   const response = await smpRequestClient.get<any>(`/cluster/${clusterType}/topology`);
-  return response.data || response;
+  const data = response?.data ?? response;
+  if (!data || !Array.isArray(data.masters) || !Array.isArray(data.workers) || !data.stats) throw new Error('集群拓扑返回结构不完整，请重试');
+  return data;
 }
 
 /**

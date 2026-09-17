@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
+import { publicRequestMessage } from '#/api/public-error';
 import type { HdfsFile } from '../../SMP/api/types';
 
 import { computed, onMounted, ref } from 'vue';
@@ -49,6 +51,7 @@ const isCAS = ref(route.query.isCAS === 'true');
 // HDFS文件列表
 const fileList = ref<HdfsFile[]>([]);
 const loading = ref(false);
+const readError = ref('');
 const currentPath = ref('/');
 const breadcrumbItems = ref<{ name: string; path: string }[]>([]);
 const selectedFiles = ref<string[]>([]);
@@ -84,9 +87,10 @@ const uploadFileName = ref('');
 const createFolderVisible = ref(false);
 const newFolderName = ref('');
 
-// 获取文件列表
+// 读取失败持续显示并允许重试，不误报为空目录。 Keep read failures visible and retryable instead of reporting an empty directory.
 const fetchFileList = async () => {
   loading.value = true;
+  readError.value = '';
   try {
     const response = await fetchAlgorithmFileList(
       algorithmId.value,
@@ -136,6 +140,9 @@ const fetchFileList = async () => {
       fileList.value = [];
     }
   } catch (error) {
+    fileList.value = [];
+    selectedFiles.value = [];
+    readError.value = publicRequestMessage(error, '文件列表读取失败');
     console.error('获取文件列表失败:', error);
     message.error('获取文件列表失败');
   } finally {
@@ -239,7 +246,9 @@ const handleUpload = async () => {
   }
 };
 
-// 下载文件
+const downloadProgress = ref<Record<string, number>>({});
+
+// 显示实际传输进度，防止重复下载并释放完成后的对象URL。 / Show actual transfer progress, prevent duplicate downloads and release completed object URLs.
 const handleDownload = async (file: HdfsFile) => {
   if (!file?.path) return;
 
@@ -248,8 +257,16 @@ const handleDownload = async (file: HdfsFile) => {
     return;
   }
 
+  const key = file.id || file.path;
+  if (downloadProgress.value[key] !== undefined) return;
+  downloadProgress.value[key] = 0;
   try {
-    const blob = await downloadAlgorithmFile(algorithmId.value, file.id || file.path);
+    const blob = await downloadAlgorithmFile(
+      algorithmId.value,
+      key,
+      // 将当前文件接收进度写回界面。 / Reflect the current file's receive progress in the view.
+      (progress) => { downloadProgress.value[key] = progress; },
+    );
 
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -258,9 +275,13 @@ const handleDownload = async (file: HdfsFile) => {
     document.body.append(link);
     link.click();
     link.remove();
+    // 浏览器保存启动后释放临时文件URL。 / Release the temporary file URL after the browser starts saving.
+    window.setTimeout(() => window.URL.revokeObjectURL(url), 30_000);
   } catch (error) {
     console.error('文件下载失败:', error);
     message.error('文件下载失败');
+  } finally {
+    delete downloadProgress.value[key];
   }
 };
 
@@ -381,196 +402,204 @@ onMounted(() => {
 </script>
 
 <template>
-  <Card class="p-4 shadow">
-    <div class="mb-4">
-      <Button @click="router.push({ path: '/MTP/algorithm/index' })">
-        <template #icon><HomeOutlined /></template>
-        返回算法列表
-      </Button>
-    </div>
-
-    <!-- CAS模式提示 -->
-    <Alert
-      v-if="isCAS"
-      message="CAS模式"
-      description="当前算法来自云算法仓库(CAS)，只能查看和下载文件，不支持上传、删除或修改操作。如需修改，请在SMP云算法仓库中操作。"
-      type="warning"
-      show-icon
-      class="mb-4"
-    >
-      <template #icon><LockOutlined /></template>
-    </Alert>
-
-    <Card :title="`算法: ${algorithmName}`" class="mb-4">
-      <div class="mb-4 flex items-center justify-between">
-        <div class="flex items-center">
-          <Breadcrumb>
-            <Breadcrumb.Item v-for="item in breadcrumbItems" :key="item.path">
-              <a @click="enterDirectory(item.path)">{{ item.name }}</a>
-            </Breadcrumb.Item>
-          </Breadcrumb>
-        </div>
-
-        <div>
-          <Button @click="goBack" class="mr-2">返回上一级</Button>
-          <Button @click="goToRoot" class="mr-4">返回根目录</Button>
-
-          <!-- 非CAS模式显示操作按钮 -->
-          <Dropdown v-if="!isCAS">
-            <Button type="primary"> 操作 <EllipsisOutlined /> </Button>
-            <template #overlay>
-              <Menu>
-                <Menu.Item @click="uploadVisible = true">
-                  <UploadOutlined /> 上传文件（覆盖模式）
-                </Menu.Item>
-                <Menu.Item @click="createFolderVisible = true">
-                  <PlusOutlined /> 新建文件夹
-                </Menu.Item>
-                <Menu.Item
-                  @click="handleBatchDelete"
-                  :disabled="selectedFiles.length === 0"
-                >
-                  <DeleteOutlined /> 批量删除
-                </Menu.Item>
-              </Menu>
-            </template>
-          </Dropdown>
-        </div>
+  <BusinessPage
+    domain="模型研发"
+    description="连接算法、训练记录与模型证据，让每一次迭代都有据可循。"
+    :error="readError"
+    :loading="loading"
+    @retry="fetchFileList"
+  >
+    <Card class="p-4 shadow">
+      <div class="mb-4">
+        <Button @click="router.push({ path: '/MTP/algorithm/index' })">
+          <template #icon><HomeOutlined /></template>
+          返回算法列表
+        </Button>
       </div>
 
-      <Table
-        :data-source="fileList"
-        :columns="columns"
-        :loading="loading"
-        :row-selection="isCAS ? undefined : rowSelection"
-        row-key="id"
-        :pagination="false"
-        class="hdfs-table"
+      <!-- CAS模式提示 -->
+      <Alert
+        v-if="isCAS"
+        message="CAS模式"
+        description="当前算法来自云算法仓库(CAS)，只能查看和下载文件，不支持上传、删除或修改操作。如需修改，请在SMP云算法仓库中操作。"
+        type="warning"
+        show-icon
+        class="mb-4"
       >
-        <template #bodyCell="{ column, record }">
-          <template v-if="column.key === 'name'">
-            <div class="flex items-center">
-              <FolderOutlined
-                v-if="record?.isDirectory"
-                class="mr-2 text-lg text-blue-500"
-              />
-              <FileOutlined v-else class="mr-2 text-lg text-gray-500" />
-              <a
-                v-if="record?.isDirectory"
-                @click="enterDirectory(record?.path || '/')"
-              >
-                {{ record?.name || '未知文件夹' }}
-              </a>
-              <span v-else>{{ record?.name || '未知文件' }}</span>
-            </div>
-          </template>
+        <template #icon><LockOutlined /></template>
+      </Alert>
 
-          <template v-if="column.key === 'size'">
-            {{ record?.isDirectory ? '-' : record?.sizeFormatted || '0 B' }}
-          </template>
-
-          <template v-if="column.key === 'modificationTime'">
-            {{
-              record?.modificationTime
-                ? new Date(record.modificationTime).toLocaleString()
-                : '-'
-            }}
-          </template>
-
-          <template v-if="column.key === 'action'">
-            <Button
-              type="link"
-              @click="handleDownload(record)"
-              v-if="record && !record.isDirectory"
-            >
-              <DownloadOutlined /> 下载
-            </Button>
-            <!-- 非CAS模式才显示删除按钮 -->
-            <Button
-              v-if="!isCAS"
-              type="link"
-              danger
-              @click="handleDelete(record)"
-            >
-              <DeleteOutlined /> 删除
-            </Button>
-          </template>
-        </template>
-
-        <template
-          #expandedRowRender="{ record }"
-          v-if="record && !record.isDirectory"
-        >
-          <div class="file-details">
-            <div class="detail-item">
-              <span class="detail-label">路径:</span>
-              <span class="detail-value">{{ record?.path || '-' }}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">权限:</span>
-              <span class="detail-value">{{ record?.permissions || '-' }}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">所有者:</span>
-              <span class="detail-value"
-                >{{ record?.owner || '-' }}:{{ record?.group || '-' }}</span
-              >
-            </div>
+      <Card :title="`算法: ${algorithmName}`" class="mb-4">
+        <div class="mb-4 flex items-center justify-between">
+          <div class="flex items-center">
+            <Breadcrumb>
+              <Breadcrumb.Item v-for="item in breadcrumbItems" :key="item.path">
+                <a @click="enterDirectory(item.path)">{{ item.name }}</a>
+              </Breadcrumb.Item>
+            </Breadcrumb>
           </div>
-        </template>
-      </Table>
+
+          <div>
+            <Button @click="goBack" class="mr-2">返回上一级</Button>
+            <Button @click="goToRoot" class="mr-4">返回根目录</Button>
+
+            <!-- 非CAS模式显示操作按钮 -->
+            <Dropdown v-if="!isCAS">
+              <Button type="primary"> 操作 <EllipsisOutlined /> </Button>
+              <template #overlay>
+                <Menu>
+                  <Menu.Item @click="uploadVisible = true">
+                    <UploadOutlined /> 上传文件（覆盖模式）
+                  </Menu.Item>
+                  <Menu.Item @click="createFolderVisible = true">
+                    <PlusOutlined /> 新建文件夹
+                  </Menu.Item>
+                  <Menu.Item
+                    @click="handleBatchDelete"
+                    :disabled="selectedFiles.length === 0"
+                  >
+                    <DeleteOutlined /> 批量删除
+                  </Menu.Item>
+                </Menu>
+              </template>
+            </Dropdown>
+          </div>
+        </div>
+
+        <Table
+          :data-source="fileList"
+          :columns="columns"
+          :loading="loading"
+          :row-selection="isCAS ? undefined : rowSelection"
+          row-key="id"
+          :pagination="false"
+          class="hdfs-table"
+        >
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'name'">
+              <div class="flex items-center">
+                <FolderOutlined
+                  v-if="record?.isDirectory"
+                  class="mr-2 text-lg text-blue-500"
+                />
+                <FileOutlined v-else class="mr-2 text-lg text-gray-500" />
+                <a
+                  v-if="record?.isDirectory"
+                  @click="enterDirectory(record?.path || '/')"
+                >
+                  {{ record?.name || '未知文件夹' }}
+                </a>
+                <span v-else>{{ record?.name || '未知文件' }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'size'">
+              {{ record?.isDirectory ? '-' : record?.sizeFormatted || '0 B' }}
+            </template>
+
+            <template v-if="column.key === 'modificationTime'">
+              {{
+                record?.modificationTime
+                  ? new Date(record.modificationTime).toLocaleString()
+                  : '-'
+              }}
+            </template>
+
+            <template v-if="column.key === 'action'">
+              <Button
+                type="link"
+                @click="handleDownload(record)"
+                :loading="downloadProgress[record.id || record.path] !== undefined"
+                v-if="record && !record.isDirectory"
+              >
+                <DownloadOutlined /> {{ downloadProgress[record.id || record.path] !== undefined ? `下载中 ${downloadProgress[record.id || record.path]}%` : '下载' }}
+              </Button>
+              <!-- 非CAS模式才显示删除按钮 -->
+              <Button
+                v-if="!isCAS"
+                type="link"
+                danger
+                @click="handleDelete(record)"
+              >
+                <DeleteOutlined /> 删除
+              </Button>
+            </template>
+          </template>
+
+          <template #expandedRowRender="{ record }">
+            <div v-if="record && !record.isDirectory" class="file-details">
+              <div class="detail-item">
+                <span class="detail-label">路径:</span>
+                <span class="detail-value">{{ record?.path || '-' }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">权限:</span>
+                <span class="detail-value">{{
+                  record?.permissions || '-'
+                }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">所有者:</span>
+                <span class="detail-value"
+                  >{{ record?.owner || '-' }}:{{ record?.group || '-' }}</span
+                >
+              </div>
+            </div>
+          </template>
+        </Table>
+      </Card>
     </Card>
-  </Card>
 
-  <!-- 上传文件模态框 -->
-  <Modal
-    v-model:visible="uploadVisible"
-    title="上传文件（覆盖模式）"
-    @ok="handleUpload"
-    @cancel="uploadVisible = false"
-  >
-    <Alert
-      message="注意：上传同名文件将会覆盖原有文件"
-      type="info"
-      show-icon
-      class="mb-4"
-    />
-    <div class="upload-container">
-      <Upload
-        :before-upload="beforeUpload"
-        :show-upload-list="false"
-        accept="*"
-      >
-        <Button class="mb-4"> <UploadOutlined /> 选择文件 </Button>
-      </Upload>
-
-      <div v-if="uploadFile" class="file-info">
-        <FileOutlined class="mr-2" />
-        {{ uploadFileName }}
-        <span class="file-size">({{ formatFileSize(uploadFile.size) }})</span>
-      </div>
-
-      <div v-if="uploadProgress > 0" class="mt-4">
-        <Progress :percent="uploadProgress" status="active" />
-      </div>
-    </div>
-  </Modal>
-
-  <!-- 创建文件夹模态框 -->
-  <Modal
-    v-model:visible="createFolderVisible"
-    title="新建文件夹"
-    @ok="handleCreateFolder"
-    @cancel="createFolderVisible = false"
-  >
-    <div class="create-folder">
-      <Input
-        v-model:value="newFolderName"
-        placeholder="请输入文件夹名称"
-        @press-enter="handleCreateFolder"
+    <!-- 上传文件模态框 -->
+    <Modal
+      v-model:visible="uploadVisible"
+      title="上传文件（覆盖模式）"
+      @ok="handleUpload"
+      @cancel="uploadVisible = false"
+    >
+      <Alert
+        message="注意：上传同名文件将会覆盖原有文件"
+        type="info"
+        show-icon
+        class="mb-4"
       />
-    </div>
-  </Modal>
+      <div class="upload-container">
+        <Upload
+          :before-upload="beforeUpload"
+          :show-upload-list="false"
+          accept="*"
+        >
+          <Button class="mb-4"> <UploadOutlined /> 选择文件 </Button>
+        </Upload>
+
+        <div v-if="uploadFile" class="file-info">
+          <FileOutlined class="mr-2" />
+          {{ uploadFileName }}
+          <span class="file-size">({{ formatFileSize(uploadFile.size) }})</span>
+        </div>
+
+        <div v-if="uploadProgress > 0" class="mt-4">
+          <Progress :percent="uploadProgress" status="active" />
+        </div>
+      </div>
+    </Modal>
+
+    <!-- 创建文件夹模态框 -->
+    <Modal
+      v-model:visible="createFolderVisible"
+      title="新建文件夹"
+      @ok="handleCreateFolder"
+      @cancel="createFolderVisible = false"
+    >
+      <div class="create-folder">
+        <Input
+          v-model:value="newFolderName"
+          placeholder="请输入文件夹名称"
+          @press-enter="handleCreateFolder"
+        />
+      </div>
+    </Modal>
+  </BusinessPage>
 </template>
 
 <style scoped>

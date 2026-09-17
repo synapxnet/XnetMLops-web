@@ -1,4 +1,5 @@
 <template>
+  <BusinessPage domain="数据准备" description="从数据集、特征到知识库，组织好训练与检索所需的数据。" existing-title>
   <div class="retrieval-test">
     <Card class="retrieval-test__header">
       <div class="retrieval-test__title-row">
@@ -199,9 +200,12 @@
       </Col>
     </Row>
   </div>
+
+  </BusinessPage>
 </template>
 
 <script setup lang="ts">
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {

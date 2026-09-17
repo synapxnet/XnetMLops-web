@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import { ref, onMounted, h } from 'vue';
 import {
   Table, Button, Space, Modal, Tag, Tooltip, message, Card,
@@ -17,6 +18,7 @@ import WorkstationForm from './components/WorkstationForm.vue';
 
 // 状态
 const loading = ref(false);
+const readError = ref('');
 const workstations = ref<Workstation[]>([]);
 const showForm = ref(false);
 const editingWorkstation = ref<Workstation | null>(null);
@@ -25,12 +27,15 @@ const detailWorkstation = ref<Workstation | null>(null);
 const checkingIds = ref<number[]>([]);
 
 // 加载数据
+/** 读取工作站列表并保留可重试错误。 Read workstations and retain a retryable failure state. */
 const loadData = async () => {
   loading.value = true;
   try {
     workstations.value = await getWorkstations();
+    readError.value = '';
   } catch (error: any) {
     console.error('加载工作站点列表失败:', error);
+    readError.value = '工作站列表读取失败，请检查服务与权限后重试。';
     message.error('加载失败: ' + error.message);
   } finally {
     loading.value = false;
@@ -226,6 +231,7 @@ onMounted(() => {
 </script>
 
 <template>
+  <BusinessPage domain="资源配置" description="管理组织内的数据连接、仓库、工作站与计算资源。" :error="readError" :loading="loading" @retry="loadData">
   <div class="workstation-manage">
     <Card title="工作站点管理" :bordered="false">
       <template #extra>
@@ -345,6 +351,8 @@ onMounted(() => {
       </Descriptions>
     </Modal>
   </div>
+
+  </BusinessPage>
 </template>
 
 <style scoped>

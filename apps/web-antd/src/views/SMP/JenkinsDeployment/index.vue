@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import {
@@ -62,12 +63,14 @@ const activeTab = ref('master');
 // Master数据
 const masterList = ref<JenkinsMaster[]>([]);
 const masterLoading = ref(false);
+const masterError = ref('');
 const masterSearchText = ref('');
 const masterStatusFilter = ref<string | undefined>(undefined);
 
 // Node数据
 const nodeList = ref<JenkinsNode[]>([]);
 const nodeLoading = ref(false);
+const nodeError = ref('');
 const nodeSearchText = ref('');
 const nodeStatusFilter = ref<string | undefined>(undefined);
 
@@ -81,12 +84,14 @@ let refreshTimer: ReturnType<typeof setInterval> | null = null;
 
 // ==================== Master相关 ====================
 
-// 加载Master列表
+/** 读取 Jenkins 主节点并保留可重试错误。 Read Jenkins masters and retain a retryable failure state. */
 const loadMasters = async () => {
   masterLoading.value = true;
   try {
     masterList.value = await fetchJenkinsMasters();
+    masterError.value = '';
   } catch (error) {
+    masterError.value = 'Jenkins 主节点列表读取失败，请检查服务与权限后重试。';
     console.error('加载Master列表失败:', error);
     message.error('加载Master列表失败');
   } finally {
@@ -164,18 +169,23 @@ const handleViewMasterLog = (master: JenkinsMaster) => {
 
 // ==================== Node相关 ====================
 
-// 加载Node列表
+/** 读取 Jenkins 工作节点并保留可重试错误。 Read Jenkins workers and retain a retryable failure state. */
 const loadNodes = async () => {
   nodeLoading.value = true;
   try {
     nodeList.value = await fetchJenkinsNodes();
+    nodeError.value = '';
   } catch (error) {
+    nodeError.value = 'Jenkins 工作节点列表读取失败，请检查服务与权限后重试。';
     console.error('加载Node列表失败:', error);
     message.error('加载Node列表失败');
   } finally {
     nodeLoading.value = false;
   }
 };
+
+/** 一次重新读取主节点与工作节点。 Reload masters and workers together. */
+async function retryLists() { await Promise.all([loadMasters(), loadNodes()]); }
 
 // 过滤后的Node列表
 const filteredNodeList = computed(() => {
@@ -321,6 +331,7 @@ const handleTabChange = (key: string) => {
 </script>
 
 <template>
+  <BusinessPage domain="资源配置" description="管理组织内的数据连接、仓库、工作站与计算资源。" :error="masterError || nodeError" :loading="masterLoading || nodeLoading" @retry="retryLists">
   <div class="jenkins-deployment-container">
     <!-- 统计卡片 -->
     <Row :gutter="16" class="stats-row">
@@ -579,6 +590,8 @@ const handleTabChange = (key: string) => {
       <pre class="log-content">{{ currentLog }}</pre>
     </Modal>
   </div>
+
+  </BusinessPage>
 </template>
 
 <style scoped>

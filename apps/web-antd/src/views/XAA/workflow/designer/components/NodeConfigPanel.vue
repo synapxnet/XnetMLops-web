@@ -281,7 +281,7 @@
 
         <!-- 其他节点显示通用配置 -->
         <template v-else>
-          <Alert message="此节点类型的配置面板正在开发中" type="info" show-icon />
+          <Alert message="此节点尚无可编辑参数。名称与说明可以修改；执行时以服务端支持的节点能力为准。" type="info" show-icon />
         </template>
       </Form>
     </div>

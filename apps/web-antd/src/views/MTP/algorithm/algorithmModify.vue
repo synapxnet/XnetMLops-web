@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
+import { publicRequestMessage } from '#/api/public-error';
 import type { HdfsFile } from '../../SMP/api/types';
 
 import { computed, onMounted, ref } from 'vue';
@@ -64,6 +66,7 @@ const cloudAlgorithmInfo = ref<{
 // 算法文件列表（非CAS模式）
 const algorithmFiles = ref<HdfsFile[]>([]);
 const filesLoading = ref(false);
+const filesError = ref('');
 
 // 配置数据
 const configData = ref({
@@ -238,11 +241,12 @@ const formatFileSize = (bytes: number): string => {
   return `${Number.parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
 };
 
-// 加载算法文件列表（非CAS模式）
+// 文件读取失败时清除旧结果并提供重试。 Clear stale file results on read failure and offer retry.
 const loadAlgorithmFiles = async () => {
   if (!algorithmId.value || isCAS.value) return;
 
   filesLoading.value = true;
+  filesError.value = '';
   try {
     const response = await fetchAlgorithmFileList(
       algorithmId.value.toString(),
@@ -273,22 +277,30 @@ const loadAlgorithmFiles = async () => {
       });
     }
   } catch (error) {
+    algorithmFiles.value = [];
+    filesError.value = publicRequestMessage(error, '算法文件读取失败');
     console.error('加载算法文件列表失败:', error);
   } finally {
     filesLoading.value = false;
   }
 };
 
-// 加载算法信息
+const loadError = ref('');
+const detailLoading = ref(false);
+const algorithmLoaded = ref(false);
+
+// 加载失败时保留当前页面并阻止编辑空记录。Remain on the page and prevent editing missing records after load failure.
 const loadAlgorithm = async () => {
   const id = route.query.id ? Number.parseInt(route.query.id as string) : null;
   if (!id) {
-    message.error('算法ID无效');
-    router.go(-1);
+    loadError.value = '算法ID无效';
     return;
   }
 
   algorithmId.value = id;
+  detailLoading.value = true;
+  loadError.value = '';
+  algorithmLoaded.value = false;
 
   try {
     // 调用API获取算法详情
@@ -318,6 +330,7 @@ const loadAlgorithm = async () => {
       encryption: algorithm.encryption ? '1' : '0',
       subdata_area: algorithm.subdata_area ? '1' : '0',
     };
+    algorithmLoaded.value = true;
 
     // 非 CAS 模式加载文件列表
     if (!isCAS.value) {
@@ -326,7 +339,10 @@ const loadAlgorithm = async () => {
   } catch (error) {
     console.error('加载算法详情失败', error);
     message.error('加载算法详情失败');
-    router.go(-1);
+    loadError.value =
+      error instanceof Error ? error.message : '算法详情暂不可用';
+  } finally {
+    detailLoading.value = false;
   }
 };
 
@@ -497,263 +513,300 @@ const goToFileManager = () => {
   });
 };
 
-// 选择云算法（CAS模式）
+// 打开已有云算法仓库入口。Open the existing cloud algorithm repository.
 const selectCloudAlgorithm = () => {
-  // 跳转到 SMP 云算法仓库选择页面
-  message.info('请前往 SMP 云算法仓库选择算法');
-  // TODO: 实现云算法选择逻辑
+  void router.push('/SMP/MTPManage/GitManage');
 };
 </script>
 
 <template>
-  <Page title="修改算法" />
-  <div class="page-container">
-    <Card class="form-card">
-      <AForm
-        ref="formRef"
-        :model="formState"
-        layout="vertical"
-        class="form-grid"
-      >
-        <!-- 动态生成表单项 -->
-        <template v-for="item in schema" :key="item.fieldName">
-          <AFormItem :label="item.label" :name="item.fieldName">
-            <component
-              :is="item.component === 'Input' ? AInput : ASelect"
-              v-bind="item.componentProps"
-              v-model:value="formState[item.fieldName]"
-            />
-          </AFormItem>
-        </template>
-
-        <!-- 描述输入区域 -->
-        <AFormItem class="col-span-2" label="描述：" name="description">
-          <AInput.TextArea
-            v-model:value="formState.description"
-            :maxlength="100"
-            :show-count="true"
-            placeholder="请输入算法描述"
-            :style="{ height: '100px' }"
-          />
-        </AFormItem>
-      </AForm>
-
-      <!-- 高级设置折叠面板 -->
-      <ACollapse
-        v-model:active-key="activeKeys"
-        class="advanced-collapse"
-        :bordered="false"
-      >
-        <ACollapsePanel key="advanced-settings" :show-arrow="true">
-          <template #header>
-            <div class="collapse-header">
-              高级设置
-              <div class="header-line"></div>
-            </div>
+  <BusinessPage
+    domain="模型研发"
+    description="连接算法、训练记录与模型证据，让每一次迭代都有据可循。"
+    existing-title
+  >
+    <Page title="修改算法" />
+    <Alert
+      v-if="loadError"
+      type="error"
+      show-icon
+      message="算法未加载"
+      :description="loadError"
+      ><template #action
+        ><AButton @click="loadAlgorithm">重试</AButton></template
+      ></Alert
+    >
+    <div v-if="detailLoading" class="py-8">正在加载算法…</div>
+    <div v-else-if="algorithmLoaded" class="page-container">
+      <Card class="form-card">
+        <AForm
+          ref="formRef"
+          :model="formState"
+          layout="vertical"
+          class="form-grid"
+        >
+          <!-- 动态生成表单项 -->
+          <template v-for="item in schema" :key="item.fieldName">
+            <AFormItem :label="item.label" :name="item.fieldName">
+              <component
+                :is="item.component === 'Input' ? AInput : ASelect"
+                v-bind="item.componentProps"
+                v-model:value="formState[item.fieldName]"
+              />
+            </AFormItem>
           </template>
 
-          <!-- CAS 模式：显示云算法信息 -->
-          <div v-if="isCAS" class="cas-section">
-            <Alert
-              message="云算法仓库 (CAS) 模式"
-              description="当前算法来自云算法仓库，如需修改算法文件请在 SMP 云算法仓库中操作。"
-              type="info"
-              show-icon
-              class="mb-4"
-            >
-              <template #icon><CloudOutlined /></template>
-            </Alert>
+          <!-- 描述输入区域 -->
+          <AFormItem class="col-span-2" label="描述：" name="description">
+            <AInput.TextArea
+              v-model:value="formState.description"
+              :maxlength="100"
+              :show-count="true"
+              placeholder="请输入算法描述"
+              :style="{ height: '100px' }"
+            />
+          </AFormItem>
+        </AForm>
 
-            <h3 class="section-title">
-              <CloudOutlined class="mr-2" />
-              云算法信息
-            </h3>
-
-            <Descriptions bordered :column="1" class="mb-4">
-              <Descriptions.Item label="云算法ID">
-                {{ cloudAlgorithmInfo?.id || formState.cloud_algorithm_id || '-' }}
-              </Descriptions.Item>
-              <Descriptions.Item label="算法名称">
-                {{ cloudAlgorithmInfo?.name || formState.algorithm_name || '-' }}
-              </Descriptions.Item>
-              <Descriptions.Item label="版本">
-                {{ cloudAlgorithmInfo?.version || formState.version || '-' }}
-              </Descriptions.Item>
-            </Descriptions>
-
-            <Button type="primary" @click="selectCloudAlgorithm">
-              <CloudOutlined />
-              更换云算法
-            </Button>
-          </div>
-
-          <!-- 非 CAS 模式：显示算法文件 -->
-          <div v-else class="upload-section">
-            <h3 class="section-title">
-              <FileOutlined class="mr-2" />
-              算法文件
-            </h3>
-
-            <!-- 当前文件列表 -->
-            <div class="current-files mb-4">
-              <div class="flex justify-between items-center mb-2">
-                <span class="text-gray-600">当前文件列表：</span>
-                <Button type="link" size="small" @click="goToFileManager">
-                  查看完整目录
-                </Button>
+        <!-- 高级设置折叠面板 -->
+        <ACollapse
+          v-model:active-key="activeKeys"
+          class="advanced-collapse"
+          :bordered="false"
+        >
+          <ACollapsePanel key="advanced-settings" :show-arrow="true">
+            <template #header>
+              <div class="collapse-header">
+                高级设置
+                <div class="header-line"></div>
               </div>
+            </template>
 
-              <Table
-                :data-source="algorithmFiles"
-                :columns="fileColumns"
-                :loading="filesLoading"
-                :pagination="false"
-                size="small"
-                row-key="id"
-                :locale="{ emptyText: '暂无文件' }"
-              >
-                <template #bodyCell="{ column, record }">
-                  <template v-if="column.key === 'name'">
-                    <div class="flex items-center">
-                      <FolderOutlined
-                        v-if="record.isDirectory"
-                        class="mr-2 text-blue-500"
-                      />
-                      <FileOutlined v-else class="mr-2 text-gray-500" />
-                      <span>{{ record.name }}</span>
-                    </div>
-                  </template>
-                </template>
-              </Table>
-            </div>
-
-            <!-- 上传新文件 -->
-            <div class="upload-area">
-              <h4 class="text-sm font-medium mb-2">上传新文件（覆盖模式）：</h4>
+            <!-- CAS 模式：显示云算法信息 -->
+            <div v-if="isCAS" class="cas-section">
               <Alert
-                message="上传同名文件将会覆盖原有文件"
-                type="warning"
+                message="云算法仓库 (CAS) 模式"
+                description="当前算法来自云算法仓库，如需修改算法文件请在 SMP 云算法仓库中操作。"
+                type="info"
                 show-icon
-                class="mb-3"
+                class="mb-4"
               >
-                <template #icon><AlertOutlined /></template>
+                <template #icon><CloudOutlined /></template>
               </Alert>
 
-              <AUpload
-                class="w-full"
-                :file-list="fileList"
-                @change="handleFileChange"
-                accept=".py,.zip,.tar"
-                :before-upload="() => false"
-                type="drag"
-                :multiple="false"
-                :show-upload-list="{
-                  showPreviewIcon: true,
-                  showRemoveIcon: true,
-                  showDownloadIcon: false,
-                }"
-              >
-                <div class="drag-content">
-                  <div class="upload-tip">
-                    <span class="tip-icon">📁</span>
-                    <p class="tip-text">点击或拖拽文件到此区域上传</p>
-                    <p class="support-types">支持格式：PY、ZIP、TAR</p>
-                    <p class="size-limit">单个文件不超过100GB</p>
-                  </div>
-                </div>
-              </AUpload>
+              <h3 class="section-title">
+                <CloudOutlined class="mr-2" />
+                云算法信息
+              </h3>
 
-              <div class="mt-4 flex gap-2">
-                <Button
-                  type="primary"
-                  @click="startUpload"
-                  :disabled="!selectedFile"
+              <Descriptions bordered :column="1" class="mb-4">
+                <Descriptions.Item label="云算法ID">
+                  {{
+                    cloudAlgorithmInfo?.id ||
+                    formState.cloud_algorithm_id ||
+                    '-'
+                  }}
+                </Descriptions.Item>
+                <Descriptions.Item label="算法名称">
+                  {{
+                    cloudAlgorithmInfo?.name || formState.algorithm_name || '-'
+                  }}
+                </Descriptions.Item>
+                <Descriptions.Item label="版本">
+                  {{ cloudAlgorithmInfo?.version || formState.version || '-' }}
+                </Descriptions.Item>
+              </Descriptions>
+
+              <Button type="primary" @click="selectCloudAlgorithm">
+                <CloudOutlined />
+                更换云算法
+              </Button>
+            </div>
+
+            <!-- 非 CAS 模式：显示算法文件 -->
+            <div v-else class="upload-section">
+              <h3 class="section-title">
+                <FileOutlined class="mr-2" />
+                算法文件
+              </h3>
+
+              <!-- 当前文件列表 -->
+              <div class="current-files mb-4">
+                <div class="mb-2 flex items-center justify-between">
+                  <span class="text-gray-600">当前文件列表：</span>
+                  <Button type="link" size="small" @click="goToFileManager">
+                    查看完整目录
+                  </Button>
+                </div>
+
+                <Alert
+                  v-if="filesError"
+                  type="error"
+                  show-icon
+                  :message="filesError"
+                  class="algorithm-files-error"
                 >
-                  上传文件
-                </Button>
-                <Button @click="goToFileManager">
-                  打开文件管理器
-                </Button>
+                  <template #action
+                    ><Button :loading="filesLoading" @click="loadAlgorithmFiles"
+                      >重试读取</Button
+                    ></template
+                  >
+                </Alert>
+                <Table
+                  v-else
+                  :data-source="algorithmFiles"
+                  :columns="fileColumns"
+                  :loading="filesLoading"
+                  :pagination="false"
+                  size="small"
+                  row-key="id"
+                  :locale="{ emptyText: '暂无文件' }"
+                >
+                  <template #bodyCell="{ column, record }">
+                    <template v-if="column.key === 'name'">
+                      <div class="flex items-center">
+                        <FolderOutlined
+                          v-if="record.isDirectory"
+                          class="mr-2 text-blue-500"
+                        />
+                        <FileOutlined v-else class="mr-2 text-gray-500" />
+                        <span>{{ record.name }}</span>
+                      </div>
+                    </template>
+                  </template>
+                </Table>
+              </div>
+
+              <!-- 上传新文件 -->
+              <div class="upload-area">
+                <h4 class="mb-2 text-sm font-medium">
+                  上传新文件（覆盖模式）：
+                </h4>
+                <Alert
+                  message="上传同名文件将会覆盖原有文件"
+                  type="warning"
+                  show-icon
+                  class="mb-3"
+                >
+                  <template #icon><AlertOutlined /></template>
+                </Alert>
+
+                <AUpload
+                  class="w-full"
+                  :file-list="fileList"
+                  @change="handleFileChange"
+                  accept=".py,.zip,.tar"
+                  :before-upload="() => false"
+                  type="drag"
+                  :multiple="false"
+                  :show-upload-list="{
+                    showPreviewIcon: true,
+                    showRemoveIcon: true,
+                    showDownloadIcon: false,
+                  }"
+                >
+                  <div class="drag-content">
+                    <div class="upload-tip">
+                      <span class="tip-icon">📁</span>
+                      <p class="tip-text">点击或拖拽文件到此区域上传</p>
+                      <p class="support-types">支持格式：PY、ZIP、TAR</p>
+                      <p class="size-limit">单个文件不超过100GB</p>
+                    </div>
+                  </div>
+                </AUpload>
+
+                <div class="mt-4 flex gap-2">
+                  <Button
+                    type="primary"
+                    @click="startUpload"
+                    :disabled="!selectedFile"
+                  >
+                    上传文件
+                  </Button>
+                  <Button @click="goToFileManager"> 打开文件管理器 </Button>
+                </div>
+              </div>
+            </div>
+          </ACollapsePanel>
+        </ACollapse>
+
+        <!-- 操作按钮区域 - 与数据集页面保持一致 -->
+        <div class="mt-6 text-center">
+          <Button type="primary" @click="handleSubmit" class="mr-2">
+            保存修改
+          </Button>
+          <Button @click="handleCancel"> 取消 </Button>
+        </div>
+      </Card>
+
+      <!-- 文件上传弹窗 -->
+      <Modal
+        v-model:visible="uploadModalVisible"
+        title="文件上传"
+        width="600px"
+        :footer="null"
+      >
+        <div class="upload-progress-container">
+          <div class="file-info">
+            <div class="file-icon">📁</div>
+            <div>
+              <div class="file-name">
+                {{ selectedFile?.name || '未知文件' }}
+              </div>
+              <div class="file-size">
+                {{
+                  selectedFile?.size
+                    ? `${(selectedFile.size / 1024 / 1024).toFixed(2)} MB`
+                    : ''
+                }}
               </div>
             </div>
           </div>
-        </ACollapsePanel>
-      </ACollapse>
 
-      <!-- 操作按钮区域 - 与数据集页面保持一致 -->
-      <div class="mt-6 text-center">
-        <Button type="primary" @click="handleSubmit" class="mr-2">
-          保存修改
-        </Button>
-        <Button @click="handleCancel"> 取消 </Button>
-      </div>
-    </Card>
-
-    <!-- 文件上传弹窗 -->
-    <Modal
-      v-model:visible="uploadModalVisible"
-      title="文件上传"
-      width="600px"
-      :footer="null"
-    >
-      <div class="upload-progress-container">
-        <div class="file-info">
-          <div class="file-icon">📁</div>
-          <div>
-            <div class="file-name">{{ selectedFile?.name || '未知文件' }}</div>
-            <div class="file-size">
-              {{
-                selectedFile?.size
-                  ? `${(selectedFile.size / 1024 / 1024).toFixed(2)} MB`
-                  : ''
-              }}
+          <div class="progress-container">
+            <div class="progress-header">
+              <span>上传进度</span>
+              <span>{{ uploadProgress }}%</span>
+            </div>
+            <div class="progress-bar">
+              <div
+                class="progress-fill"
+                :style="{ width: `${uploadProgress}%` }"
+              ></div>
+            </div>
+            <div class="progress-status">
+              <span v-if="uploadStatus === 'uploading'"
+                >正在上传，请勿关闭页面...</span
+              >
+              <span v-else-if="uploadStatus === 'success'" class="success-text"
+                >上传成功!</span
+              >
+              <span v-else-if="uploadStatus === 'error'" class="error-text"
+                >上传失败</span
+              >
             </div>
           </div>
-        </div>
 
-        <div class="progress-container">
-          <div class="progress-header">
-            <span>上传进度</span>
-            <span>{{ uploadProgress }}%</span>
-          </div>
-          <div class="progress-bar">
-            <div
-              class="progress-fill"
-              :style="{ width: `${uploadProgress}%` }"
-            ></div>
-          </div>
-          <div class="progress-status">
-            <span v-if="uploadStatus === 'uploading'"
-              >正在上传，请勿关闭页面...</span
+          <div class="action-buttons">
+            <Button
+              v-if="uploadStatus === 'uploading'"
+              type="default"
+              @click="cancelUpload"
             >
-            <span v-else-if="uploadStatus === 'success'" class="success-text"
-              >上传成功!</span
+              取消上传
+            </Button>
+            <Button
+              v-else-if="uploadStatus === 'success'"
+              type="primary"
+              @click="uploadModalVisible = false"
             >
-            <span v-else-if="uploadStatus === 'error'" class="error-text"
-              >上传失败</span
-            >
+              完成
+            </Button>
           </div>
         </div>
-
-        <div class="action-buttons">
-          <Button
-            v-if="uploadStatus === 'uploading'"
-            type="default"
-            @click="cancelUpload"
-          >
-            取消上传
-          </Button>
-          <Button
-            v-else-if="uploadStatus === 'success'"
-            type="primary"
-            @click="uploadModalVisible = false"
-          >
-            完成
-          </Button>
-        </div>
-      </div>
-    </Modal>
-  </div>
+      </Modal>
+    </div>
+  </BusinessPage>
 </template>
 
 <style scoped>

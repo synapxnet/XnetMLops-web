@@ -1,8 +1,21 @@
+import { toEntityPayload } from './normalizers';
 import type { DeployNode } from './types';
 
 import { message } from 'ant-design-vue';
 
 import { mepRequestClient } from '#/api/request';
+
+/** 节点编辑表单字段；请求适配器转换为Java实体。Node form fields converted by the request adapter into the Java entity. */
+export interface DeployNodeInput {
+  name: string;
+  ip_address: string;
+  port: number;
+  cpu_cores: number;
+  memory_gb: number;
+  gpu_info: null | string;
+  labels: string | string[];
+  description: string;
+}
 
 /**
  * 获取部署节点列表
@@ -35,21 +48,12 @@ export const fetchNodeDetail = async (id: number): Promise<DeployNode> => {
 /**
  * 创建部署节点
  */
+/** 对接实际后端实体字段与JSON配置。Use actual backend entity fields and serialized JSON configuration. */
 export const createNode = async (
-  payload: Omit<
-    DeployNode,
-    | 'id'
-    | 'uid'
-    | 'status'
-    | 'docker_version'
-    | 'nginx_status'
-    | 'created_at'
-    | 'updated_at'
-    | 'created_by'
-  >,
+  payload: DeployNodeInput,
 ): Promise<DeployNode> => {
   try {
-    const response = await mepRequestClient.post<DeployNode>('/nodes', payload);
+    const response = await mepRequestClient.post<DeployNode>('/nodes', toEntityPayload(payload));
     message.success('创建节点成功');
     return response;
   } catch (error) {
@@ -62,14 +66,15 @@ export const createNode = async (
 /**
  * 更新部署节点
  */
+/** 对接实际后端实体字段与JSON配置。Use actual backend entity fields and serialized JSON configuration. */
 export const updateNode = async (
   id: number,
-  payload: Partial<DeployNode>,
+  payload: Partial<DeployNodeInput>,
 ): Promise<DeployNode> => {
   try {
     const response = await mepRequestClient.put<DeployNode>(
       `/nodes/${id}`,
-      payload,
+      toEntityPayload(payload),
     );
     message.success('更新节点成功');
     return response;

@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
+import { Alert as SourceAlert } from 'ant-design-vue';
 import type { JenkinsNode, JenkinsNodeDeployConfig } from '../api/jenkinsNode';
 import type { JenkinsMaster } from '../api/jenkinsMaster';
 
@@ -337,7 +339,10 @@ watch(() => nodeForm.value.name, (newName) => {
 
 // ==================== 加载已有节点 ====================
 
+const sourceError = ref('');
+/** 读取编辑来源，失败时阻止使用默认空表单部署。Load edit source and prevent deployment from a default empty form on failure. */
 const loadNode = async (id: number) => {
+  sourceError.value = '';
   try {
     loading.value = true;
     const node = await fetchJenkinsNodeById(id);
@@ -379,7 +384,7 @@ const loadNode = async (id: number) => {
     }
   } catch (error) {
     console.error('加载节点失败:', error);
-    message.error('加载节点信息失败');
+    sourceError.value = error instanceof Error ? error.message : 'Jenkins Node暂不可用';
   } finally {
     loading.value = false;
   }
@@ -573,6 +578,7 @@ const executeDeploy = async () => {
 // ==================== 步骤控制 ====================
 
 const nextStep = async () => {
+  if (sourceError.value || loading.value) return;
   if (currentStep.value === 0) {
     currentStep.value = 1;
   } else if (currentStep.value === 1) {
@@ -623,9 +629,11 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <BusinessPage domain="资源配置" description="管理组织内的数据连接、仓库、工作站与计算资源。" existing-title>
+  <SourceAlert v-if="sourceError" type="error" show-icon message="Jenkins Node 未加载" :description="sourceError"><template #action><Button @click="loadNode(Number(route.query.id))">重试</Button></template></SourceAlert>
   <Page title="Node节点部署" />
 
-  <div class="mt-6">
+  <div v-if="!sourceError && !loading" class="mt-6">
     <Card>
       <div class="mb-4">
         <Button @click="goBack">
@@ -1055,6 +1063,8 @@ onUnmounted(() => {
       <pre class="text-green-400 text-xs font-mono whitespace-pre-wrap">{{ scriptPreview }}</pre>
     </div>
   </Modal>
+
+  </BusinessPage>
 </template>
 
 <style scoped>

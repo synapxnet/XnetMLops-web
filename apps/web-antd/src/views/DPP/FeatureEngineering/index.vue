@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import type { FeatureEngineering, FeatureTaskInfo } from '../../SMP/api/featureEngineering';
 
 import { onMounted, onUnmounted, ref } from 'vue';
@@ -22,6 +23,7 @@ import {
   SyncOutlined,
 } from '@ant-design/icons-vue';
 import {
+  Alert,
   Button,
   Card,
   Drawer,
@@ -46,6 +48,7 @@ import {
 
 const router = useRouter();
 const loading = ref(false);
+const loadError = ref('');
 const featureList = ref<FeatureEngineering[]>([]);
 
 // 执行历史相关
@@ -129,11 +132,16 @@ const getBuildStatusIcon = (status: string) => {
   }
 };
 
-// 加载特征工程列表
+/** 区分读取失败与真实空列表，重试完成后才展示任务。Distinguish failed reads from genuine empty lists and render tasks after retry completes. */
 const loadFeatureList = async () => {
+  if (loading.value) return;
   loading.value = true;
+  loadError.value = '';
+  stopAllPolling();
   try {
-    featureList.value = await fetchFeatureEngineeringList();
+    const result = await fetchFeatureEngineeringList();
+    if (!Array.isArray(result)) throw new Error('特征工程列表响应格式无效');
+    featureList.value = result;
     // 为处理中的任务启动状态轮询
     featureList.value.forEach((item) => {
       if (item.status === 'processing' && item.id) {
@@ -141,8 +149,9 @@ const loadFeatureList = async () => {
       }
     });
   } catch (error) {
+    featureList.value = [];
+    loadError.value = error instanceof Error ? error.message : '服务暂不可用，请重试。';
     console.error('加载特征工程列表失败:', error);
-    message.error('加载特征工程列表失败');
   } finally {
     loading.value = false;
   }
@@ -321,6 +330,7 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <BusinessPage domain="数据准备" description="从数据集、特征到知识库，组织好训练与检索所需的数据。">
   <Card class="p-4 shadow">
     <div class="mb-4 flex justify-between items-center">
       <div class="flex items-center">
@@ -337,7 +347,20 @@ onUnmounted(() => {
       </div>
     </div>
 
+    <Alert
+      v-if="loadError"
+      role="alert"
+      type="error"
+      show-icon
+      message="特征工程任务读取失败"
+      :description="loadError"
+    >
+      <template #action>
+        <Button :loading="loading" @click="loadFeatureList">重试读取</Button>
+      </template>
+    </Alert>
     <Table
+      v-else
       :columns="columns"
       :data-source="featureList"
       :loading="loading"
@@ -440,7 +463,8 @@ onUnmounted(() => {
       </template>
 
       <template #emptyText>
-        <div class="py-8 text-center text-gray-500">
+        <div v-if="loading" role="status" class="py-8 text-center text-gray-500">正在读取特征工程任务…</div>
+        <div v-else class="py-8 text-center text-gray-500">
           <SettingOutlined class="text-4xl mb-2" />
           <p>暂无特征工程任务</p>
           <Button type="primary" size="small" @click="handleAdd" class="mt-2">
@@ -492,6 +516,8 @@ onUnmounted(() => {
       </Timeline>
     </Drawer>
   </Card>
+
+  </BusinessPage>
 </template>
 
 <style scoped>

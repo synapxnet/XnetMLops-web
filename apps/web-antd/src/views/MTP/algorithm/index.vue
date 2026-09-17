@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import type { AlgorithmItem } from '../../SMP/api/types';
 
 import { computed, onMounted, reactive, ref, watch } from 'vue';
@@ -47,10 +48,11 @@ const columns = [
 // 使用ref存储算法列表
 const algorithmList = ref<AlgorithmItem[]>([]);
 const loading = ref(false);
+const readError = ref('');
 // 当前展开的行keys
 const expandedRowKeys = ref<number[]>([]);
 
-// 获取数据
+/** 读取算法列表并保留可重试错误。 Read algorithms and retain a retryable failure state. */
 const fetchAlgorithms = async () => {
   try {
     loading.value = true;
@@ -61,9 +63,11 @@ const fetchAlgorithms = async () => {
       // 添加tabActiveKey用于控制每个算法的标签页
       tabActiveKey: '0',
       // 添加 created_at 字段（如果没有）
-      created_at: item.created_at || new Date().toLocaleString(),
+      created_at: item.created_at || '',
     }));
+    readError.value = '';
   } catch (error) {
+    readError.value = '算法列表读取失败，请检查服务与权限后重试。';
     console.error('获取算法列表失败:', error);
     message.error('获取算法列表失败');
   } finally {
@@ -187,6 +191,7 @@ const searchName = ref('');
 </script>
 
 <template>
+  <BusinessPage domain="模型研发" description="连接算法、训练记录与模型证据，让每一次迭代都有据可循。" :error="readError" :loading="loading" @retry="fetchAlgorithms">
   <Card class="p-4 shadow">
     <!-- 搜索区域 -->
     <div class="mb-4 flex justify-between">
@@ -342,6 +347,8 @@ const searchName = ref('');
       </template>
     </Table>
   </Card>
+
+  </BusinessPage>
 </template>
 
 <style scoped>

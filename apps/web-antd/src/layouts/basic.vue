@@ -16,6 +16,10 @@ import { preferences } from '@vben/preferences';
 import { useAccessStore, useUserStore } from '@vben/stores';
 import { openWindow } from '@vben/utils';
 
+import { Button } from 'ant-design-vue';
+import SkinStudio from '#/components/workspace/SkinStudio.vue';
+import ResidentAgentPanel from '#/components/resident/ResidentAgentPanel.vue';
+
 import { getOrganizationTreeApi, type OrganizationTreeNode } from '#/api/core';
 import AssistantFloatingWindow from '#/components/AssistantFloatingWindow/index.vue';
 import { useAuthStore } from '#/store';
@@ -27,38 +31,10 @@ const BACKEND_REPOSITORY_URL = 'https://github.com/synapxnet/XnetMLops';
 const ORGANIZATION_SCOPE_KEY = 'synapxnet:organization-scope';
 
 // 智能助手浮窗控制
-const showAssistantFloat = ref(true);
+const showAssistantFloat = ref(false);
 
-const notifications = ref<NotificationItem[]>([
-  {
-    avatar: 'https://avatar.vercel.sh/synapxnet.svg?text=SX',
-    date: '3小时前',
-    isRead: true,
-    message: '描述信息描述信息描述信息',
-    title: '收到了 14 份新周报',
-  },
-  {
-    avatar: 'https://avatar.vercel.sh/1',
-    date: '刚刚',
-    isRead: false,
-    message: '描述信息描述信息描述信息',
-    title: '朱偏右 回复了你',
-  },
-  {
-    avatar: 'https://avatar.vercel.sh/1',
-    date: '2024-01-01',
-    isRead: false,
-    message: '描述信息描述信息描述信息',
-    title: '曲丽丽 评论了你',
-  },
-  {
-    avatar: 'https://avatar.vercel.sh/satori',
-    date: '1天前',
-    isRead: false,
-    message: '描述信息描述信息描述信息',
-    title: '代办提醒',
-  },
-]);
+// 只有真实通知可以进入此列表。Only real notifications belong in this list.
+const notifications = ref<NotificationItem[]>([]);
 
 const userStore = useUserStore();
 const authStore = useAuthStore();
@@ -280,7 +256,21 @@ onMounted(fetchOrganizationTree);
         @logout="handleLogout"
       />
     </template>
+    <template #header-right-45>
+      <ResidentAgentPanel
+        platform="mlops"
+        :scope="selectedOrganization"
+        :enabled="organizationTreeLoaded"
+      />
+      <SkinStudio />
+    </template>
     <template #notification>
+      <Button
+        type="text"
+        aria-label="打开智能体助手"
+        @click="showAssistantFloat = true"
+        >智能体助手</Button
+      >
       <Notification
         :dot="showDot"
         :notifications="notifications"

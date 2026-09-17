@@ -162,10 +162,13 @@ const filteredDeployedNodes = computed(() => {
 });
 
 // 监听训练模式变化，重置已选资源
-watch(() => localFormState.value.trainType, () => {
-  selectedNode.value = null;
-  localFormState.value.resources = '';
-});
+watch(
+  () => localFormState.value.trainType,
+  () => {
+    selectedNode.value = null;
+    localFormState.value.resources = '';
+  },
+);
 
 // 镜像选择相关状态
 const showImageDialog = ref(false);
@@ -241,7 +244,10 @@ const schemas = ref([
   [
     {
       component: 'Input',
-      componentProps: { placeholder: '请输入任务名称（仅支持字母、数字、下划线、中划线）', class: 'w-full' },
+      componentProps: {
+        placeholder: '请输入任务名称（仅支持字母、数字、下划线、中划线）',
+        class: 'w-full',
+      },
       fieldName: 'taskName',
       label: '任务名称：',
       rules: [requiredRule('请输入任务名称'), noChineseRule],
@@ -342,6 +348,30 @@ const schemas = ref([
   ],
 ]);
 
+const fieldGroups = [
+  {
+    id: 'definition',
+    title: '任务定义',
+    description: '名称、任务类型与数据保护。',
+    fields: ['taskName', 'taskType', 'encryption'],
+  },
+  {
+    id: 'runtime',
+    title: '运行环境',
+    description: '选择训练区域、计算方式及已配置的运行资源。',
+    fields: ['taskZone', 'podType', 'trainType', 'resources', 'image'],
+  },
+];
+/** 按任务分组读取原字段配置，完整保留验证与数据绑定。Group the original field schemas while retaining validation and bindings. */
+function fieldsForGroup(fields: string[]) {
+  return fields.flatMap(
+    (field) =>
+      schemas.value[current.value]?.filter(
+        (item) => item.fieldName === field,
+      ) ?? [],
+  );
+}
+
 // 加载Docker镜像
 const loadDockerImages = async () => {
   try {
@@ -400,7 +430,9 @@ const selectNodeResource = (node: JenkinsNode) => {
   if (node.ram_gb) specs.push(`RAM: ${node.ram_gb}GB`);
   if (node.gpu_memory) {
     if (node.gpu_count && node.gpu_count > 1) {
-      specs.push(`GPU: ${node.gpu_count}x${node.gpu_memory}GB (${node.gpu_count}x${node.gpu_model})`);
+      specs.push(
+        `GPU: ${node.gpu_count}x${node.gpu_memory}GB (${node.gpu_count}x${node.gpu_model})`,
+      );
     } else {
       specs.push(`GPU: ${node.gpu_memory}GB (${node.gpu_model || ''})`);
     }
@@ -475,62 +507,86 @@ const selectImage = () => {
     ref="formRef"
     :model="localFormState"
     layout="vertical"
-    class="grid grid-cols-1 gap-4 md:grid-cols-2"
+    class="training-definition-form"
   >
-    <template v-for="item in schemas[current]" :key="item.fieldName">
-      <AFormItem
-        :label="item.label"
-        :name="item.fieldName"
-        :rules="item.rules"
-        :disabled="isEditMode"
-      >
-        <template v-if="item.tooltip">
-          <div class="flex items-center">
-            <Tooltip :title="item.tooltip">
-              <QuestionCircleOutlined class="mr-1" />
-            </Tooltip>
-            <component
-              :is="getComponent(item.component)"
-              v-bind="item.componentProps"
-              v-model:value="localFormState[item.fieldName]"
-              @click="item.fieldName === 'resources' && openResourceSelector()"
-              :class="{
-                'cursor-pointer': ['resources', 'image'].includes(
-                  item.fieldName,
-                ),
-              }"
-            />
-          </div>
+    <section
+      v-for="group in fieldGroups"
+      :key="group.id"
+      class="training-form-group"
+    >
+      <div class="training-group-label">
+        <h3>{{ group.title }}</h3>
+        <p>{{ group.description }}</p>
+      </div>
+      <div class="training-field-grid">
+        <template
+          v-for="item in fieldsForGroup(group.fields)"
+          :key="item.fieldName"
+        >
+          <AFormItem
+            :label="item.label"
+            :name="item.fieldName"
+            :rules="item.rules"
+            :disabled="isEditMode"
+          >
+            <template v-if="item.tooltip">
+              <div class="flex items-center">
+                <Tooltip :title="item.tooltip">
+                  <QuestionCircleOutlined class="mr-1" />
+                </Tooltip>
+                <component
+                  :is="getComponent(item.component)"
+                  v-bind="item.componentProps"
+                  v-model:value="localFormState[item.fieldName]"
+                  @click="
+                    item.fieldName === 'resources' && openResourceSelector()
+                  "
+                  :class="{
+                    'cursor-pointer': ['resources', 'image'].includes(
+                      item.fieldName,
+                    ),
+                  }"
+                />
+              </div>
+            </template>
+            <template v-else>
+              <component
+                :is="getComponent(item.component)"
+                v-bind="item.componentProps"
+                v-model:value="localFormState[item.fieldName]"
+                @click="
+                  item.fieldName === 'resources'
+                    ? openResourceSelector()
+                    : item.fieldName === 'image'
+                      ? openImageSelector()
+                      : null
+                "
+                :class="{
+                  'cursor-pointer': ['resources', 'image'].includes(
+                    item.fieldName,
+                  ),
+                }"
+              />
+            </template>
+          </AFormItem>
         </template>
-        <template v-else>
-          <component
-            :is="getComponent(item.component)"
-            v-bind="item.componentProps"
-            v-model:value="localFormState[item.fieldName]"
-            @click="
-              item.fieldName === 'resources'
-                ? openResourceSelector()
-                : item.fieldName === 'image'
-                  ? openImageSelector()
-                  : null
-            "
-            :class="{
-              'cursor-pointer': ['resources', 'image'].includes(item.fieldName),
-            }"
-          />
-        </template>
-      </AFormItem>
-    </template>
 
-    <AFormItem class="col-span-2" label="描述：" name="describe">
-      <AInput.TextArea
-        v-model:value="localFormState.describe"
-        :maxlength="50"
-        :show-count="true"
-        placeholder="请输入数据集描述,不超过50个字符"
-        :style="{ height: '100px' }"
-      />
-    </AFormItem>
+        <AFormItem
+          v-if="group.id === 'definition'"
+          class="training-description"
+          label="任务说明"
+          name="describe"
+        >
+          <AInput.TextArea
+            v-model:value="localFormState.describe"
+            :maxlength="50"
+            :show-count="true"
+            placeholder="说明本次训练的用途，不超过50个字符"
+            :style="{ height: '76px' }"
+          />
+        </AFormItem>
+      </div>
+    </section>
   </AForm>
 
   <!-- 资源选择弹窗 -->
@@ -542,12 +598,15 @@ const selectImage = () => {
   >
     <div class="resource-selector">
       <!-- 提示信息 -->
-      <div v-if="!localFormState.trainType" class="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded text-yellow-700">
+      <div
+        v-if="!localFormState.trainType"
+        class="mb-4 rounded border border-yellow-200 bg-yellow-50 p-3 text-yellow-700"
+      >
         请先选择训练模式，以便筛选匹配的作业节点
       </div>
 
       <!-- 加载中 -->
-      <div v-if="loadingNodes" class="text-center py-8">
+      <div v-if="loadingNodes" class="py-8 text-center">
         <SyncOutlined spin class="text-2xl text-blue-500" />
         <p class="mt-2 text-gray-500">正在加载作业节点...</p>
       </div>
@@ -557,7 +616,14 @@ const selectImage = () => {
         <div class="mb-4 text-sm text-gray-500">
           共 {{ filteredDeployedNodes.length }} 个可用节点
           <span v-if="localFormState.trainType">
-            （{{ localFormState.trainType === 'cpu' ? 'CPU' : localFormState.trainType === 'single_gpu' ? '单卡GPU' : '多卡GPU' }} 类型）
+            （{{
+              localFormState.trainType === 'cpu'
+                ? 'CPU'
+                : localFormState.trainType === 'single_gpu'
+                  ? '单卡GPU'
+                  : '多卡GPU'
+            }}
+            类型）
           </span>
         </div>
         <div class="resource-grid">
@@ -571,13 +637,29 @@ const selectImage = () => {
             <div class="card-header">
               <h3>{{ node.name }}</h3>
               <Tag v-if="node.resource_type === 'cpu'" color="blue">CPU</Tag>
-              <Tag v-else-if="node.resource_type === 'single_gpu'" color="green">单卡GPU</Tag>
-              <Tag v-else-if="node.resource_type === 'multi_gpu'" color="orange">多卡GPU</Tag>
+              <Tag v-else-if="node.resource_type === 'single_gpu'" color="green"
+                >单卡GPU</Tag
+              >
+              <Tag v-else-if="node.resource_type === 'multi_gpu'" color="orange"
+                >多卡GPU</Tag
+              >
             </div>
             <div class="card-body">
               <div class="spec-item">
                 <span class="spec-label">地域:</span>
-                <span class="spec-value">{{ node.region === 'guangzhou' ? '广州' : node.region === 'beijing' ? '北京' : node.region === 'shanghai' ? '上海' : node.region === 'silicon_valley' ? '硅谷' : node.region === 'singapore' ? '新加坡' : node.region || '-' }}</span>
+                <span class="spec-value">{{
+                  node.region === 'guangzhou'
+                    ? '广州'
+                    : node.region === 'beijing'
+                      ? '北京'
+                      : node.region === 'shanghai'
+                        ? '上海'
+                        : node.region === 'silicon_valley'
+                          ? '硅谷'
+                          : node.region === 'singapore'
+                            ? '新加坡'
+                            : node.region || '-'
+                }}</span>
               </div>
               <div class="spec-item">
                 <span class="spec-label">主机:</span>
@@ -593,11 +675,23 @@ const selectImage = () => {
               </div>
               <div v-if="node.gpu_memory" class="spec-item">
                 <span class="spec-label">GPU:</span>
-                <span class="spec-value">{{ node.gpu_count && node.gpu_count > 1 ? `${node.gpu_count}x` : '' }}{{ node.gpu_memory }}GB</span>
+                <span class="spec-value"
+                  >{{
+                    node.gpu_count && node.gpu_count > 1
+                      ? `${node.gpu_count}x`
+                      : ''
+                  }}{{ node.gpu_memory }}GB</span
+                >
               </div>
               <div v-if="node.gpu_model" class="spec-item">
                 <span class="spec-label">GPU型号:</span>
-                <span class="spec-value">{{ node.gpu_count && node.gpu_count > 1 ? `${node.gpu_count}x ` : '' }}{{ node.gpu_model }}</span>
+                <span class="spec-value"
+                  >{{
+                    node.gpu_count && node.gpu_count > 1
+                      ? `${node.gpu_count}x `
+                      : ''
+                  }}{{ node.gpu_model }}</span
+                >
               </div>
             </div>
             <div class="card-footer">
@@ -610,10 +704,10 @@ const selectImage = () => {
       </div>
 
       <!-- 无可用节点 -->
-      <div v-else class="text-center py-8 text-gray-400">
-        <ExclamationCircleOutlined class="text-4xl mb-4" />
+      <div v-else class="py-8 text-center text-gray-400">
+        <ExclamationCircleOutlined class="mb-4 text-4xl" />
         <p>暂无可用的作业节点</p>
-        <p class="text-sm mt-2">请先在SMP模块中配置并部署作业节点</p>
+        <p class="mt-2 text-sm">请先在SMP模块中配置并部署作业节点</p>
       </div>
     </div>
   </Modal>
@@ -692,6 +786,62 @@ const selectImage = () => {
 
 <style lang="scss" scoped>
 @use '../taskcommon/form-styles.scss' as *;
+.training-definition-form {
+  display: grid;
+  gap: 26px;
+}
+.training-form-group {
+  display: grid;
+  grid-template-columns: 152px minmax(0, 1fr);
+  gap: 28px;
+}
+.training-form-group + .training-form-group {
+  border-top: 1px solid var(--xnet-line);
+  padding-top: 24px;
+}
+.training-group-label h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 2px 0 8px;
+}
+.training-group-label p {
+  color: var(--xnet-muted);
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 0;
+}
+.training-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 22px;
+  min-width: 0;
+}
+.training-field-grid :deep(.ant-form-item) {
+  margin-bottom: 0;
+  min-width: 0;
+}
+.training-field-grid :deep(.ant-form-item-label > label) {
+  font-size: 13px;
+  font-weight: 500;
+}
+.training-field-grid :deep(.ant-radio-group) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.training-description {
+  grid-column: 1 / -1;
+}
+@media (max-width: 768px) {
+  .training-form-group {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .training-field-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+}
 
 .resource-selector {
   max-height: 500px;

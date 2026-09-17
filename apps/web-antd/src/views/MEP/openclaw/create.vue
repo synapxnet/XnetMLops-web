@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import type { FormInstance } from 'ant-design-vue';
 
 import { onMounted, reactive, ref } from 'vue';
@@ -248,6 +249,7 @@ onMounted(() => {
 </script>
 
 <template>
+  <BusinessPage domain="服务交付" description="集中管理模型服务、节点与访问密钥，按实际运行结果确认状态。" existing-title>
   <div class="p-4">
     <!-- 页面标题 -->
     <Card class="mb-4 shadow">
@@ -533,4 +535,6 @@ onMounted(() => {
       </Form>
     </Spin>
   </div>
+
+  </BusinessPage>
 </template>

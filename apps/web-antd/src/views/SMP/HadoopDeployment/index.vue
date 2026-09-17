@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import {
@@ -43,12 +44,14 @@ const activeTab = ref('master');
 // Master 数据
 const masterList = ref<HadoopCluster[]>([]);
 const masterLoading = ref(false);
+const masterError = ref('');
 const masterSearchText = ref('');
 const masterStatusFilter = ref<string | undefined>(undefined);
 
 // Node 数据
 const nodeList = ref<HadoopCluster[]>([]);
 const nodeLoading = ref(false);
+const nodeError = ref('');
 const nodeSearchText = ref('');
 const nodeStatusFilter = ref<string | undefined>(undefined);
 
@@ -65,6 +68,7 @@ let refreshTimer: ReturnType<typeof setInterval> | null = null;
 
 // ==================== Master 相关 ====================
 
+/** 读取 Hadoop 主节点，错误时保留未知状态。 Read Hadoop masters and retain unknown state on failure. */
 async function loadMasters() {
   masterLoading.value = true;
   try {
@@ -77,9 +81,11 @@ async function loadMasters() {
     } else if (res && res.data) {
       masterList.value = res.data || [];
     } else {
-      masterList.value = [];
+      throw new Error('主节点响应格式无效');
     }
+    masterError.value = '';
   } catch (error) {
+    masterError.value = 'Hadoop 主节点列表读取失败，请检查服务与权限后重试。';
     console.error('加载 Master 列表失败', error);
   } finally {
     masterLoading.value = false;
@@ -162,6 +168,7 @@ function handleViewMasterLog(master: HadoopCluster) {
 
 // ==================== Node 相关 ====================
 
+/** 读取 Hadoop 工作节点，错误时保留未知状态。 Read Hadoop workers and retain unknown state on failure. */
 async function loadNodes() {
   nodeLoading.value = true;
   try {
@@ -174,14 +181,19 @@ async function loadNodes() {
     } else if (res && res.data) {
       nodeList.value = res.data || [];
     } else {
-      nodeList.value = [];
+      throw new Error('工作节点响应格式无效');
     }
+    nodeError.value = '';
   } catch (error) {
+    nodeError.value = 'Hadoop 工作节点列表读取失败，请检查服务与权限后重试。';
     console.error('加载 Node 列表失败', error);
   } finally {
     nodeLoading.value = false;
   }
 }
+
+/** 一次重新读取主节点与工作节点。 Reload masters and workers together. */
+async function retryLists() { await Promise.all([loadMasters(), loadNodes()]); }
 
 const filteredNodeList = computed(() => {
   return nodeList.value.filter((item) => {
@@ -365,6 +377,7 @@ function handleTabChange(key: string) {
 </script>
 
 <template>
+  <BusinessPage domain="资源配置" description="管理组织内的数据连接、仓库、工作站与计算资源。" :error="masterError || nodeError" :loading="masterLoading || nodeLoading" @retry="retryLists">
   <div class="hadoop-deployment-container">
     <!-- 统计卡片 -->
     <Row :gutter="16" class="stats-row">
@@ -601,6 +614,8 @@ function handleTabChange(key: string) {
       <pre class="log-content">{{ currentLog }}</pre>
     </Modal>
   </div>
+
+  </BusinessPage>
 </template>
 
 <style scoped>

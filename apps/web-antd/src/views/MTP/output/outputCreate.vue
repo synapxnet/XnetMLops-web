@@ -1,270 +1,48 @@
-<script lang="ts" setup>
-import { ref } from 'vue';
+<!-- Copyright (C) 2026 Synapxnet. All rights reserved.
+Synapxnet Proprietary and Confidential. Unauthorized copying, distribution or use is forbidden.
+模型制品登记页面。Model artifact registration page.
+Author: maoyo | Department: 研发部 | Date: 2026-09-16 | Version: 1.0.0 | Security Level: INTERNAL
+__version__: 1.0.0 | __author__: maoyo | __copyright__: Copyright 2026 Synapxnet
+__maintainer__: maoyo | __email__: synapxnet@gmail.com -->
+<script setup lang="ts">
+import type { Ref } from 'vue';
+import { inject, ref } from 'vue';
 import { useRouter } from 'vue-router';
-
+import { Alert, Button, Card, Form, Input, message, Select, Upload } from 'ant-design-vue';
+import type { FormInstance, UploadChangeParam } from 'ant-design-vue';
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import { Page } from '@vben/common-ui';
+import { createModelArtifact, uploadModelToTemp } from '../api/modelArtifact';
 
-import {
-  Button,
-  Card,
-  Collapse,
-  Form,
-  Input,
-  message,
-  Select,
-  Upload,
-} from 'ant-design-vue';
-
-// 组件注册
-const AForm = Form;
-const AFormItem = Form.Item;
-const AInput = Input;
-const ASelect = Select;
-const AButton = Button;
-const ACard = Card;
-const AUpload = Upload;
-const ACollapse = Collapse;
-const ACollapsePanel = Collapse.Panel;
-
-const router = useRouter();
-const formRef = ref<InstanceType<typeof AForm>>();
-const activeKeys = ref(['advanced-settings']);
-const formState = ref<Record<string, any>>({});
-
-// 通用验证规则生成器
-const requiredRule = (message: string) => ({ required: true, message });
-
-// 表单配置
-const schema = [
-  {
-    component: 'Input',
-    componentProps: {
-      placeholder: '请输入输出名称',
-      class: 'w-full',
-    },
-    fieldName: 'datasetFile',
-    label: '输出名称：',
-    rules: [requiredRule('请输入输出名称')],
-  },
-  {
-    component: 'Select',
-    componentProps: {
-      allowClear: true,
-      showSearch: true,
-      options: [
-        { label: 'Pytorch', value: '1' },
-        { label: 'Tensorflow', value: '2' },
-        { label: 'MXNet', value: '3' },
-      ],
-      placeholder: '请选择',
-      filterOption: (input: string, option: any) =>
-        option.label.toLowerCase().includes(input.toLowerCase()),
-    },
-    fieldName: 'datasetType',
-    label: '训练框架：',
-    rules: [requiredRule('请选择训练框架')],
-  },
-  {
-    component: 'Select',
-    componentProps: {
-      allowClear: true,
-      showSearch: true,
-      options: [
-        { label: '推荐', value: '1' },
-        { label: '分类', value: '2' },
-        { label: '检测', value: '3' },
-      ],
-      placeholder: '请选择',
-      filterOption: (input: string, option: any) =>
-        option.label.toLowerCase().includes(input.toLowerCase()),
-    },
-    fieldName: 'datasetZone',
-    label: '技术领域：',
-    rules: [requiredRule('请选择技术领域')],
-  },
-  {
-    component: 'Select',
-    componentProps: {
-      allowClear: true,
-      showSearch: true,
-      options: [
-        { label: '否', value: '0' },
-        { label: '是', value: '1' },
-      ],
-      placeholder: '请选择',
-      filterOption: (input: string, option: any) =>
-        option.label.toLowerCase().includes(input.toLowerCase()),
-    },
-    fieldName: 'encryption',
-    label: '团队名称',
-    rules: [requiredRule('请选择团队名称')],
-  },
-  
-];
-
-// 表单提交处理
-const handleSubmit = async () => {
-  try {
-    await formRef.value?.validate();
-    onSubmit(formState.value);
-  } catch {
-    message.error('请正确填写所有必填字段');
-  }
-};
-
-const handleCancel = () => {
-  router.go(-1);
-};
-
-const onSubmit = (values: Record<string, any>) => {
-  message.success(`表单数据: ${JSON.stringify(values)}`);
-};
-
-// 文件上传处理
-const beforeUpload = (file: File) => {
-  const isLt100G = file.size / 1024 / 1024 / 1024 < 100; // 100GB
-  if (!isLt100G) {
-    message.error('文件大小不能超过100GB');
-    return false;
-  }
-  return true;
-};
+const router = useRouter(); const formRef = ref<FormInstance>(); const formState = ref({ outputName: '', framework: '', domain: '', description: '' });
+const selectedFile = ref<File>(); const submitting = ref(false); const uploadPercent = ref(0);
+const organization = inject<Ref<{ tenantUid?: string | null; teamUid?: string | null; deptUid?: string | null }>>('selectedOrganization', ref({}));
+const currentUserInfo = inject<Ref<{ userId?: string | null }>>('currentUserInfo', ref({}));
+/** 接收用户选择的模型文件。 / Capture the selected model file. */
+function onFileChange(info: UploadChangeParam) { selectedFile.value = info.file.originFileObj as File | undefined; }
+/** 阻止组件自行上传，提交时统一登记。 / Prevent auto-upload so registration remains atomic. */
+function beforeUpload(file: File) { selectedFile.value = file; return false; }
+/** 提交元数据并转存可选模型文件。 / Submit metadata and move the optional model file. */
+async function handleSubmit() {
+  try { await formRef.value?.validate(); const tenantUid = organization.value.tenantUid || ''; const teamUid = organization.value.teamUid || ''; const deptUid = organization.value.deptUid || null; const userId = currentUserInfo.value.userId || ''; if (!tenantUid || !teamUid || !userId) throw new Error('请先选择企业空间、团队并确认登录身份'); submitting.value = true; uploadPercent.value = 0; const tempPath = selectedFile.value ? await uploadModelToTemp(selectedFile.value) : null; if (selectedFile.value) uploadPercent.value = 100; await createModelArtifact({ ...formState.value, teamUid, deptUid, tenantUid, userId, teamName: teamUid, artifactPath: tempPath }); message.success('模型制品登记成功'); await router.replace('/MTP/modeloutput/index'); }
+  catch (error) { message.error(error instanceof Error ? error.message : '模型制品登记失败'); }
+  finally { submitting.value = false; }
+}
+/** 返回模型输出列表。 / Return to the model output list. */
+function handleCancel() { void router.go(-1); }
 </script>
-
 <template>
-  <Page title="新增输出" />
-  <div class="flex flex-col">
-    <div class="p-1 shadow">
-      <ACard class="mb-4">
-        <AForm
-          ref="formRef"
-          :model="formState"
-          layout="vertical"
-          class="grid grid-cols-1 gap-4 md:grid-cols-2"
-        >
-          <!-- 动态生成表单项 -->
-          <template v-for="item in schema" :key="item.fieldName">
-            <AFormItem
-              :label="item.label"
-              :name="item.fieldName"
-              :rules="item.rules"
-            >
-              <component
-                :is="item.component === 'Input' ? AInput : ASelect"
-                v-bind="item.componentProps"
-                v-model:value="formState[item.fieldName]"
-              />
-            </AFormItem>
-          </template>
-
-          <!-- 描述输入区域 -->
-          <AFormItem class="col-span-2" label="描述：" name="describe">
-            <AInput.TextArea
-              v-model:value="formState.describe"
-              :maxlength="50"
-              :show-count="true"
-              placeholder="请输入数据集描述,不超过50个字符"
-              :style="{ height: '100px' }"
-            />
-          </AFormItem>
-        </AForm>
-
-        
-
-        <!-- 操作按钮 -->
-        <div class="mt-6 text-center">
-          <AButton type="primary" @click="handleSubmit" class="mr-2">
-            提交
-          </AButton>
-          <AButton @click="handleCancel">取消</AButton>
-        </div>
-      </ACard>
-    </div>
-  </div>
+  <BusinessPage domain="模型研发" description="登记训练产物，保留模型文件、版本和组织归属，供后续证据与部署流程引用。" existing-title>
+    <Page title="新增模型制品" />
+    <Card><Alert class="mb-4" type="info" show-icon message="提交后会创建租户范围内的模型制品记录，模型文件将转存到 HDFS。" />
+      <Form ref="formRef" :model="formState" layout="vertical" class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Form.Item label="输出名称" name="outputName" :rules="[{ required: true, message: '请输入输出名称' }]"><Input v-model:value="formState.outputName" placeholder="例如 dcn-recommendation-v1" /></Form.Item>
+        <Form.Item label="训练框架" name="framework" :rules="[{ required: true, message: '请选择训练框架' }]"><Select v-model:value="formState.framework" :options="[{ label: 'PyTorch', value: 'pytorch' }, { label: 'TensorFlow', value: 'tensorflow' }, { label: 'ONNX', value: 'onnx' }, { label: '其他', value: 'other' }]" placeholder="请选择" /></Form.Item>
+        <Form.Item label="技术领域" name="domain" :rules="[{ required: true, message: '请选择技术领域' }]"><Select v-model:value="formState.domain" :options="[{ label: '推荐', value: 'recommendation' }, { label: '分类', value: 'classification' }, { label: '检测', value: 'detection' }, { label: 'NLP', value: 'nlp' }]" placeholder="请选择" /></Form.Item>
+        <Form.Item class="md:col-span-2" label="模型文件"><Upload :before-upload="beforeUpload" :show-upload-list="true" :max-count="1" accept=".pt,.pth,.onnx,.safetensors,.zip,.tar.gz" @change="onFileChange"><Button>选择模型文件</Button></Upload><div v-if="selectedFile" class="mt-2 text-xs text-gray-500">{{ selectedFile.name }} <span v-if="uploadPercent">{{ uploadPercent }}%</span></div></Form.Item>
+        <Form.Item class="md:col-span-2" label="描述"><Input.TextArea v-model:value="formState.description" :maxlength="500" show-count placeholder="说明模型用途和来源" /></Form.Item>
+      </Form>
+      <div class="mt-4 flex justify-end gap-2"><Button @click="handleCancel">取消</Button><Button type="primary" :loading="submitting" @click="handleSubmit">登记模型制品</Button></div>
+    </Card>
+  </BusinessPage>
 </template>
-
-<style scoped>
-/* 上传区域样式 */
-.upload-section {
-  @apply rounded-lg bg-gray-50;
-}
-
-:deep(.ant-upload.ant-upload-drag) {
-  @apply h-full border-2 border-dashed border-gray-200 bg-transparent p-8 hover:border-blue-500;
-  min-height: 180px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-:deep(.ant-upload.ant-upload-drag-hover) {
-  @apply border-blue-500 bg-blue-50;
-}
-
-:deep(.ant-upload-text) {
-  @apply hidden;
-}
-
-/* 调整高级设置和描述之间的间距 */
-:deep(.advanced-collapse) {
-  margin-top: 0px; /* 调整折叠面板的上间距 */
-}
-
-:deep(.ant-form-item) {
-  margin-bottom: 0px; /* 调整每个表单项的下间距 */
-}
-
-.upload-section {
-  margin-top: 10px; /* 控制上传区域的顶部间距 */
-}
-
-/* 折叠面板样式 */
-:deep(.advanced-collapse) {
-  background: transparent !important;
-  border: 0 !important;
-}
-
-:deep(.advanced-collapse .ant-collapse-item) {
-  border: 0 !important;
-}
-
-:deep(.advanced-collapse .ant-collapse-header) {
-  padding: 12px 0 !important;
-  border: 0 !important;
-  cursor: pointer !important;
-}
-
-:deep(.advanced-collapse .ant-collapse-content) {
-  border: 0 !important;
-  background: transparent !important;
-}
-
-.header-line {
-  @apply absolute bottom-0 left-0 h-px w-full bg-gray-200;
-}
-
-/* 拖拽内容样式 */
-.drag-content {
-  @apply flex flex-col items-center justify-center text-center;
-}
-
-.upload-tip {
-  @apply space-y-2;
-}
-
-.tip-icon {
-  @apply mb-3 text-4xl;
-}
-
-.tip-text {
-  @apply text-base font-medium text-gray-800;
-}
-
-.support-types {
-  @apply text-sm text-gray-600;
-}
-
-.size-limit {
-  @apply text-xs text-gray-400;
-}
-</style>

@@ -159,8 +159,11 @@ export interface ApiResponse<T> {
 
 // 工作流图数据
 export interface WorkflowGraph {
-  nodes: WorkflowNode[];
-  edges: WorkflowEdge[];
+  nodes: Omit<WorkflowNode, 'id' | 'createdAt' | 'updatedAt'>[];
+  edges: (Omit<WorkflowEdge, 'id' | 'createdAt' | 'updatedAt' | 'sourceNodeId' | 'targetNodeId'> & {
+    sourceNodeUid: string;
+    targetNodeUid: string;
+  })[];
 }
 
 // 创建工作流请求

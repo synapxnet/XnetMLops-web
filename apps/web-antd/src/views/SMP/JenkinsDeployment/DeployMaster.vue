@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
+import { Alert as SourceAlert } from 'ant-design-vue';
 import { ref, onMounted, nextTick, onUnmounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import {
@@ -309,7 +311,12 @@ const handleRefreshVersions = async () => {
 
 // ==================== 加载已有数据 ====================
 
+const sourceError = ref('');
+const sourceLoading = ref(false);
+/** 读取编辑来源，失败时阻止使用默认空表单部署。Load edit source and prevent deployment from a default empty form on failure. */
 const loadMaster = async (id: number) => {
+  sourceError.value = '';
+  sourceLoading.value = true;
   try {
     const data = await fetchJenkinsMasterById(id);
     masterForm.value = {
@@ -325,7 +332,9 @@ const loadMaster = async (id: number) => {
     deployConfig.value.javaOpts = data.java_opts || '-Xmx2g -Xms1g';
     deployConfig.value.adminUsername = data.admin_username || 'admin';
   } catch (error) {
-    message.error('加载数据失败');
+    sourceError.value = error instanceof Error ? error.message : 'Jenkins Master暂不可用';
+  } finally {
+    sourceLoading.value = false;
   }
 };
 
@@ -502,6 +511,7 @@ const autoConfigureCredentials = async () => {
 // ==================== 步骤控制 ====================
 
 const nextStep = async () => {
+  if (sourceError.value || sourceLoading.value) return;
   // 验证当前步骤
   if (currentStep.value === 0) {
     if (!masterForm.value.name) {
@@ -578,7 +588,10 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="deploy-master-container">
+  <BusinessPage domain="资源配置" description="管理组织内的数据连接、仓库、工作站与计算资源。">
+  <SourceAlert v-if="sourceError" type="error" show-icon message="Jenkins Master 未加载" :description="sourceError"><template #action><Button @click="loadMaster(Number(route.query.id))">重试</Button></template></SourceAlert>
+  <div v-if="sourceLoading" class="py-8">正在加载 Master…</div>
+  <div v-if="!sourceError && !sourceLoading" class="deploy-master-container">
     <Card>
       <!-- 标题栏 -->
       <template #title>
@@ -1003,6 +1016,8 @@ onUnmounted(() => {
       <pre class="script-preview">{{ scriptPreview }}</pre>
     </Modal>
   </div>
+
+  </BusinessPage>
 </template>
 
 <style scoped>

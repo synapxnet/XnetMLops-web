@@ -4,7 +4,7 @@ import { message } from 'ant-design-vue';
 
 import { mepRequestClient } from '#/api/request';
 
-import { toSnakeCaseKeys } from './normalizers';
+import { toSnakeCaseKeys, toEntityPayload } from './normalizers';
 
 /**
  * 获取API Key列表
@@ -66,6 +66,7 @@ export const createApiKey = async (
 /**
  * 更新API Key
  */
+/** 对接实际后端实体字段与JSON配置。Use actual backend entity fields and serialized JSON configuration. */
 export const updateApiKey = async (
   id: number,
   payload: Partial<
@@ -78,7 +79,7 @@ export const updateApiKey = async (
   try {
     const response = await mepRequestClient.put<ApiKeyItem>(
       `/api-keys/${id}`,
-      payload,
+      toEntityPayload(payload),
     );
     message.success('更新API Key成功');
     return toSnakeCaseKeys(response);

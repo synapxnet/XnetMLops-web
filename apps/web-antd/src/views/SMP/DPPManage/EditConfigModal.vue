@@ -6,6 +6,7 @@ import { useForm } from 'ant-design-vue/es/form';
 
 const props = defineProps({
   visible: Boolean,
+  saving: Boolean,
   configType: String,
   currentItem: Object,
   existingValues: Set, // 所有已存在的值
@@ -87,7 +88,7 @@ const validateValue = async (_rule: any, value: string) => {
   }
 };
 
-// 处理确定
+// 仅请求保存，由父页在API成功后关闭。Request persistence and let the parent close only after API success.
 const handleOk = async () => {
   try {
     // 验证表单
@@ -95,7 +96,6 @@ const handleOk = async () => {
 
     // 如果通过验证，触发保存
     emit('save', props.configType, { ...formState.value });
-    visible.value = false;
   } catch (error) {
     console.log('验证失败', error);
   }
@@ -111,6 +111,7 @@ const handleCancel = () => {
   <AModal
     v-model:visible="visible"
     :title="modalTitle"
+    :confirm-loading="saving"
     @ok="handleOk"
     @cancel="handleCancel"
     :destroy-on-close="true"

@@ -1,0 +1,292 @@
+{
+  "_metadata": {
+    "copyright": "Copyright (C) 2026 Synapxnet. All rights reserved.",
+    "classification": "Synapxnet Proprietary and Confidential; unauthorized distribution is forbidden.",
+    "description": "路由回归清单 / Route regression inventory",
+    "author": "maoyo",
+    "department": "研发部",
+    "date": "2026-09-17",
+    "version": "1.3.0",
+    "securityLevel": "INTERNAL",
+    "maintainer": "maoyo",
+    "email": "synapxnet@gmail.com"
+  },
+  "routes": [
+    {
+      "path": "/analytics",
+      "component": "views/dashboard/analytics/index.vue"
+    },
+    {
+      "path": "/workspace",
+      "component": "views/dashboard/workspace/index.vue"
+    },
+    {
+      "path": "/DPP/Datatask/index",
+      "component": "views/DPP/Datatask/index.vue"
+    },
+    {
+      "path": "/DPP/dataset/index",
+      "component": "views/DPP/dataset/index.vue"
+    },
+    {
+      "path": "/DPP/dataset/datafileCreate",
+      "component": "views/DPP/dataset/datafileCreate.vue"
+    },
+    {
+      "path": "/DPP/Datatask/task",
+      "component": "views/DPP/Datatask/datataskCreate.vue"
+    },
+    {
+      "path": "/DPP/dataset/datafileModify",
+      "component": "views/DPP/dataset/datafileModify.vue"
+    },
+    {
+      "path": "/DPP/dataset/datafileManager",
+      "component": "views/DPP/dataset/datafileManager.vue"
+    },
+    {
+      "path": "/DPP/feature-engineering/index",
+      "component": "views/DPP/FeatureEngineering/index.vue"
+    },
+    {
+      "path": "/DPP/feature-engineering/create",
+      "component": "views/DPP/FeatureEngineering/FeatureCreate.vue"
+    },
+    {
+      "path": "/DPP/feature-engineering/edit/:id",
+      "component": "views/DPP/FeatureEngineering/FeatureCreate.vue"
+    },
+    {
+      "path": "/DPP/KnowledgeBase",
+      "component": "views/DPP/KnowledgeBase/index.vue"
+    },
+    {
+      "path": "/DPP/KnowledgeBase/documents",
+      "component": "views/DPP/KnowledgeBase/documents.vue"
+    },
+    {
+      "path": "/DPP/KnowledgeBase/retrieval-test",
+      "component": "views/DPP/KnowledgeBase/retrieval-test.vue"
+    },
+    {
+      "path": "/MEP/llmservice/index",
+      "component": "views/MEP/llmservice/index.vue"
+    },
+    {
+      "path": "/MEP/llmservice/create",
+      "component": "views/MEP/llmservice/serviceCreate.vue"
+    },
+    {
+      "path": "/MEP/llmservice/modify",
+      "component": "views/MEP/llmservice/serviceModify.vue"
+    },
+    {
+      "path": "/MEP/apikey/index",
+      "component": "views/MEP/apikey/index.vue"
+    },
+    {
+      "path": "/MEP/deployment/index",
+      "component": "views/MEP/deployment/index.vue"
+    },
+    {
+      "path": "/MEP/deployment/create",
+      "component": "views/MEP/deployment/deployCreate.vue"
+    },
+    {
+      "path": "/MEP/deployment/detail",
+      "component": "views/MEP/deployment/deployDetail.vue"
+    },
+    {
+      "path": "/MEP/nodes/index",
+      "component": "views/MEP/nodes/index.vue"
+    },
+    {
+      "path": "/MEP/nodes/create",
+      "component": "views/MEP/nodes/nodeCreate.vue"
+    },
+    {
+      "path": "/MEP/openclaw/index",
+      "component": "views/MEP/openclaw/index.vue"
+    },
+    {
+      "path": "/MEP/openclaw/create",
+      "component": "views/MEP/openclaw/create.vue"
+    },
+    {
+      "path": "/MEP/openclaw/detail",
+      "component": "views/MEP/openclaw/detail.vue"
+    },
+    {
+      "path": "/MTP/model-evidence",
+      "component": "views/MTP/model-evidence/index.vue"
+    },
+    {
+      "path": "/MTP/algorithm/index",
+      "component": "views/MTP/algorithm/index.vue"
+    },
+    {
+      "path": "/MTP/train/index",
+      "component": "views/MTP/train/index.vue"
+    },
+    {
+      "path": "/MTP/recommendation-training",
+      "component": "views/MTP/recommendation-training/index.vue"
+    },
+    {
+      "path": "/MTP/modeloutput/index",
+      "component": "views/MTP/output/index.vue"
+    },
+    {
+      "path": "/MTP/modeloutput/outputcreate",
+      "component": "views/MTP/output/outputCreate.vue"
+    },
+    {
+      "path": "/MTP/train/task",
+      "component": "views/MTP/train/task/TaskCreate.vue"
+    },
+    {
+      "path": "/MTP/algorithm/algorithmCreate",
+      "component": "views/MTP/algorithm/algorithmCreate.vue"
+    },
+    {
+      "path": "/MTP/algorithm/algorithmModify",
+      "component": "views/MTP/algorithm/algorithmModify.vue"
+    },
+    {
+      "path": "/MTP/algorithm/algorithmFileManager",
+      "component": "views/MTP/algorithm/algorithmFileManager.vue"
+    },
+    {
+      "path": "/MTP/train/job",
+      "component": "views/MTP/train/job/JobManager.vue"
+    },
+    {
+      "path": "/SMP/DPPManage/index",
+      "component": "views/SMP/DPPManage/index.vue"
+    },
+    {
+      "path": "/SMP/DPPManage/DatasetConfigManage",
+      "component": "views/SMP/DPPManage/DatasetConfigManage.vue"
+    },
+    {
+      "path": "/SMP/DPPManage/BucketConfigManage",
+      "component": "views/SMP/DPPManage/BucketConfigManage.vue"
+    },
+    {
+      "path": "/SMP/DPPManage/DataSourceManage",
+      "component": "views/SMP/DPPManage/DataSourceManage.vue"
+    },
+    {
+      "path": "/SMP/DPPManage/FeatureOperatorGitManage",
+      "component": "views/SMP/DPPManage/FeatureOperatorGitManage.vue"
+    },
+    {
+      "path": "/SMP/MTPManage/index",
+      "component": "views/SMP/MTPManage/index.vue"
+    },
+    {
+      "path": "/SMP/MTPManage/GitManage",
+      "component": "views/SMP/MTPManage/GitManage.vue"
+    },
+    {
+      "path": "/SMP/MTPManage/ImageManage",
+      "component": "views/SMP/MTPManage/ImageManage.vue"
+    },
+    {
+      "path": "/SMP/MTPManage/ImageCreate",
+      "component": "views/SMP/MTPManage/ImageCreate.vue"
+    },
+    {
+      "path": "/SMP/WorkstationManage/index",
+      "component": "views/SMP/WorkstationManage/index.vue"
+    },
+    {
+      "path": "/SMP/JenkinsDeployment/index",
+      "component": "views/SMP/JenkinsDeployment/index.vue"
+    },
+    {
+      "path": "/SMP/JenkinsDeployment/DeployMaster",
+      "component": "views/SMP/JenkinsDeployment/DeployMaster.vue"
+    },
+    {
+      "path": "/SMP/JenkinsDeployment/DeployNode",
+      "component": "views/SMP/JenkinsDeployment/DeployNode.vue"
+    },
+    {
+      "path": "/SMP/HadoopDeployment/index",
+      "component": "views/SMP/HadoopDeployment/index.vue"
+    },
+    {
+      "path": "/SMP/HadoopDeployment/DeployMaster",
+      "component": "views/SMP/HadoopDeployment/DeployMaster.vue"
+    },
+    {
+      "path": "/SMP/HadoopDeployment/DeployNode",
+      "component": "views/SMP/HadoopDeployment/DeployNode.vue"
+    },
+    {
+      "path": "/SMP/ClusterManagement/index",
+      "component": "views/SMP/ClusterManagement/index.vue"
+    },
+    {
+      "path": "/about",
+      "component": "views/_core/about/index.vue"
+    },
+    {
+      "path": "/XAA/workflow/index",
+      "component": "views/XAA/workflow/index.vue"
+    },
+    {
+      "path": "/XAA/workflow/create",
+      "component": "views/XAA/workflow/workflowCreate.vue"
+    },
+    {
+      "path": "/XAA/workflow/edit",
+      "component": "views/XAA/workflow/workflowEdit.vue"
+    },
+    {
+      "path": "/XAA/workflow/designer",
+      "component": "views/XAA/workflow/workflowDesigner.vue"
+    },
+    {
+      "path": "/XAA/workflow/executions",
+      "component": "views/XAA/workflow/executionList.vue"
+    },
+    {
+      "path": "/XAA/workflow/execution-detail",
+      "component": "views/XAA/workflow/executionDetail.vue"
+    },
+    {
+      "path": "/XAA/skill/repository",
+      "component": "views/XAA/skill/repository/index.vue"
+    },
+    {
+      "path": "/XAA/skill/installed",
+      "component": "views/XAA/skill/installed/index.vue"
+    },
+    {
+      "path": "/XAA/skill/create",
+      "component": "views/XAA/skill/create/index.vue"
+    },
+    {
+      "path": "/XAA/skill/index",
+      "component": "views/XAA/skill/index.vue"
+    },
+    {
+      "path": "/XAA/assistant/index",
+      "component": "views/XAA/assistant/index.vue"
+    },
+    {
+      "path": "/XAA/assistant/create",
+      "component": "views/XAA/assistant/create.vue"
+    },
+    {
+      "path": "/XAA/assistant/edit",
+      "component": "views/XAA/assistant/edit.vue"
+    },
+    {
+      "path": "/XAA/assistant/chat",
+      "component": "views/XAA/assistant/chat.vue"
+    }
+  ]
+}

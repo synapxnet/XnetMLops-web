@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import type { ConfigItem, DatasetConfig } from '../api/datasetConfig';
 
 import { computed, onMounted, ref } from 'vue';
@@ -6,12 +7,13 @@ import { computed, onMounted, ref } from 'vue';
 import { Page } from '@vben/common-ui';
 
 import { PlusOutlined, SearchOutlined } from '@ant-design/icons-vue';
-import { Button, Card, Input, message, Table } from 'ant-design-vue';
+import { Alert, Button, Card, Input, message, Table } from 'ant-design-vue';
 
 import {
   addConfigItem,
   deleteConfigItem,
   fetchConfig,
+  updateConfigItem,
 } from '../api/datasetConfig';
 import EditConfigModal from './EditConfigModal.vue';
 
@@ -86,15 +88,19 @@ const zoneColumns = [
 
 // 弹窗控制
 const modalVisible = ref(false);
+const loadError = ref('');
+const saving = ref(false);
 const currentConfigType = ref<'datasetTypes' | 'datasetZones'>();
 const currentItem = ref<ConfigItem | null>(null);
 
-// 从后端加载配置
+// 读取失败保持空数组并展示持久错误。Keep safe arrays and display persistent read errors.
 const loadConfig = async () => {
+  loadError.value = '';
   try {
     const data = await fetchConfig();
     configData.value = data;
   } catch (error) {
+    loadError.value = error instanceof Error ? error.message : '配置暂不可用';
     console.error('加载配置失败:', error);
     message.error('加载配置失败');
   }
@@ -147,15 +153,17 @@ const handleSave = async (
   type: 'datasetTypes' | 'datasetZones',
   newItem: ConfigItem,
 ) => {
+  if (saving.value) return;
   try {
-    const isEditing = currentItem.value !== null;
+    saving.value = true;
+    const editingItem = currentItem.value;
     const currentItems = [...configData.value[type]];
 
-    if (isEditing) {
+    if (editingItem) {
       // 编辑现有项
       // 1. 检查是否修改了值，且新值是否已存在
       if (
-        currentItem.value.value !== newItem.value &&
+        editingItem.value !== newItem.value &&
         existingValues.value.has(newItem.value)
       ) {
         message.error(`值 "${newItem.value}" 已存在，请使用其他值`);
@@ -164,7 +172,7 @@ const handleSave = async (
 
       // 2. 检查是否修改了标签，且新标签是否已存在
       if (
-        currentItem.value.label !== newItem.label &&
+        editingItem.label !== newItem.label &&
         existingLabels.value.has(newItem.label)
       ) {
         message.error(`名称 "${newItem.label}" 已存在，请使用其他名称`);
@@ -172,11 +180,11 @@ const handleSave = async (
       }
 
       // 3. 调用更新API
-      await loadConfig();
+      await updateConfigItem(type, editingItem.value, newItem);
 
       // 4. 更新本地状态
       const index = currentItems.findIndex(
-        (item) => item.value === currentItem.value?.value,
+        (item) => item.value === editingItem.value,
       );
       if (index !== -1) {
         currentItems[index] = newItem;
@@ -213,6 +221,8 @@ const handleSave = async (
   } catch (error) {
     console.error('保存失败:', error);
     message.error('保存失败');
+  } finally {
+    saving.value = false;
   }
 };
 
@@ -228,6 +238,8 @@ const clearZoneSearch = () => {
 </script>
 
 <template>
+  <BusinessPage domain="资源配置" description="管理组织内的数据连接、仓库、工作站与计算资源。" existing-title>
+  <Alert v-if="loadError" type="error" show-icon message="数据集配置未加载" :description="loadError"><template #action><AButton @click="loadConfig">重试</AButton></template></Alert>
   <Page title="数据集配置管理" />
   <!-- 内容区域 -->
   <div class="rounded-lg bg-white p-4 shadow" style="margin-top: 20px">
@@ -362,6 +374,7 @@ const clearZoneSearch = () => {
   </div>
 
   <EditConfigModal
+    :saving="saving"
     v-model:visible="modalVisible"
     :config-type="currentConfigType"
     :current-item="currentItem"
@@ -369,6 +382,8 @@ const clearZoneSearch = () => {
     :existing-labels="existingLabels"
     @save="handleSave"
   />
+
+  </BusinessPage>
 </template>
 
 <style scoped>

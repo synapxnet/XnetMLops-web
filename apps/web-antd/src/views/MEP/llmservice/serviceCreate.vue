@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import type { LLMServiceConfig, LLMServiceType } from '../api/types';
 
 import { reactive, ref } from 'vue';
@@ -150,6 +151,7 @@ const handleCancel = () => {
 </script>
 
 <template>
+  <BusinessPage domain="服务交付" description="集中管理模型服务、节点与访问密钥，按实际运行结果确认状态。">
   <Card title="新增大模型服务" class="m-4 shadow">
     <Form
       :model="formState"
@@ -347,6 +349,8 @@ const handleCancel = () => {
       </FormItem>
     </Form>
   </Card>
+
+  </BusinessPage>
 </template>
 
 <style scoped>

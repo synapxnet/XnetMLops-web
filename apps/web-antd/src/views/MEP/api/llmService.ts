@@ -1,3 +1,4 @@
+import { fromEntityResponse, toEntityPayload } from './normalizers';
 import type { LLMService, LLMServiceConfig } from './types';
 
 import { message } from 'ant-design-vue';
@@ -10,7 +11,7 @@ import { mepRequestClient } from '#/api/request';
 export const fetchLLMServiceList = async (): Promise<LLMService[]> => {
   try {
     const response = await mepRequestClient.get<LLMService[]>('/llm-services');
-    return response;
+    return fromEntityResponse(response);
   } catch (error) {
     console.error('获取大模型服务列表失败:', error);
     message.error('获取大模型服务列表失败');
@@ -28,7 +29,7 @@ export const fetchLLMServiceDetail = async (
     const response = await mepRequestClient.get<LLMService>(
       `/llm-services/${id}`,
     );
-    return response;
+    return fromEntityResponse(response);
   } catch (error) {
     console.error('获取大模型服务详情失败:', error);
     message.error('获取大模型服务详情失败');
@@ -39,6 +40,7 @@ export const fetchLLMServiceDetail = async (
 /**
  * 创建大模型服务
  */
+/** 对接实际后端实体字段与JSON配置。Use actual backend entity fields and serialized JSON configuration. */
 export const createLLMService = async (
   payload: Omit<
     LLMService,
@@ -54,10 +56,10 @@ export const createLLMService = async (
   try {
     const response = await mepRequestClient.post<LLMService>(
       '/llm-services',
-      payload,
+      toEntityPayload(payload),
     );
     message.success('创建大模型服务成功');
-    return response;
+    return fromEntityResponse(response);
   } catch (error) {
     console.error('创建大模型服务失败:', error);
     message.error('创建大模型服务失败');
@@ -68,6 +70,7 @@ export const createLLMService = async (
 /**
  * 更新大模型服务
  */
+/** 对接实际后端实体字段与JSON配置。Use actual backend entity fields and serialized JSON configuration. */
 export const updateLLMService = async (
   id: number,
   payload: Partial<LLMService>,
@@ -75,10 +78,10 @@ export const updateLLMService = async (
   try {
     const response = await mepRequestClient.put<LLMService>(
       `/llm-services/${id}`,
-      payload,
+      toEntityPayload(payload),
     );
     message.success('更新大模型服务成功');
-    return response;
+    return fromEntityResponse(response);
   } catch (error) {
     console.error('更新大模型服务失败:', error);
     message.error('更新大模型服务失败');
@@ -141,7 +144,7 @@ export const testLLMServiceConnection = async (payload: {
       success: boolean;
       message: string;
     }>('/llm-services/test-connection', payload);
-    return response;
+    return fromEntityResponse(response);
   } catch (error) {
     console.error('测试连接失败:', error);
     throw error;

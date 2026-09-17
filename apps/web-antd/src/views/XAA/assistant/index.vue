@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import type { Assistant } from '../api/types';
 
 import { computed, h, onMounted, reactive, ref } from 'vue';
@@ -46,9 +47,15 @@ import {
 
 const router = useRouter();
 
+/** 打开平台驻场 Agent，保留当前助手列表；Open the platform resident while preserving the assistant list. */
+function openResident() {
+  window.dispatchEvent(new Event('synapxnet:open-resident'));
+}
+
 // 助手列表
 const assistantList = ref<Assistant[]>([]);
 const loading = ref(false);
+const readError = ref('');
 
 // 搜索条件
 const searchParams = reactive({
@@ -57,11 +64,14 @@ const searchParams = reactive({
 });
 
 // 获取数据
+/** 读取智能助手并保留可重试错误。 Read assistants and retain a retryable failure state. */
 const fetchData = async () => {
   try {
     loading.value = true;
     assistantList.value = await fetchAssistantList();
+    readError.value = '';
   } catch (error) {
+    readError.value = '智能助手列表读取失败，请检查服务与权限后重试。';
     console.error('获取助手列表失败:', error);
     message.error('获取助手列表失败');
   } finally {
@@ -159,6 +169,7 @@ onMounted(() => {
 </script>
 
 <template>
+  <BusinessPage domain="智能协作" description="用助手、技能与工作流串联日常任务，查看每一步执行记录。" existing-title :error="readError" :loading="loading" @retry="fetchData">
   <div class="p-4">
     <!-- 页面标题 -->
     <Card class="mb-4 shadow">
@@ -171,6 +182,7 @@ onMounted(() => {
           </div>
         </div>
         <Space>
+          <Button @click="openResident"><RobotOutlined />平台驻场 Agent</Button>
           <Tooltip title="刷新">
             <Button @click="fetchData">
               <ReloadOutlined />
@@ -324,6 +336,8 @@ onMounted(() => {
       </Card>
     </Spin>
   </div>
+
+  </BusinessPage>
 </template>
 
 <style scoped>

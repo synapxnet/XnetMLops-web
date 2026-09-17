@@ -6,16 +6,29 @@ import type {
 } from './types';
 
 import { mtpRequestClient } from '#/api/request';
+import { publicRequestMessage } from '#/api/public-error';
 
-// 获取算法HDFS文件列表
+// 校验原始包络，业务失败不得返回为空文件列表。 Validate the raw envelope so business failures cannot become empty file lists.
 export const fetchAlgorithmFileList = async (
   algorithmId: string,
   path: string,
 ): Promise<ApiResponse<HdfsFileListData>> => {
-  return mtpRequestClient.get(`/mtp/algorithms/${algorithmId}/files`, {
-    params: { path },
-    responseReturn: 'body',
-  });
+  const response = await mtpRequestClient.get<ApiResponse<HdfsFileListData>>(
+    `/mtp/algorithms/${algorithmId}/files`,
+    {
+      params: { path },
+      responseReturn: 'body',
+    },
+  );
+  if (!response || response.code !== 0) {
+    throw new Error(
+      publicRequestMessage(
+        { response: { data: response } },
+        '算法文件读取失败',
+      ),
+    );
+  }
+  return response;
 };
 
 // 上传文件到算法HDFS目录
@@ -29,30 +42,40 @@ export const uploadAlgorithmFile = async (
   formData.append('file', file);
   formData.append('path', path);
 
-  return mtpRequestClient.post(`/mtp/algorithms/${algorithmId}/upload`, formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
+  return mtpRequestClient.post(
+    `/mtp/algorithms/${algorithmId}/upload`,
+    formData,
+    {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      responseReturn: 'body',
+      onUploadProgress: (progressEvent) => {
+        if (onProgress && progressEvent.total) {
+          const progress = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total,
+          );
+          onProgress(progress);
+        }
+      },
     },
-    responseReturn: 'body',
-    onUploadProgress: (progressEvent) => {
-      if (onProgress && progressEvent.total) {
-        const progress = Math.round(
-          (progressEvent.loaded * 100) / progressEvent.total,
-        );
-        onProgress(progress);
-      }
-    },
-  });
+  );
 };
 
-// 下载算法文件
+// 以二进制正文下载，避免将文件套入业务JSON包络。 / Download the binary body without treating the file as a business JSON envelope.
 export const downloadAlgorithmFile = async (
   algorithmId: string,
   filePath: string,
+  onProgress?: (progress: number) => void,
 ): Promise<Blob> => {
   return mtpRequestClient.get(`/mtp/algorithms/${algorithmId}/download`, {
     params: { filePath },
     responseType: 'blob',
+    responseReturn: 'body',
+    // 依据实际传输字节更新行内进度。 / Update row progress from actual transferred bytes.
+    onDownloadProgress: (event) => {
+      if (event.total && event.total > 0) onProgress?.(Math.min(99, Math.round(event.loaded * 100 / event.total)));
+    },
   });
 };
 

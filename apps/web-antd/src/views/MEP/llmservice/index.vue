@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import type { LLMService, LLMServiceType, ServiceStatus } from '../api/types';
 
 import { computed, h, onMounted, reactive, ref } from 'vue';
@@ -51,6 +52,7 @@ const serviceTypeOptions: { label: string; value: LLMServiceType }[] = [
 // 服务列表数据
 const serviceList = ref<LLMService[]>([]);
 const loading = ref(false);
+const readError = ref('');
 
 // 搜索条件
 const searchParams = reactive({
@@ -134,13 +136,15 @@ const columns = [
   },
 ];
 
-// 获取数据
+/** 读取服务列表，失败时保留可重试错误。 Read services and retain a retryable failure state. */
 const fetchData = async () => {
   try {
     loading.value = true;
     const data = await fetchLLMServiceList();
     serviceList.value = data.map((item) => ({ ...item, key: item.id }));
+    readError.value = '';
   } catch (error) {
+    readError.value = '大模型服务列表读取失败，请检查服务与权限后重试。';
     console.error('获取服务列表失败:', error);
   } finally {
     loading.value = false;
@@ -252,6 +256,7 @@ onMounted(() => {
 </script>
 
 <template>
+  <BusinessPage domain="服务交付" description="集中管理模型服务、节点与访问密钥，按实际运行结果确认状态。" :error="readError" :loading="loading" @retry="fetchData">
   <Card class="p-4 shadow">
     <!-- 搜索区域 -->
     <div class="mb-4 flex flex-wrap items-center justify-between gap-4">
@@ -381,6 +386,8 @@ onMounted(() => {
       </template>
     </Table>
   </Card>
+
+  </BusinessPage>
 </template>
 
 <style scoped>

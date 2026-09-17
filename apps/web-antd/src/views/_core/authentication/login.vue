@@ -12,9 +12,8 @@ defineOptions({ name: 'Login' });
 
 const authStore = useAuthStore();
 const CODE_LENGTH = 6;
-const DEMO_PHONE = '17870171303';
-const DEMO_VERIFICATION_CODE = '000000';
 
+/** 使用用户输入构建登录表单。Build the login form from user-provided credentials. */
 const formSchema = computed((): VbenFormSchema[] => {
   return [
     {
@@ -22,7 +21,6 @@ const formSchema = computed((): VbenFormSchema[] => {
       componentProps: {
         placeholder: $t('authentication.mobile'),
       },
-      defaultValue: DEMO_PHONE,
       fieldName: 'phoneNumber',
       label: $t('authentication.mobile'),
       rules: z
@@ -39,7 +37,6 @@ const formSchema = computed((): VbenFormSchema[] => {
         placeholder: $t('authentication.code'),
         showSendButton: false,
       },
-      defaultValue: DEMO_VERIFICATION_CODE,
       fieldName: 'code',
       label: $t('authentication.code'),
       rules: z.string().length(CODE_LENGTH, {

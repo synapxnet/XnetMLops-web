@@ -15,7 +15,7 @@ const appName = 'XnetMLops';
     :page-description="$t('authentication.pageDesc')"
     :page-title="$t('authentication.pageTitle')"
     :preview-alt="$t('authentication.previewAlt')"
-    preview-image="/auth-platform.png"
+    preview-image="/auth-mlops.svg"
     :product-summary="$t('authentication.platformSummary')"
     :toolbar-list="['language', 'theme']"
   />

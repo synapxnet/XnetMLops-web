@@ -65,7 +65,8 @@ const routes: RouteRecordRaw[] = [
         name: 'DPP:Datatask:task',
         path: '/DPP/Datatask/task',
         // @ts-ignore 忽略报错
-        component: () => import('#/views/DPP/Datatask/datataskCreate.vue'),
+        // 通用数据任务复用已接入的真实数据集登记与上传链路。
+        component: () => import('#/views/DPP/dataset/datafileCreate.vue'),
       },
       {
         // 二级级主页设置

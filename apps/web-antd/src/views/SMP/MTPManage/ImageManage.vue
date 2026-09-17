@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import type { HarborRepository } from '../api/types.ts';
 
 import { computed, h, onMounted, reactive, ref } from 'vue';
@@ -290,6 +291,7 @@ onMounted(() => {
 </script>
 
 <template>
+  <BusinessPage domain="资源配置" description="管理组织内的数据连接、仓库、工作站与计算资源。" existing-title>
   <div class="image-manage-wrapper">
   <div class="container mx-auto px-4 py-6">
     <!-- 标题和操作区 -->
@@ -439,6 +441,8 @@ onMounted(() => {
     </div>
   </Modal>
   </div>
+
+  </BusinessPage>
 </template>
 
 <style scoped>

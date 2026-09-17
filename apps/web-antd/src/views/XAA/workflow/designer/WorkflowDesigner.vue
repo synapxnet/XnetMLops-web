@@ -104,13 +104,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted, provide } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, onActivated, onDeactivated } from 'vue';
 import { VueFlow, useVueFlow } from '@vue-flow/core';
 import { Background } from '@vue-flow/background';
 import { Controls } from '@vue-flow/controls';
 import { MiniMap } from '@vue-flow/minimap';
 import { v4 as uuidv4 } from 'uuid';
 import { message } from 'ant-design-vue';
+import { fetchDppDatasets, fetchDppFeatures, fetchMtpAlgorithms } from '../../api/workflow';
 
 import Toolbar from './components/Toolbar.vue';
 import NodeSelector from './components/NodeSelector.vue';
@@ -162,7 +163,9 @@ const selectedNodeId = ref<string | null>(null);
 const controlMode = ref<ControlMode>('pointer');
 const showMinimap = ref(true);
 const isDirty = ref(false);
+let initialized = false;
 const saving = ref(false);
+let pendingGraph = '';
 const running = ref(false);
 const viewport = ref({ x: 0, y: 0, zoom: 1 });
 
@@ -213,6 +216,8 @@ onMounted(() => {
 
   // 保存初始状态到历史
   saveToHistory();
+  initialized = true;
+  isDirty.value = props.initialNodes.length === 0;
 
   // 加载外部数据
   loadExternalData();
@@ -225,13 +230,18 @@ onUnmounted(() => {
   document.removeEventListener('keydown', handleKeyDown);
 });
 
-// 监听节点和边的变化
+/** 缓存页离开后停止监听键盘，避免影响其他表单。Stop keyboard listeners while a cached editor is inactive. */
+onDeactivated(() => document.removeEventListener('keydown', handleKeyDown));
+/** 返回缓存页时恢复画布快捷键。Restore canvas shortcuts when the cached editor becomes active. */
+onActivated(() => document.addEventListener('keydown', handleKeyDown));
+
+// 只把用户图内容变化记为草稿，忽略选中态与尺寸测量。Track graph content changes while ignoring selection and layout measurements.
 watch(
-  [nodes, edges],
+  () => JSON.stringify({ nodes: nodes.value.map((node) => ({ id: node.id, position: node.position, data: node.data })), edges: edges.value.map((edge) => ({ id: edge.id, source: edge.source, target: edge.target, sourceHandle: edge.sourceHandle, targetHandle: edge.targetHandle, edgeType: edge.edgeType, conditionJson: edge.conditionJson })) }),
   () => {
-    isDirty.value = true;
+    if (initialized) isDirty.value = true;
   },
-  { deep: true }
+  { flush: 'sync' }
 );
 
 // 方法
@@ -437,6 +447,8 @@ function addNode(nodeType: NodeType, position: { x: number; y: number }) {
 
 // 快捷键处理
 function handleKeyDown(event: KeyboardEvent) {
+  // 输入控件中的编辑快捷键不能删除画布节点。Editing shortcuts inside fields must not delete canvas nodes.
+  if (event.target instanceof HTMLElement && event.target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"]')) return;
   const isCtrl = event.ctrlKey || event.metaKey;
 
   // 删除选中节点
@@ -478,46 +490,51 @@ function handleKeyDown(event: KeyboardEvent) {
   }
 }
 
-// 保存和运行
+// 提交保存请求，由父级真实API结果确认。Request saving and await the parent's actual API outcome.
 async function saveWorkflow() {
+  if (saving.value) return;
   saving.value = true;
-  try {
-    emit('save', {
-      nodes: nodes.value,
-      edges: edges.value,
-    });
-    isDirty.value = false;
-    message.success('工作流保存成功');
-  } catch (error) {
-    message.error('保存失败');
-  } finally {
-    saving.value = false;
-  }
+  pendingGraph = JSON.stringify({ nodes: nodes.value, edges: edges.value });
+  emit('save', { nodes: nodes.value, edges: edges.value });
 }
 
+/** 只在对应图保存成功后清除草稿标记。Clear dirty state only when the submitted graph was saved successfully. */
+function finishSave(success: boolean) {
+  if (success && pendingGraph === JSON.stringify({ nodes: nodes.value, edges: edges.value })) isDirty.value = false;
+  saving.value = false;
+}
+
+/** 发起运行并由父级回传执行请求结果。Request execution and receive its outcome from the parent. */
 async function runWorkflow() {
+  if (running.value) return;
   if (!props.workflowId) {
     message.warning('请先保存工作流');
     return;
   }
   running.value = true;
-  try {
-    emit('run', props.workflowId);
-  } finally {
-    running.value = false;
-  }
+  emit('run', props.workflowId);
 }
 
-// 加载外部数据
+/** 完成真实运行请求后解除加载状态。Release loading after the actual execution request finishes. */
+function finishRun() { running.value = false; }
+
+// 加载已存在的资源接口，不使用空壳数据。Load existing resource APIs instead of placeholder lists.
 async function loadExternalData() {
-  // TODO: 从 API 加载数据集、特征工程、算法等数据
-  // datasets.value = await fetchDppDatasets();
-  // features.value = await fetchDppFeatures();
-  // algorithms.value = await fetchMtpAlgorithms();
+  const results = await Promise.allSettled([fetchDppDatasets(), fetchDppFeatures(), fetchMtpAlgorithms()]);
+  const targets = [datasets, features, algorithms];
+  results.forEach((result, index) => {
+    const target = targets[index];
+    if (target) target.value = result.status === 'fulfilled' && Array.isArray(result.value) ? result.value : [];
+  });
+  if (results.some((result) => result.status === 'rejected')) message.warning('部分资源暂不可用；已加载的资源仍可使用。');
 }
 
 // 暴露方法供外部调用
 defineExpose({
+  /** 离开页面前检查草稿与待完成保存。Check drafts and pending saves before leaving. */
+  hasUnsavedChanges: () => isDirty.value || saving.value,
+  finishSave,
+  finishRun,
   getNodes: () => nodes.value,
   getEdges: () => edges.value,
   setNodes: (newNodes: WorkflowNode[]) => { nodes.value = newNodes; },

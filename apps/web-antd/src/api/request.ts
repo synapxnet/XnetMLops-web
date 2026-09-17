@@ -18,6 +18,7 @@ import { message } from 'ant-design-vue';
 import { useAuthStore } from '#/store';
 
 import { refreshTokenApi } from './core';
+import { normalizeRequestFailure } from './public-error';
 
 const { apiURL, smpApiURL, dppApiURL, mtpApiURL, mepApiURL, xaaApiURL } =
   useAppConfig(import.meta.env, import.meta.env.PROD);
@@ -49,7 +50,11 @@ function appendOrganizationScopeHeaders(headers: Record<string, any>) {
   headers['X-Team-Uid'] = scope.teamUid;
 }
 
-function createRequestClient(baseURL: string, options?: RequestClientOptions) {
+function createRequestClient(
+  baseURL: string,
+  options?: RequestClientOptions,
+  showErrorMessage = true,
+) {
   const client = new RequestClient({
     ...options,
     baseURL,
@@ -118,17 +123,22 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
     }),
   );
 
+  // 认证恢复结束后统一公开错误文本，静默客户端同样保留失败。 Normalize public errors after authentication recovery, including silent clients.
+  client.addResponseInterceptor({
+    rejected: (error) => {
+      normalizeRequestFailure(error);
+      return Promise.reject(error);
+    },
+  });
+
   // 通用的错误处理,如果没有进入上面的错误处理逻辑，就会进入这里
-  client.addResponseInterceptor(
-    errorMessageResponseInterceptor((msg: string, error) => {
-      // 这里可以根据业务进行定制,你可以拿到 error 内的信息进行定制化处理，根据不同的 code 做不同的提示，而不是直接使用 message.error 提示 msg
-      // 当前mock接口返回的错误字段是 error 或者 message
-      const responseData = error?.response?.data ?? {};
-      const errorMessage = responseData?.error ?? responseData?.message ?? '';
-      // 如果没有错误信息，则会根据状态码进行提示
-      message.error(errorMessage || msg);
-    }),
-  );
+  if (showErrorMessage)
+    client.addResponseInterceptor(
+      errorMessageResponseInterceptor((msg: string, error) => {
+        // 业务页面可自行呈现错误时不重复弹窗。 Avoid duplicate toasts when pages render inline errors.
+        message.error(normalizeRequestFailure(error, msg));
+      }),
+    );
 
   return client;
 }
@@ -168,9 +178,13 @@ export const dppRequestClient = createRequestClient(dppApiURL, {
   responseReturn: 'data',
 });
 // mtp接口请求客户端
-export const mtpRequestClient = createRequestClient(mtpApiURL, {
-  responseReturn: 'data',
-});
+export const mtpRequestClient = createRequestClient(
+  mtpApiURL,
+  {
+    responseReturn: 'data',
+  },
+  false,
+);
 // smp接口请求客户端
 export const smpRequestClient = createRequestClient(smpApiURL, {
   responseReturn: 'data',

@@ -1,13 +1,18 @@
 <script lang="ts" setup>
-import type { DeployNode, DeploymentResourceConfig, HealthCheckConfig, MTPOutputModel, NginxConfig } from '../api/types';
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
+import DeploymentCapability from './DeploymentCapability.vue';
+import type {
+  DeployNode,
+  DeploymentResourceConfig,
+  HealthCheckConfig,
+  MTPOutputModel,
+  NginxConfig,
+} from '../api/types';
 
 import { onMounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
-import {
-  CloudServerOutlined,
-  SettingOutlined,
-} from '@ant-design/icons-vue';
+import { CloudServerOutlined, SettingOutlined } from '@ant-design/icons-vue';
 import {
   Button,
   Card,
@@ -128,17 +133,22 @@ const handleMTPModelChange = (modelUid: string) => {
     formState.model_name = model.model_name;
     formState.model_version = model.version;
     // 自动生成容器名称
-    formState.container_name = `${model.model_name}-${model.version}`.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+    formState.container_name = `${model.model_name}-${model.version}`
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-');
   }
 };
 
 // 自动生成Nginx配置
-watch(() => formState.name, (name) => {
-  if (name) {
-    formState.nginx_config.upstream_name = `upstream_${name.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
-    formState.nginx_config.server_name = `${name.toLowerCase().replace(/[^a-z0-9]/g, '-')}.local`;
-  }
-});
+watch(
+  () => formState.name,
+  (name) => {
+    if (name) {
+      formState.nginx_config.upstream_name = `upstream_${name.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+      formState.nginx_config.server_name = `${name.toLowerCase().replace(/[^a-z0-9]/g, '-')}.local`;
+    }
+  },
+);
 
 // 验证当前步骤
 const validateStep = async (step: number): Promise<boolean> => {
@@ -228,384 +238,433 @@ onMounted(() => {
 </script>
 
 <template>
-  <Card title="新建模型部署" class="m-4 shadow">
-    <Steps :current="currentStep" class="mb-8">
-      <Steps.Step title="基本配置" description="选择模型和节点" />
-      <Steps.Step title="容器配置" description="设置镜像和资源" />
-      <Steps.Step title="网络配置" description="配置Nginx代理" />
-      <Steps.Step title="确认部署" description="检查并提交" />
-    </Steps>
+  <BusinessPage
+    domain="服务交付"
+    description="集中管理模型服务、节点与访问密钥，按实际运行结果确认状态。"
+  >
+    <DeploymentCapability />
+    <Card title="新建模型部署" class="m-4 shadow">
+      <Steps :current="currentStep" class="mb-8">
+        <Steps.Step title="基本配置" description="选择模型和节点" />
+        <Steps.Step title="容器配置" description="设置镜像和资源" />
+        <Steps.Step title="网络配置" description="配置Nginx代理" />
+        <Steps.Step title="确认部署" description="检查并提交" />
+      </Steps>
 
-    <Form :model="formState" layout="vertical">
-      <!-- 步骤1: 基本配置 -->
-      <div v-show="currentStep === 0">
-        <Row :gutter="24">
-          <Col :span="12">
-            <FormItem label="部署名称" required>
-              <Input
-                v-model:value="formState.name"
-                placeholder="请输入部署名称"
-                :maxlength="50"
-                show-count
-              />
-            </FormItem>
-          </Col>
-          <Col :span="12">
-            <FormItem label="模型来源" required>
-              <RadioGroup v-model:value="formState.model_source">
-                <Radio value="mtp">MTP训练模型</Radio>
-                <Radio value="llm">大模型服务</Radio>
-              </RadioGroup>
-            </FormItem>
-          </Col>
-        </Row>
-
-        <Row :gutter="24">
-          <Col :span="12">
-            <FormItem v-if="formState.model_source === 'mtp'" label="选择MTP模型" required>
-              <Select
-                v-model:value="formState.model_uid"
-                placeholder="请选择MTP训练输出的模型"
-                :loading="loadingModels"
-                show-search
-                option-filter-prop="label"
-                @change="handleMTPModelChange"
-              >
-                <SelectOption
-                  v-for="model in mtpModels"
-                  :key="model.uid"
-                  :value="model.uid"
-                  :label="model.model_name"
-                >
-                  <div class="flex items-center justify-between">
-                    <span>{{ model.model_name }}</span>
-                    <span class="text-xs text-gray-400">v{{ model.version }}</span>
-                  </div>
-                  <div class="text-xs text-gray-400">
-                    任务: {{ model.task_name }} | 框架: {{ model.framework }}
-                  </div>
-                </SelectOption>
-              </Select>
-            </FormItem>
-            <FormItem v-else label="模型名称" required>
-              <Input
-                v-model:value="formState.model_name"
-                placeholder="请输入模型名称"
-              />
-            </FormItem>
-          </Col>
-          <Col :span="12">
-            <FormItem label="模型版本">
-              <Input
-                v-model:value="formState.model_version"
-                placeholder="请输入模型版本"
-                :disabled="formState.model_source === 'mtp'"
-              />
-            </FormItem>
-          </Col>
-        </Row>
-
-        <Row :gutter="24">
-          <Col :span="12">
-            <FormItem label="部署节点" required>
-              <Select
-                v-model:value="formState.node_uid"
-                placeholder="请选择部署节点"
-                :loading="loadingNodes"
-                @change="handleNodeChange"
-              >
-                <SelectOption
-                  v-for="node in nodeList"
-                  :key="node.uid"
-                  :value="node.uid"
-                >
-                  <div class="flex items-center justify-between">
-                    <span>
-                      <CloudServerOutlined class="mr-1" />
-                      {{ node.name }}
-                    </span>
-                    <span class="text-xs text-gray-400">{{ node.ip_address }}</span>
-                  </div>
-                  <div class="text-xs text-gray-400">
-                    CPU: {{ node.cpu_cores }}核 | 内存: {{ node.memory_gb }}GB
-                    {{ node.gpu_info ? `| GPU: ${node.gpu_info}` : '' }}
-                  </div>
-                </SelectOption>
-              </Select>
-            </FormItem>
-          </Col>
-          <Col :span="12">
-            <FormItem label="副本数">
-              <InputNumber
-                v-model:value="formState.replicas"
-                :min="1"
-                :max="10"
-                style="width: 100%"
-              />
-            </FormItem>
-          </Col>
-        </Row>
-      </div>
-
-      <!-- 步骤2: 容器配置 -->
-      <div v-show="currentStep === 1">
-        <Row :gutter="24">
-          <Col :span="12">
-            <FormItem label="容器名称" required>
-              <Input
-                v-model:value="formState.container_name"
-                placeholder="请输入容器名称"
-              />
-            </FormItem>
-          </Col>
-          <Col :span="12">
-            <FormItem label="镜像名称" required>
-              <Input
-                v-model:value="formState.image_name"
-                placeholder="例如: harbor.example.com/models/my-model:v1.0"
-              />
-            </FormItem>
-          </Col>
-        </Row>
-
-        <Row :gutter="24">
-          <Col :span="12">
-            <FormItem label="服务端口">
-              <InputNumber
-                v-model:value="formState.port"
-                :min="1"
-                :max="65535"
-                style="width: 100%"
-              />
-            </FormItem>
-          </Col>
-        </Row>
-
-        <Divider>资源限制</Divider>
-
-        <Row :gutter="24">
-          <Col :span="6">
-            <FormItem label="CPU限制">
-              <Input
-                v-model:value="formState.resource_config.cpu_limit"
-                placeholder="例如: 2, 0.5"
-                addon-after="核"
-              />
-            </FormItem>
-          </Col>
-          <Col :span="6">
-            <FormItem label="内存限制">
-              <Input
-                v-model:value="formState.resource_config.memory_limit"
-                placeholder="例如: 4Gi, 512Mi"
-              />
-            </FormItem>
-          </Col>
-          <Col :span="6">
-            <FormItem label="GPU数量">
-              <InputNumber
-                v-model:value="formState.resource_config.gpu_count"
-                :min="0"
-                :max="8"
-                style="width: 100%"
-              />
-            </FormItem>
-          </Col>
-          <Col :span="6">
-            <FormItem label="GPU显存">
-              <Input
-                v-model:value="formState.resource_config.gpu_memory"
-                placeholder="例如: 8Gi"
-                :disabled="formState.resource_config.gpu_count === 0"
-              />
-            </FormItem>
-          </Col>
-        </Row>
-
-        <Divider>健康检查</Divider>
-
-        <Row :gutter="24">
-          <Col :span="6">
-            <FormItem label="启用健康检查">
-              <Switch v-model:checked="formState.health_check.enabled" />
-            </FormItem>
-          </Col>
-          <Col :span="6">
-            <FormItem label="检查路径">
-              <Input
-                v-model:value="formState.health_check.path"
-                placeholder="/health"
-                :disabled="!formState.health_check.enabled"
-              />
-            </FormItem>
-          </Col>
-          <Col :span="4">
-            <FormItem label="检查间隔(秒)">
-              <InputNumber
-                v-model:value="formState.health_check.interval"
-                :min="5"
-                :max="300"
-                :disabled="!formState.health_check.enabled"
-                style="width: 100%"
-              />
-            </FormItem>
-          </Col>
-          <Col :span="4">
-            <FormItem label="超时时间(秒)">
-              <InputNumber
-                v-model:value="formState.health_check.timeout"
-                :min="1"
-                :max="60"
-                :disabled="!formState.health_check.enabled"
-                style="width: 100%"
-              />
-            </FormItem>
-          </Col>
-          <Col :span="4">
-            <FormItem label="重试次数">
-              <InputNumber
-                v-model:value="formState.health_check.retries"
-                :min="1"
-                :max="10"
-                :disabled="!formState.health_check.enabled"
-                style="width: 100%"
-              />
-            </FormItem>
-          </Col>
-        </Row>
-      </div>
-
-      <!-- 步骤3: 网络配置 -->
-      <div v-show="currentStep === 2">
-        <Divider>
-          <SettingOutlined />
-          Nginx 代理配置
-        </Divider>
-
-        <Row :gutter="24">
-          <Col :span="12">
-            <FormItem label="Upstream名称">
-              <Input
-                v-model:value="formState.nginx_config.upstream_name"
-                placeholder="自动生成或手动输入"
-              />
-            </FormItem>
-          </Col>
-          <Col :span="12">
-            <FormItem label="Server Name">
-              <Input
-                v-model:value="formState.nginx_config.server_name"
-                placeholder="例如: api.example.com"
-              />
-            </FormItem>
-          </Col>
-        </Row>
-
-        <Row :gutter="24">
-          <Col :span="8">
-            <FormItem label="监听端口">
-              <InputNumber
-                v-model:value="formState.nginx_config.listen_port"
-                :min="1"
-                :max="65535"
-                style="width: 100%"
-              />
-            </FormItem>
-          </Col>
-          <Col :span="8">
-            <FormItem label="Proxy Pass">
-              <Input
-                v-model:value="formState.nginx_config.proxy_pass"
-                placeholder="自动生成或手动输入"
-              />
-            </FormItem>
-          </Col>
-          <Col :span="8">
-            <FormItem label="启用SSL">
-              <Switch v-model:checked="formState.nginx_config.ssl_enabled" />
-            </FormItem>
-          </Col>
-        </Row>
-
-        <FormItem label="自定义Nginx配置">
-          <Textarea
-            v-model:value="formState.nginx_config.custom_config"
-            placeholder="可选: 输入额外的Nginx配置指令"
-            :rows="4"
-          />
-        </FormItem>
-      </div>
-
-      <!-- 步骤4: 确认部署 -->
-      <div v-show="currentStep === 3">
-        <Card title="部署配置确认" class="mb-4">
+      <Form :model="formState" layout="vertical">
+        <!-- 步骤1: 基本配置 -->
+        <div v-show="currentStep === 0">
           <Row :gutter="24">
             <Col :span="12">
-              <div class="config-section">
-                <h4 class="section-title">基本信息</h4>
-                <p><strong>部署名称:</strong> {{ formState.name }}</p>
-                <p><strong>模型来源:</strong> {{ formState.model_source === 'mtp' ? 'MTP训练' : '大模型' }}</p>
-                <p><strong>模型名称:</strong> {{ formState.model_name }}</p>
-                <p><strong>模型版本:</strong> {{ formState.model_version }}</p>
-                <p><strong>部署节点:</strong> {{ formState.node_name }}</p>
-                <p><strong>副本数:</strong> {{ formState.replicas }}</p>
-              </div>
+              <FormItem label="部署名称" required>
+                <Input
+                  v-model:value="formState.name"
+                  placeholder="请输入部署名称"
+                  :maxlength="50"
+                  show-count
+                />
+              </FormItem>
             </Col>
             <Col :span="12">
-              <div class="config-section">
-                <h4 class="section-title">容器配置</h4>
-                <p><strong>容器名称:</strong> {{ formState.container_name }}</p>
-                <p><strong>镜像名称:</strong> {{ formState.image_name }}</p>
-                <p><strong>服务端口:</strong> {{ formState.port }}</p>
-                <p><strong>CPU限制:</strong> {{ formState.resource_config.cpu_limit }}</p>
-                <p><strong>内存限制:</strong> {{ formState.resource_config.memory_limit }}</p>
-                <p><strong>GPU:</strong> {{ formState.resource_config.gpu_count }}块</p>
-              </div>
+              <FormItem label="模型来源" required>
+                <RadioGroup v-model:value="formState.model_source">
+                  <Radio value="mtp">MTP训练模型</Radio>
+                  <Radio value="llm">大模型服务</Radio>
+                </RadioGroup>
+              </FormItem>
             </Col>
           </Row>
-          <Row :gutter="24" class="mt-4">
+
+          <Row :gutter="24">
             <Col :span="12">
-              <div class="config-section">
-                <h4 class="section-title">Nginx配置</h4>
-                <p><strong>Server Name:</strong> {{ formState.nginx_config.server_name || '未配置' }}</p>
-                <p><strong>监听端口:</strong> {{ formState.nginx_config.listen_port }}</p>
-                <p><strong>SSL:</strong> {{ formState.nginx_config.ssl_enabled ? '已启用' : '未启用' }}</p>
-              </div>
+              <FormItem
+                v-if="formState.model_source === 'mtp'"
+                label="选择MTP模型"
+                required
+              >
+                <Select
+                  v-model:value="formState.model_uid"
+                  placeholder="请选择MTP训练输出的模型"
+                  :loading="loadingModels"
+                  show-search
+                  option-filter-prop="label"
+                  @change="handleMTPModelChange"
+                >
+                  <SelectOption
+                    v-for="model in mtpModels"
+                    :key="model.uid"
+                    :value="model.uid"
+                    :label="model.model_name"
+                  >
+                    <div class="flex items-center justify-between">
+                      <span>{{ model.model_name }}</span>
+                      <span class="text-xs text-gray-400"
+                        >v{{ model.version }}</span
+                      >
+                    </div>
+                    <div class="text-xs text-gray-400">
+                      任务: {{ model.task_name }} | 框架: {{ model.framework }}
+                    </div>
+                  </SelectOption>
+                </Select>
+              </FormItem>
+              <FormItem v-else label="模型名称" required>
+                <Input
+                  v-model:value="formState.model_name"
+                  placeholder="请输入模型名称"
+                />
+              </FormItem>
             </Col>
             <Col :span="12">
-              <div class="config-section">
-                <h4 class="section-title">健康检查</h4>
-                <p><strong>状态:</strong> {{ formState.health_check.enabled ? '已启用' : '未启用' }}</p>
-                <p v-if="formState.health_check.enabled">
-                  <strong>检查路径:</strong> {{ formState.health_check.path }}
-                </p>
-                <p v-if="formState.health_check.enabled">
-                  <strong>检查间隔:</strong> {{ formState.health_check.interval }}秒
-                </p>
-              </div>
+              <FormItem label="模型版本">
+                <Input
+                  v-model:value="formState.model_version"
+                  placeholder="请输入模型版本"
+                  :disabled="formState.model_source === 'mtp'"
+                />
+              </FormItem>
             </Col>
           </Row>
-        </Card>
-      </div>
 
-      <Divider />
+          <Row :gutter="24">
+            <Col :span="12">
+              <FormItem label="部署节点" required>
+                <Select
+                  v-model:value="formState.node_uid"
+                  placeholder="请选择部署节点"
+                  :loading="loadingNodes"
+                  @change="handleNodeChange"
+                >
+                  <SelectOption
+                    v-for="node in nodeList"
+                    :key="node.uid"
+                    :value="node.uid"
+                  >
+                    <div class="flex items-center justify-between">
+                      <span>
+                        <CloudServerOutlined class="mr-1" />
+                        {{ node.name }}
+                      </span>
+                      <span class="text-xs text-gray-400">{{
+                        node.ipAddress
+                      }}</span>
+                    </div>
+                    <div class="text-xs text-gray-400">
+                      CPU: {{ node.cpuCores }}核 | 内存: {{ node.memoryGb }}GB
+                      {{ node.gpuInfo ? `| GPU: ${node.gpuInfo}` : '' }}
+                    </div>
+                  </SelectOption>
+                </Select>
+              </FormItem>
+            </Col>
+            <Col :span="12">
+              <FormItem label="副本数">
+                <InputNumber
+                  v-model:value="formState.replicas"
+                  :min="1"
+                  :max="10"
+                  style="width: 100%"
+                />
+              </FormItem>
+            </Col>
+          </Row>
+        </div>
 
-      <!-- 操作按钮 -->
-      <div class="flex justify-end gap-4">
-        <Button @click="handleCancel">取消</Button>
-        <Button v-if="currentStep > 0" @click="handlePrev">上一步</Button>
-        <Button v-if="currentStep < 3" type="primary" @click="handleNext">下一步</Button>
-        <Button
-          v-if="currentStep === 3"
-          type="primary"
-          :loading="submitLoading"
-          @click="handleSubmit"
-        >
-          确认部署
-        </Button>
-      </div>
-    </Form>
-  </Card>
+        <!-- 步骤2: 容器配置 -->
+        <div v-show="currentStep === 1">
+          <Row :gutter="24">
+            <Col :span="12">
+              <FormItem label="容器名称" required>
+                <Input
+                  v-model:value="formState.container_name"
+                  placeholder="请输入容器名称"
+                />
+              </FormItem>
+            </Col>
+            <Col :span="12">
+              <FormItem label="镜像名称" required>
+                <Input
+                  v-model:value="formState.image_name"
+                  placeholder="例如: harbor.example.com/models/my-model:v1.0"
+                />
+              </FormItem>
+            </Col>
+          </Row>
+
+          <Row :gutter="24">
+            <Col :span="12">
+              <FormItem label="服务端口">
+                <InputNumber
+                  v-model:value="formState.port"
+                  :min="1"
+                  :max="65535"
+                  style="width: 100%"
+                />
+              </FormItem>
+            </Col>
+          </Row>
+
+          <Divider>资源限制</Divider>
+
+          <Row :gutter="24">
+            <Col :span="6">
+              <FormItem label="CPU限制">
+                <Input
+                  v-model:value="formState.resource_config.cpu_limit"
+                  placeholder="例如: 2, 0.5"
+                  addon-after="核"
+                />
+              </FormItem>
+            </Col>
+            <Col :span="6">
+              <FormItem label="内存限制">
+                <Input
+                  v-model:value="formState.resource_config.memory_limit"
+                  placeholder="例如: 4Gi, 512Mi"
+                />
+              </FormItem>
+            </Col>
+            <Col :span="6">
+              <FormItem label="GPU数量">
+                <InputNumber
+                  v-model:value="formState.resource_config.gpu_count"
+                  :min="0"
+                  :max="8"
+                  style="width: 100%"
+                />
+              </FormItem>
+            </Col>
+            <Col :span="6">
+              <FormItem label="GPU显存">
+                <Input
+                  v-model:value="formState.resource_config.gpu_memory"
+                  placeholder="例如: 8Gi"
+                  :disabled="formState.resource_config.gpu_count === 0"
+                />
+              </FormItem>
+            </Col>
+          </Row>
+
+          <Divider>健康检查</Divider>
+
+          <Row :gutter="24">
+            <Col :span="6">
+              <FormItem label="启用健康检查">
+                <Switch v-model:checked="formState.health_check.enabled" />
+              </FormItem>
+            </Col>
+            <Col :span="6">
+              <FormItem label="检查路径">
+                <Input
+                  v-model:value="formState.health_check.path"
+                  placeholder="/health"
+                  :disabled="!formState.health_check.enabled"
+                />
+              </FormItem>
+            </Col>
+            <Col :span="4">
+              <FormItem label="检查间隔(秒)">
+                <InputNumber
+                  v-model:value="formState.health_check.interval"
+                  :min="5"
+                  :max="300"
+                  :disabled="!formState.health_check.enabled"
+                  style="width: 100%"
+                />
+              </FormItem>
+            </Col>
+            <Col :span="4">
+              <FormItem label="超时时间(秒)">
+                <InputNumber
+                  v-model:value="formState.health_check.timeout"
+                  :min="1"
+                  :max="60"
+                  :disabled="!formState.health_check.enabled"
+                  style="width: 100%"
+                />
+              </FormItem>
+            </Col>
+            <Col :span="4">
+              <FormItem label="重试次数">
+                <InputNumber
+                  v-model:value="formState.health_check.retries"
+                  :min="1"
+                  :max="10"
+                  :disabled="!formState.health_check.enabled"
+                  style="width: 100%"
+                />
+              </FormItem>
+            </Col>
+          </Row>
+        </div>
+
+        <!-- 步骤3: 网络配置 -->
+        <div v-show="currentStep === 2">
+          <Divider>
+            <SettingOutlined />
+            Nginx 代理配置
+          </Divider>
+
+          <Row :gutter="24">
+            <Col :span="12">
+              <FormItem label="Upstream名称">
+                <Input
+                  v-model:value="formState.nginx_config.upstream_name"
+                  placeholder="自动生成或手动输入"
+                />
+              </FormItem>
+            </Col>
+            <Col :span="12">
+              <FormItem label="Server Name">
+                <Input
+                  v-model:value="formState.nginx_config.server_name"
+                  placeholder="例如: api.example.com"
+                />
+              </FormItem>
+            </Col>
+          </Row>
+
+          <Row :gutter="24">
+            <Col :span="8">
+              <FormItem label="监听端口">
+                <InputNumber
+                  v-model:value="formState.nginx_config.listen_port"
+                  :min="1"
+                  :max="65535"
+                  style="width: 100%"
+                />
+              </FormItem>
+            </Col>
+            <Col :span="8">
+              <FormItem label="Proxy Pass">
+                <Input
+                  v-model:value="formState.nginx_config.proxy_pass"
+                  placeholder="自动生成或手动输入"
+                />
+              </FormItem>
+            </Col>
+            <Col :span="8">
+              <FormItem label="启用SSL">
+                <Switch v-model:checked="formState.nginx_config.ssl_enabled" />
+              </FormItem>
+            </Col>
+          </Row>
+
+          <FormItem label="自定义Nginx配置">
+            <Textarea
+              v-model:value="formState.nginx_config.custom_config"
+              placeholder="可选: 输入额外的Nginx配置指令"
+              :rows="4"
+            />
+          </FormItem>
+        </div>
+
+        <!-- 步骤4: 确认部署 -->
+        <div v-show="currentStep === 3">
+          <Card title="部署配置确认" class="mb-4">
+            <Row :gutter="24">
+              <Col :span="12">
+                <div class="config-section">
+                  <h4 class="section-title">基本信息</h4>
+                  <p><strong>部署名称:</strong> {{ formState.name }}</p>
+                  <p>
+                    <strong>模型来源:</strong>
+                    {{
+                      formState.model_source === 'mtp' ? 'MTP训练' : '大模型'
+                    }}
+                  </p>
+                  <p><strong>模型名称:</strong> {{ formState.model_name }}</p>
+                  <p>
+                    <strong>模型版本:</strong> {{ formState.model_version }}
+                  </p>
+                  <p><strong>部署节点:</strong> {{ formState.node_name }}</p>
+                  <p><strong>副本数:</strong> {{ formState.replicas }}</p>
+                </div>
+              </Col>
+              <Col :span="12">
+                <div class="config-section">
+                  <h4 class="section-title">容器配置</h4>
+                  <p>
+                    <strong>容器名称:</strong> {{ formState.container_name }}
+                  </p>
+                  <p><strong>镜像名称:</strong> {{ formState.image_name }}</p>
+                  <p><strong>服务端口:</strong> {{ formState.port }}</p>
+                  <p>
+                    <strong>CPU限制:</strong>
+                    {{ formState.resource_config.cpu_limit }}
+                  </p>
+                  <p>
+                    <strong>内存限制:</strong>
+                    {{ formState.resource_config.memory_limit }}
+                  </p>
+                  <p>
+                    <strong>GPU:</strong>
+                    {{ formState.resource_config.gpu_count }}块
+                  </p>
+                </div>
+              </Col>
+            </Row>
+            <Row :gutter="24" class="mt-4">
+              <Col :span="12">
+                <div class="config-section">
+                  <h4 class="section-title">Nginx配置</h4>
+                  <p>
+                    <strong>Server Name:</strong>
+                    {{ formState.nginx_config.server_name || '未配置' }}
+                  </p>
+                  <p>
+                    <strong>监听端口:</strong>
+                    {{ formState.nginx_config.listen_port }}
+                  </p>
+                  <p>
+                    <strong>SSL:</strong>
+                    {{
+                      formState.nginx_config.ssl_enabled ? '已启用' : '未启用'
+                    }}
+                  </p>
+                </div>
+              </Col>
+              <Col :span="12">
+                <div class="config-section">
+                  <h4 class="section-title">健康检查</h4>
+                  <p>
+                    <strong>状态:</strong>
+                    {{ formState.health_check.enabled ? '已启用' : '未启用' }}
+                  </p>
+                  <p v-if="formState.health_check.enabled">
+                    <strong>检查路径:</strong> {{ formState.health_check.path }}
+                  </p>
+                  <p v-if="formState.health_check.enabled">
+                    <strong>检查间隔:</strong>
+                    {{ formState.health_check.interval }}秒
+                  </p>
+                </div>
+              </Col>
+            </Row>
+          </Card>
+        </div>
+
+        <Divider />
+
+        <!-- 操作按钮 -->
+        <div class="flex justify-end gap-4">
+          <Button @click="handleCancel">取消</Button>
+          <Button v-if="currentStep > 0" @click="handlePrev">上一步</Button>
+          <Button v-if="currentStep < 3" type="primary" @click="handleNext"
+            >下一步</Button
+          >
+          <Button
+            v-if="currentStep === 3"
+            type="primary"
+            :loading="submitLoading"
+            @click="handleSubmit"
+          >
+            确认部署
+          </Button>
+        </div>
+      </Form>
+    </Card>
+  </BusinessPage>
 </template>
 
 <style scoped>

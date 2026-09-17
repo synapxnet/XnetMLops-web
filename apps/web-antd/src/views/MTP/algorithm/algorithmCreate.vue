@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import type { Ref } from 'vue';
 
 import type { DeptTreeDataItem } from '../../SMP/api/types';
@@ -69,7 +70,7 @@ const organizationTree = inject<Ref<DeptTreeDataItem[]>>(
   ref([]),
 );
 
-const selectedOrg = inject<
+const workspaceOrganization = inject<
   Ref<{
     deptUid: null | string;
     level: number;
@@ -85,6 +86,9 @@ const selectedOrg = inject<
     teamUid: null,
   }),
 );
+
+// 表单组织是独立副本，重置表单不能清空全局授权范围。Form scope is an independent copy and cannot clear workspace authorization.
+const selectedOrg = ref({ ...workspaceOrganization.value });
 
 // 添加加载状态
 const isOrganizationTreeLoading = ref(true);
@@ -911,6 +915,7 @@ const removeAlgorithm = () => {
 </script>
 
 <template>
+  <BusinessPage domain="模型研发" description="连接算法、训练记录与模型证据，让每一次迭代都有据可循。" existing-title>
   <Page title="新增算法">
     <template #action>
       <div class="flex items-center gap-2">
@@ -1350,6 +1355,8 @@ const removeAlgorithm = () => {
       <AButton type="primary" @click="selectBucket">确认选择</AButton>
     </div>
   </AModal>
+
+  </BusinessPage>
 </template>
 
 <style scoped>

@@ -13,6 +13,10 @@ export const overridesPreferences = defineOverridesPreferences({
     enableCheckUpdates: false,
     name: import.meta.env.VITE_APP_TITLE,
   },
+  breadcrumb: { enable: false },
+  tabbar: { styleType: 'plain', showIcon: false },
+  sidebar: { width: 228 },
+  theme: { colorPrimary: '#187bbd', mode: 'light', radius: '0.75', semiDarkSidebar: false },
   copyright: {
     companyName: 'SynapXnet',
     companySiteLink: 'https://openxnet.synapxnet.com',

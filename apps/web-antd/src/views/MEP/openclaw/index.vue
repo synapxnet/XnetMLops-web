@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import { computed, h, onMounted, onUnmounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
@@ -61,6 +62,7 @@ const router = useRouter();
 // 实例列表
 const instanceList = ref<OpenClawInstance[]>([]);
 const loading = ref(false);
+const readError = ref('');
 
 // 操作中的实例ID集合（用于按钮loading状态）
 const operatingIds = ref<Set<number>>(new Set());
@@ -163,13 +165,15 @@ const columns = [
   },
 ];
 
-// 获取数据（silent模式不显示loading，用于轮询）
+/** 读取实例列表，轮询失败也保留明确错误。 Read instances and retain errors from background polling. */
 const fetchData = async (silent = false) => {
   try {
     if (!silent) loading.value = true;
     const res = await mepRequestClient.get<OpenClawInstance[]>('/openclaw/instances');
     instanceList.value = Array.isArray(res) ? res : (res as any).data || [];
+    readError.value = '';
   } catch (error) {
+    readError.value = 'OpenClaw 实例读取失败，请检查服务与权限后重试。';
     console.error('获取实例列表失败:', error);
     if (!silent) message.error('获取实例列表失败');
   } finally {
@@ -399,6 +403,7 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <BusinessPage domain="服务交付" description="集中管理模型服务、节点与访问密钥，按实际运行结果确认状态。" existing-title :error="readError" :loading="loading" @retry="fetchData()">
   <div class="p-4">
     <!-- 页面标题 -->
     <Card class="mb-4 shadow">
@@ -573,6 +578,8 @@ onUnmounted(() => {
       </Spin>
     </Drawer>
   </div>
+
+  </BusinessPage>
 </template>
 
 <style scoped>

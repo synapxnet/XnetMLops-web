@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import type { Ref } from 'vue';
 
 import type { DeptTreeDataItem } from '../../SMP/api/types';
@@ -72,7 +73,7 @@ const organizationTree = inject<Ref<DeptTreeDataItem[]>>(
   ref([]),
 );
 
-const selectedOrg = inject<
+const workspaceOrganization = inject<
   Ref<{
     deptUid: null | string;
     level: number;
@@ -88,6 +89,9 @@ const selectedOrg = inject<
     teamUid: null,
   }),
 );
+
+// 表单组织是独立副本，重置表单不能清空全局授权范围。Form scope is an independent copy and cannot clear workspace authorization.
+const selectedOrg = ref({ ...workspaceOrganization.value });
 
 // 添加加载状态
 const isOrganizationTreeLoading = ref(true);
@@ -198,16 +202,11 @@ onMounted(() => {
   resetFormState();
 });
 
-// 重置表单状态
+// 重置本地表单并沿用当前工作区组织。Reset the local form using the current workspace organization.
 const resetFormState = () => {
   isSubmitted.value = false;
   formState.value = {};
-  selectedOrg.value = {
-    level: 0,
-    tenantUid: null,
-    deptUid: null,
-    teamUid: null,
-  };
+  selectedOrg.value = { ...workspaceOrganization.value };
   selectedBucket.value = null;
   radioValue.value = null;
   bucketSearchValue.value = '';
@@ -803,9 +802,9 @@ const onSubmit = async (values: Record<string, any>) => {
   }
 };
 
-// 跳转到配置管理页面
+// 前往已注册的数据集配置页。Navigate to the registered dataset configuration page.
 const goToConfig = () => {
-  router.push('/DPP/dataset/config');
+  router.push('/SMP/DPPManage/DatasetConfigManage');
 };
 
 // 重置组织选择
@@ -823,8 +822,9 @@ const resetOrgSelection = () => {
 </script>
 
 <template>
+  <BusinessPage domain="数据准备" description="从数据集、特征到知识库，组织好训练与检索所需的数据。" existing-title>
   <Page title="新增数据集">
-    <template #action>
+    <template #extra>
       <div class="flex items-center gap-2">
         <AButton type="link" @click="goToConfig">
           <template #icon><SettingOutlined /></template>
@@ -1166,6 +1166,8 @@ const resetOrgSelection = () => {
       <AButton type="primary" @click="selectBucket">确认选择</AButton>
     </div>
   </AModal>
+
+  </BusinessPage>
 </template>
 
 <style scoped>

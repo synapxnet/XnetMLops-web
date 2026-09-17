@@ -12,6 +12,15 @@ packages:
   - scripts/*
   - docs
   - playground
+allowBuilds:
+  '@parcel/watcher': false
+  bufferutil: false
+  core-js: false
+  es5-ext: false
+  esbuild: true
+  unrs-resolver: false
+  utf-8-validate: false
+  vue-demi: false
 catalog:
   '@ast-grep/napi': ^0.32.3
   '@changesets/changelog-github': ^0.5.1

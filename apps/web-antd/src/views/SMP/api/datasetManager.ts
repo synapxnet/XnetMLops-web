@@ -48,14 +48,20 @@ export const uploadHdfsFile = async (
   });
 };
 
-// 下载HDFS文件
+// 以二进制正文下载，保留登录和组织请求头。 / Download the binary body while preserving authentication and organization headers.
 export const downloadHdfsFile = async (
   datasetId: string,
   filePath: string,
+  onProgress?: (progress: number) => void,
 ): Promise<Blob> => {
   return dppRequestClient.get(`/dpp/datasets/${datasetId}/download`, {
     params: { filePath },
     responseType: 'blob',
+    responseReturn: 'body',
+    // 依据实际传输字节更新行内进度。 / Update row progress from actual transferred bytes.
+    onDownloadProgress: (event) => {
+      if (event.total && event.total > 0) onProgress?.(Math.min(99, Math.round(event.loaded * 100 / event.total)));
+    },
     headers: {
       'X-Tenant-Id': localStorage.getItem('tenantId') || '',
       Authorization: `Bearer ${localStorage.getItem('token')}`,

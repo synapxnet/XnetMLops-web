@@ -1,768 +1,410 @@
+<!--
+Copyright (C) 2026 Synapxnet. All rights reserved.
+This file is Synapxnet Proprietary and Confidential. It is strictly
+forbidden to copy, distribute, or use without explicit authorization.
+用途：训练作业的真实详情与控制台。Purpose: Actual training job details and console output.
+Author: maoyo | Department: 研发部 | Date: 2026-09-14
+Version: 1.0.0 | Security Level: INTERNAL
+__version__: 1.0.0 | __author__: maoyo | __copyright__: Copyright 2026 Synapxnet
+__maintainer__: maoyo | __email__: synapxnet@gmail.com
+-->
 <script lang="ts" setup>
-import { onMounted, ref } from 'vue';
-import { useRoute } from 'vue-router';
-
-import { Button, Card, message, Steps, Tag } from 'ant-design-vue';
-
+import type { JobSnapshot } from './job-status';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { Alert, Button, Card, Modal, Steps, Tag } from 'ant-design-vue';
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import { fetchPipelineStatus } from '../../../SMP/api/traintask';
-
-// 定义阶段类型
-interface TaskStage {
-  title: string;
-  status: 'error' | 'finish' | 'process' | 'wait';
-  description: string;
-  startTime: string;
-  endTime?: string;
-  duration?: string;
-  logs: string[];
-  metrics: { title: string; value: string }[];
-}
-
-// 当前任务ID（从路由参数获取）
+import { parsePipelineStatus, routeIdentity } from './job-status';
 const route = useRoute();
-const jobUid = ref((route.query.id as string) || 'TRN-20230815-001');
-const tenantUid = ref((route.query.tenantUid as string) || '');
-const currentStep = ref(0); // 当前进行到第几步
+const router = useRouter();
+const taskInfo = ref<JobSnapshot | null>(null);
+const currentStep = ref(0);
 const loading = ref(false);
-
-// 任务信息
-const taskInfo = ref({
-  title: '训练任务',
-  creator: '系统',
-  createTime: '2023-08-15 09:30',
-  status: 'running',
-  startTime: '',
-  elapsedTime: '计算中...',
-  remainingTime: '计算中...',
-});
-
-// 任务阶段数据 - 初始化为空
-const stages = ref<TaskStage[]>([]);
-
-// 阶段状态映射
-const mapStageStatus = (apiStatus: string) => {
-  const statusMap: Record<string, 'error' | 'finish' | 'process' | 'wait'> = {
-    SUCCESS: 'finish',
-    FAILED: 'error',
-    IN_PROGRESS: 'process',
-    PENDING: 'wait',
-  };
-  return statusMap[apiStatus] || 'wait';
-};
-
-// 阶段描述文本
-const getStageDescription = (apiStatus: string) => {
-  const descriptionMap: Record<string, string> = {
-    SUCCESS: '已完成',
-    FAILED: '失败',
-    IN_PROGRESS: '进行中',
-    PENDING: '等待中',
-  };
-  return descriptionMap[apiStatus] || '未开始';
-};
-
-// 整体任务状态映射
-const mapJobStatus = (apiStatus: string) => {
-  const statusMap: Record<string, string> = {
-    SUCCESS: 'finished',
-    FAILED: 'error',
-    RUNNING: 'running',
-    PAUSED: 'paused',
-    CANCELLED: 'stopped',
-    QUEUED: 'queued',
-  };
-  return statusMap[apiStatus] || 'running';
-};
-
-// 日期格式化函数
-const formatDateTime = (dateString: string) => {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
-};
-
-// 计算持续时间
-const calculateDuration = (start: string, end: string) => {
-  if (!start || !end) return '';
-
-  const startTime = new Date(start).getTime();
-  const endTime = new Date(end).getTime();
-  const durationMillis = endTime - startTime;
-
-  if (durationMillis <= 0) return '00:00:00';
-
-  const seconds = Math.floor(durationMillis / 1000) % 60;
-  const minutes = Math.floor(durationMillis / (1000 * 60)) % 60;
-  const hours = Math.floor(durationMillis / (1000 * 60 * 60));
-
-  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-};
-
-// 新增步骤变更处理方法
-const handleStepChange = (step: number) => {
-  if (step >= 0 && step < stages.value.length) {
-    currentStep.value = step;
-  }
-};
-
-// 加载任务数据
-// 加载任务数据
-const loadTaskData = async () => {
-  loading.value = true;
-  try {
-    const response = await fetchPipelineStatus(jobUid.value, tenantUid.value);
-    // 更新任务信息
-    taskInfo.value.title = response.jobName || '训练任务';
-    taskInfo.value.status = mapJobStatus(response.overallStatus);
-
-    // 处理阶段数据
-    const backendStages = response.stages || [];
-    const mappedStages = backendStages.map((stage: any) => {
-      // 计算结束时间
-      const startDate = new Date(stage.startTime);
-      const endDate = new Date(startDate.getTime() + stage.durationMillis);
-
-      // 特殊处理：当阶段名称为"Declarative: Post Actions"时，替换为"数据清理"
-      const stageName =
-        stage.stageName === 'Declarative: Post Actions'
-          ? '数据清理'
-          : stage.stageName;
-
-      return {
-        title: stageName, // 使用处理后的阶段名称
-        status: mapStageStatus(stage.status),
-        description: getStageDescription(stage.status),
-        startTime: formatDateTime(stage.startTime),
-        endTime: formatDateTime(endDate.toISOString()),
-        duration: stage.durationFormatted,
-        logs: [
-          `[${formatDateTime(stage.startTime).split(' ')[1]}] 开始${stageName}`,
-          `[${formatDateTime(endDate.toISOString()).split(' ')[1]}] ${stageName}完成`,
-          `状态: ${stage.status} | 耗时: ${stage.durationFormatted}`,
-        ],
-        metrics: [
-          {
-            title: '状态',
-            value: stage.status === 'SUCCESS' ? '成功' : stage.status,
-          },
-          { title: '持续时间', value: stage.durationFormatted },
-        ],
-      };
-    });
-
-    // 添加默认的Post Actions阶段（如果不存在）
-    const hasDataCleaning = mappedStages.some(
-      (stage) => stage.title === '数据清理',
-    );
-    if (!hasDataCleaning && mappedStages.length < 6) {
-      mappedStages.push({
-        title: '数据清理',
-        status: 'wait',
-        description: '未开始',
-        startTime: '',
-        endTime: '',
-        duration: '',
-        logs: [],
-        metrics: [],
-      });
-    }
-
-    stages.value = mappedStages;
-
-    // 计算当前步骤（找到第一个进行中或未开始的阶段）
-    const activeIndex = mappedStages.findIndex(
-      (stage) => stage.status === 'process' || stage.status === 'wait',
-    );
-    currentStep.value =
-      activeIndex === -1 ? mappedStages.length - 1 : activeIndex;
-
-    // 更新任务时间信息
-    if (backendStages.length > 0) {
-      const firstStage = backendStages[0];
-      const lastStage = backendStages[backendStages.length - 1];
-
-      taskInfo.value.startTime = formatDateTime(firstStage.startTime);
-
-      // 计算总耗时
-      if (lastStage.startTime) {
-        const startTime = new Date(firstStage.startTime);
-        const endTime = new Date(
-          new Date(lastStage.startTime).getTime() + lastStage.durationMillis,
-        );
-        taskInfo.value.elapsedTime = calculateDuration(
-          firstStage.startTime,
-          endTime.toISOString(),
-        );
-      }
-    }
-  } catch (error) {
-    console.error('获取任务详情失败:', error);
-    message.error('获取任务详情失败，使用默认数据');
-
-    // 使用默认数据作为回退
-    stages.value = [
-      {
-        title: '拉取数据',
-        status: 'finish',
-        description: '已完成',
-        startTime: '2023-08-15 10:15:20',
-        endTime: '2023-08-15 10:25:45',
-        duration: '10分25秒',
-        logs: ['数据获取成功'],
-        metrics: [{ title: '状态', value: '成功' }],
-      },
-      {
-        title: '构建训练任务',
-        status: 'finish',
-        description: '已完成',
-        startTime: '2023-08-15 10:26:10',
-        endTime: '2023-08-15 10:35:30',
-        duration: '9分20秒',
-        logs: ['任务构建完成'],
-        metrics: [{ title: '状态', value: '成功' }],
-      },
-      {
-        title: '准备训练环境',
-        status: 'process',
-        description: '进行中',
-        startTime: '2023-08-15 10:45:32',
-        logs: [
-          '开始准备训练环境',
-          '检测可用资源：GPU 可用，内存充足',
-          '分配计算资源：2个GPU，32GB内存',
-        ],
-        metrics: [{ title: '状态', value: '进行中' }],
-      },
-      {
-        title: '模型训练',
-        status: 'wait',
-        description: '等待中',
-        logs: [],
-        metrics: [],
-      },
-      {
-        title: '模型输出',
-        status: 'wait',
-        description: '等待中',
-        logs: [],
-        metrics: [],
-      },
-      {
-        title: '数据清理',
-        status: 'wait',
-        description: '等待中',
-        logs: [],
-        metrics: [],
-      },
-    ];
-  } finally {
+const error = ref('');
+const logsOpen = ref(false);
+const logsLoading = ref(false);
+const logsError = ref('');
+const fullLogs = ref<null | string>(null);
+let generation = 0;
+let logsGeneration = 0;
+/** 每次路由变化读取新作业，不补默认ID。 Read the current route identity without a default job. */
+const jobUid = computed(() => routeIdentity(route.query.id));
+/** 租户参数缺失时明确停止读取。 Stop reads when the route tenant is missing. */
+const tenantUid = computed(() => routeIdentity(route.query.tenantUid));
+/** 只展示已取得的实际阶段。 Display only stages returned by the service. */
+const stages = computed(() => taskInfo.value?.stages ?? []);
+/** 当前阶段由用户选择和实际数组决定。 Resolve the selected stage from the actual array. */
+const activeStage = computed(() => stages.value[currentStep.value]);
+/** 将路由身份绑定每次异步读取。 Bind asynchronous reads to the route identity. */
+function currentScope(): string {
+  return `${jobUid.value}|${tenantUid.value}`;
+}
+/** 保留服务端错误说明，未知错误使用明确失败提示。 Retain service errors and use an explicit failure message otherwise. */
+function errorMessage(cause: unknown): string {
+  return cause instanceof Error && cause.message
+    ? cause.message
+    : '作业详情暂时无法读取，请稍后重试';
+}
+/** 清空旧详情后读取真实状态，拒绝迟到或错作业响应。 Clear stale details and reject late or mismatched job responses. */
+async function loadTaskData(): Promise<void> {
+  const ticket = ++generation;
+  ++logsGeneration;
+  const scope = currentScope();
+  taskInfo.value = null;
+  currentStep.value = 0;
+  error.value = '';
+  logsOpen.value = false;
+  logsLoading.value = false;
+  fullLogs.value = null;
+  logsError.value = '';
+  if (!jobUid.value || !tenantUid.value) {
     loading.value = false;
+    error.value = '缺少有效的作业或租户标识，请从训练任务列表重新打开';
+    return;
   }
-};
-
-onMounted(() => {
-  loadTaskData();
-});
-
-// 操作处理函数
-const refreshStatus = () => {
   loading.value = true;
-  loadTaskData();
-  message.success('状态已刷新');
-};
-
-const viewFullLogs = () => {
-  message.info('打开完整日志查看器');
-};
-
-const pauseTask = () => {
-  message.warning('任务已暂停');
-  taskInfo.value.status = 'paused';
-};
-
-const stopTask = () => {
-  message.error('任务已终止');
-  taskInfo.value.status = 'stopped';
-};
+  const job = jobUid.value;
+  try {
+    const response = await fetchPipelineStatus(job, tenantUid.value);
+    if (ticket !== generation || scope !== currentScope()) return;
+    taskInfo.value = parsePipelineStatus(response, job);
+    const active = taskInfo.value.stages.findIndex(isActiveStage);
+    currentStep.value = Math.max(0, active);
+  } catch (cause) {
+    if (ticket === generation && scope === currentScope())
+      error.value = errorMessage(cause);
+  } finally {
+    if (ticket === generation && scope === currentScope())
+      loading.value = false;
+  }
+}
+/** 优先定位正在执行或失败的真实阶段。 Prefer an actually running or failed stage. */
+function isActiveStage(stage: JobSnapshot['stages'][number]): boolean {
+  return stage.status === 'process' || stage.status === 'error';
+}
+/** 选择有效阶段，不把前序阶段推断为已完成。 Select a valid stage without marking preceding stages complete. */
+function handleStepChange(step: number): void {
+  if (Number.isInteger(step) && step >= 0 && step < stages.value.length)
+    currentStep.value = step;
+}
+/** 刷新完成以真实响应为准，不提前报告成功。 Refresh against the actual response without premature success messages. */
+function refreshStatus(): void {
+  void loadTaskData();
+}
+/** 通过已有控制台读取契约展示原文，错误不回退合成日志。 Read original console output through the existing contract without synthetic fallback logs. */
+async function viewFullLogs(): Promise<void> {
+  if (!taskInfo.value || loading.value || logsLoading.value) return;
+  const ticket = ++logsGeneration;
+  const scope = currentScope();
+  const job = jobUid.value;
+  logsOpen.value = true;
+  logsLoading.value = true;
+  logsError.value = '';
+  fullLogs.value = null;
+  try {
+    const response = await fetchPipelineStatus(job, tenantUid.value, true);
+    if (ticket !== logsGeneration || scope !== currentScope()) return;
+    fullLogs.value = parsePipelineStatus(response, job).consoleOutput;
+  } catch (cause) {
+    if (ticket === logsGeneration && scope === currentScope())
+      logsError.value = errorMessage(cause);
+  } finally {
+    if (ticket === logsGeneration && scope === currentScope())
+      logsLoading.value = false;
+  }
+}
+/** 关闭日志使待返回读取失效。 Invalidate pending log reads when the dialog closes. */
+function closeLogs(): void {
+  ++logsGeneration;
+  logsOpen.value = false;
+  logsLoading.value = false;
+}
+/** 返回已有训练任务入口。 Return to the existing training task list. */
+function backToTasks(): void {
+  void router.push('/MTP/train/index');
+}
+/** 离页使所有读取失效，不保留旧作业回调。 Invalidate all reads when leaving the job page. */
+function dispose(): void {
+  ++generation;
+  ++logsGeneration;
+}
+watch(currentScope, refreshStatus, { immediate: true });
+onBeforeUnmount(dispose);
 </script>
-
 <template>
-  <div class="task-detail-container">
-    <!-- 头部任务信息 -->
-    <Card class="header-card">
-      <div class="header-content">
-        <div class="task-header">
-          <div class="task-title-row">
-            <h1 class="task-title">{{ taskInfo.title }}</h1>
-            <Tag
-              :color="
-                taskInfo.status === 'running'
-                  ? 'blue'
-                  : taskInfo.status === 'paused'
-                    ? 'orange'
-                    : taskInfo.status === 'stopped'
-                      ? 'red'
-                      : 'green'
-              "
-            >
-              {{
-                taskInfo.status === 'running'
-                  ? '运行中'
-                  : taskInfo.status === 'paused'
-                    ? '已暂停'
-                    : taskInfo.status === 'stopped'
-                      ? '已终止'
-                      : '已完成'
+  <BusinessPage
+    domain="模型研发"
+    description="沿着实际阶段和原始日志，了解训练作业进展。"
+    existing-title
+  >
+    <div class="task-detail-container">
+      <Card class="header-card">
+        <div class="header-content">
+          <div class="task-header">
+            <div class="task-title-row">
+              <h1 class="task-title">
+                {{ taskInfo?.title ?? '训练作业详情' }}
+              </h1>
+              <Tag :color="taskInfo?.color ?? 'default'">{{
+                loading ? '正在读取' : (taskInfo?.statusLabel ?? '状态未知')
+              }}</Tag>
+            </div>
+            <p class="task-id">作业标识：{{ jobUid || '未提供' }}</p>
+            <div class="task-info">
+              <span>创建者：{{ taskInfo?.creator ?? '未提供' }}</span
+              ><span>创建时间：{{ taskInfo?.createTime ?? '未提供' }}</span>
+            </div>
+          </div>
+          <Button @click="backToTasks">返回训练任务</Button>
+        </div>
+        <dl v-if="taskInfo" class="stat-grid">
+          <div>
+            <dt>开始时间</dt>
+            <dd>{{ taskInfo.startTime ?? '未提供' }}</dd>
+          </div>
+          <div>
+            <dt>已记录运行时长</dt>
+            <dd>{{ taskInfo.elapsedTime ?? '未提供' }}</dd>
+          </div>
+          <div>
+            <dt>预估剩余时间</dt>
+            <dd>未提供</dd>
+          </div>
+        </dl>
+      </Card>
+      <Alert
+        v-if="error"
+        type="error"
+        show-icon
+        message="作业详情未能读取"
+        :description="error"
+        class="read-message"
+        ><template #action
+          ><Button :loading="loading" @click="refreshStatus"
+            >重试</Button
+          ></template
+        ></Alert
+      >
+      <p v-if="loading" class="empty-state" role="status">
+        正在读取当前作业的状态与阶段…
+      </p>
+      <Card v-else-if="taskInfo && !stages.length" class="steps-card"
+        ><div class="empty-state">
+          当前作业尚未提供阶段记录。可以刷新状态或查看已采集的完整日志。
+        </div></Card
+      >
+      <Card v-else-if="stages.length" class="steps-card"
+        ><Steps :current="currentStep" size="small" @change="handleStepChange"
+          ><Steps.Step
+            v-for="(stage, index) in stages"
+            :key="index"
+            :title="stage.title"
+            :status="stage.status"
+            :description="stage.description" /></Steps
+      ></Card>
+      <Card v-if="activeStage" class="step-card">
+        <div class="step-header">
+          <h2>{{ activeStage.title }}</h2>
+          <span>{{ activeStage.description }}</span>
+        </div>
+        <dl class="stat-grid">
+          <div>
+            <dt>开始时间</dt>
+            <dd>{{ activeStage.startTime ?? '未提供' }}</dd>
+          </div>
+          <div>
+            <dt>
+              结束时间{{
+                activeStage.endTimeDerived ? '（按已结束阶段耗时计算）' : ''
               }}
-            </Tag>
+            </dt>
+            <dd>{{ activeStage.endTime ?? '未提供' }}</dd>
           </div>
-          <div class="task-id">任务ID: {{ jobUid }}</div>
-          <div class="task-info">
-            <div>创建者: {{ taskInfo.creator }}</div>
-            <div>创建时间: {{ taskInfo.createTime }}</div>
+          <div>
+            <dt>已记录耗时</dt>
+            <dd>{{ activeStage.duration ?? '未提供' }}</dd>
           </div>
+        </dl>
+        <div class="log-header">
+          <h3>阶段日志</h3>
+          <span>{{
+            activeStage.logs.length
+              ? `${activeStage.logs.length} 行原始文本`
+              : '当前状态接口未提供阶段日志'
+          }}</span>
         </div>
-        <div class="time-stat">
-          <div class="stat-grid">
-            <div class="stat-item">
-              <div class="stat-label">开始时间</div>
-              <div class="stat-value">{{ taskInfo.startTime || '--' }}</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-label">已运行时间</div>
-              <div class="stat-value">{{ taskInfo.elapsedTime }}</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-label">预估剩余时间</div>
-              <div class="stat-value">{{ taskInfo.remainingTime }}</div>
-            </div>
-          </div>
-        </div>
+        <pre v-if="activeStage.logs.length" class="logs-container">{{
+          activeStage.logs.join('\n')
+        }}</pre>
+        <p v-else class="empty-state">
+          没有可显示的阶段日志。完整控制台与阶段状态分别读取。
+        </p>
+      </Card>
+      <div class="footer-actions">
+        <Button type="primary" :loading="loading" @click="refreshStatus"
+          >刷新状态</Button
+        ><Button
+          :disabled="!taskInfo || loading"
+          :loading="logsLoading"
+          @click="viewFullLogs"
+          >查看完整日志</Button
+        ><Button disabled>暂停任务</Button
+        ><Button danger disabled>终止任务</Button>
       </div>
-    </Card>
-
-    <!-- 步骤指示器 - 已修改支持点击 -->
-    <Card class="steps-card">
-      <Steps :current="currentStep" size="small">
-        <Steps.Step
-          v-for="(stage, index) in stages"
-          :key="index"
-          :title="stage.title"
-          :description="stage.description"
-          @click.native="handleStepChange(index)"
-          class="step-item"
-          :class="[{ active: currentStep === index }]"
-        />
-      </Steps>
-    </Card>
-
-    <!-- 当前阶段详情 -->
-    <Card v-if="stages.length > 0 && stages[currentStep]" class="step-card">
-      <div class="step-header">
-        <div class="step-title">{{ stages[currentStep].title }}阶段详情</div>
-        <div class="step-time">
-          开始时间: {{ stages[currentStep].startTime || '--' }}
-          <span v-if="stages[currentStep].endTime">
-            | 结束时间: {{ stages[currentStep].endTime }} | 持续时间:
-            {{ stages[currentStep].duration || '--' }}
-          </span>
-        </div>
-      </div>
-
-      <!-- 资源指标 -->
-      <div v-if="stages[currentStep].metrics.length > 0" class="metrics-grid">
-        <div
-          v-for="(metric, idx) in stages[currentStep].metrics"
-          :key="idx"
-          class="metric-card"
-        >
-          <div class="metric-title">{{ metric.title }}</div>
-          <div class="metric-value">{{ metric.value }}</div>
-        </div>
-      </div>
-
-      <!-- 阶段日志 -->
-      <div class="log-header">
-        <h3 class="log-title">阶段日志</h3>
-        <div class="log-stats">
-          <span class="log-count">共 {{ stages[currentStep].logs.length }} 条日志</span>
-          <span class="log-update">最后更新: {{ new Date().toLocaleTimeString() }}</span>
-        </div>
-      </div>
-      <div class="logs-container">
-        <div
-          v-for="(log, idx) in stages[currentStep].logs"
-          :key="idx"
-          class="log-entry"
-        >
-          <span class="log-time">{{ log.split(']')[0] }}]</span>
-          <span
-            :class="{
-              'log-info': !(log.includes('警告') || log.includes('错误')),
-              'log-warning': log.includes('警告'),
-              'log-error': log.includes('错误'),
-            }"
-          >
-            {{ log.split('] ')[1] || log }}
-          </span>
-        </div>
-        <div v-if="stages[currentStep].logs.length === 0" class="empty-logs">
-          暂无日志记录
-        </div>
-      </div>
-    </Card>
-
-    <!-- 操作按钮 -->
-    <div class="footer-actions">
-      <Button type="primary" :loading="loading" @click="refreshStatus">
-        <template #icon><SyncOutlined /></template>
-        刷新状态
-      </Button>
-      <Button @click="viewFullLogs">
-        <template #icon><FileTextOutlined /></template>
-        查看完整日志
-      </Button>
-      <Button type="dashed" @click="pauseTask">
-        <template #icon><PauseOutlined /></template>
-        暂停任务
-      </Button>
-      <Button type="primary" danger @click="stopTask">
-        <template #icon><StopOutlined /></template>
-        终止任务
-      </Button>
+      <p class="control-note">
+        此作业的暂停和终止控制尚未接入。状态与日志读取不会操作训练进程。
+      </p>
     </div>
-  </div>
+    <Modal
+      :open="logsOpen"
+      title="训练作业 · 完整日志"
+      :footer="null"
+      width="min(960px, 94vw)"
+      @cancel="closeLogs"
+      ><p v-if="logsLoading" role="status">正在读取原始控制台输出…</p>
+      <Alert v-else-if="logsError" type="error" show-icon :message="logsError"
+        ><template #action
+          ><Button @click="viewFullLogs">重试日志</Button></template
+        ></Alert
+      >
+      <pre v-else-if="fullLogs !== null" class="logs-container full-logs">{{
+        fullLogs
+      }}</pre>
+      <p v-else class="empty-state">服务端尚未提供控制台日志。</p></Modal
+    >
+  </BusinessPage>
 </template>
-
 <style scoped>
-/* 全局样式 */
 .task-detail-container {
+  width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 20px;
-  background-color: hsl(var(--muted));
 }
-
-.header-card {
-  background: linear-gradient(135deg, #1a73e8, #0d47a1);
-  color: white;
-  border-radius: 10px;
-  margin-bottom: 20px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.task-header {
-  flex: 1;
-  padding-right: 20px;
-}
-
-.task-title-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.task-title {
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin-bottom: 0;
-}
-
-.task-id {
-  font-size: 0.95rem;
-  opacity: 0.85;
-  margin-bottom: 8px;
-}
-
-.task-info {
-  display: flex;
-  gap: 15px;
-  font-size: 0.95rem;
-  opacity: 0.9;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.time-stat {
-  background: rgba(255, 255, 255, 0.2);
-  padding: 12px;
-  border-radius: 8px;
-  min-width: 320px;
-}
-
-.stat-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-}
-
-.stat-item {
-  background: rgba(255, 255, 255, 0.1);
-  padding: 8px;
-  border-radius: 6px;
-  text-align: center;
-}
-
-.stat-label {
-  font-size: 0.85rem;
-  opacity: 0.8;
-}
-
-.stat-value {
-  font-size: 1rem;
-  font-weight: 600;
-  margin-top: 3px;
-}
-
-.steps-card {
-  margin-bottom: 20px;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-/* 步骤项样式 - 添加了点击效果 */
-:deep(.ant-steps-item) {
-  cursor: pointer;
-  transition: all 0.3s;
-  padding: 8px 12px;
-  border-radius: 4px;
-}
-
-:deep(.ant-steps-item):hover {
-  background-color: hsl(var(--primary) / 8%);
-}
-
-:deep(.ant-steps-item).active {
-  background-color: hsl(var(--primary) / 12%);
-  font-weight: 500;
-}
-
+.header-card,
+.steps-card,
 .step-card {
-  border-radius: 10px;
   margin-bottom: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border-radius: var(--workspace-radius, 12px);
 }
-
-.step-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid hsl(var(--border));
-  flex-wrap: wrap;
+.header-card {
+  background: linear-gradient(
+    125deg,
+    hsl(var(--primary) / 10%),
+    hsl(var(--card))
+  );
 }
-
-.step-title {
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: #1a73e8;
-  margin-right: 15px;
-}
-
-.step-time {
-  font-size: 0.9rem;
-  color: hsl(var(--muted-foreground));
-}
-
-.metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
-  margin: 15px 0;
-}
-
-.metric-card {
-  border: 1px solid hsl(var(--border));
-  border-radius: 8px;
-  padding: 12px;
-  background: hsl(var(--card));
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
-  transition:
-    transform 0.2s,
-    box-shadow 0.2s;
-}
-
-.metric-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
-}
-
-.metric-title {
-  font-size: 0.9rem;
-  color: hsl(var(--muted-foreground));
-  margin-bottom: 6px;
-}
-
-.metric-value {
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: #1a73e8;
-}
-
-.log-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: 20px 0 10px;
-  flex-wrap: wrap;
-}
-
-.log-title {
-  color: hsl(var(--foreground));
-  font-size: 1.1rem;
-  margin-bottom: 0;
-  display: flex;
-  align-items: center;
-}
-
-.log-title::before {
-  content: '';
-  display: inline-block;
-  width: 4px;
-  height: 16px;
-  background: #1a73e8;
-  margin-right: 8px;
-  border-radius: 2px;
-}
-
-.log-stats {
-  font-size: 0.85rem;
-  color: hsl(var(--muted-foreground));
-}
-
-.log-count {
-  margin-right: 15px;
-}
-
-.logs-container {
-  background: #2d2d2d;
-  color: #f1f1f1;
-  border-radius: 6px;
-  padding: 15px;
-  font-family: 'Fira Code', 'Courier New', monospace;
-  height: 500px;
-  overflow-y: auto;
-  margin-top: 10px;
-  font-size: 0.9rem;
-  border: 1px solid #444;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
-}
-
-.logs-container::-webkit-scrollbar {
-  width: 8px;
-}
-
-.logs-container::-webkit-scrollbar-track {
-  background: #252525;
-  border-radius: 4px;
-}
-
-.logs-container::-webkit-scrollbar-thumb {
-  background: #555;
-  border-radius: 4px;
-}
-
-.logs-container::-webkit-scrollbar-thumb:hover {
-  background: #777;
-}
-
-.log-entry {
-  margin-bottom: 5px;
-  line-height: 1.4;
-  white-space: pre-wrap;
-  padding: 3px 0;
-}
-
-.log-time {
-  color: #6a9955;
-  margin-right: 10px;
-}
-
-.log-info {
-  color: #d4d4d4;
-}
-
-.log-warning {
-  color: #d7ba7d;
-}
-
-.log-error {
-  color: #f48771;
-}
-
-.empty-logs {
-  color: hsl(var(--muted-foreground));
-  font-style: italic;
-  text-align: center;
-  padding: 20px;
-}
-
+.header-content,
+.task-title-row,
+.step-header,
+.log-header,
 .footer-actions {
   display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
-  padding-top: 15px;
-  border-top: 1px solid hsl(var(--border));
-}
-
-.footer-actions button {
-  display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 12px;
 }
-
+.header-content,
+.step-header,
+.log-header {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.task-header {
+  min-width: 0;
+}
+.task-title {
+  margin: 0;
+  font-size: 1.5rem;
+  color: hsl(var(--foreground));
+}
+.task-id {
+  margin: 10px 0;
+  overflow-wrap: anywhere;
+  color: hsl(var(--muted-foreground));
+}
+.task-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  color: hsl(var(--muted-foreground));
+}
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 24px 0 0;
+}
+.stat-grid dt {
+  color: hsl(var(--muted-foreground));
+  font-size: 13px;
+}
+.stat-grid dd {
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+}
+.step-header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.step-header span,
+.log-header span {
+  color: hsl(var(--muted-foreground));
+}
+.log-header {
+  margin-top: 24px;
+}
+.log-header h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.logs-container {
+  margin: 12px 0 0;
+  padding: 16px;
+  max-height: 420px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  font:
+    13px/1.6 ui-monospace,
+    monospace;
+}
+.full-logs {
+  max-height: 65vh;
+}
+.empty-state {
+  padding: 24px 12px;
+  color: hsl(var(--muted-foreground));
+  text-align: center;
+}
+.read-message {
+  margin-bottom: 20px;
+}
+.footer-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+.control-note {
+  text-align: right;
+  margin-top: 12px;
+  color: hsl(var(--muted-foreground));
+}
 @media (max-width: 768px) {
-  .header-content {
-    flex-direction: column;
-    align-items: flex-start;
+  .stat-grid {
+    grid-template-columns: 1fr;
   }
-
-  .task-info {
+  .task-title-row {
     flex-wrap: wrap;
-    margin-top: 10px;
   }
-
-  .time-stat {
-    width: 100%;
-    margin-top: 15px;
-    min-width: auto;
-  }
-
-  .step-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .step-time {
-    margin-top: 10px;
-  }
-
   .footer-actions {
-    flex-wrap: wrap;
-    justify-content: center;
+    justify-content: flex-start;
   }
-
-  .metrics-grid {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  }
-
-  .log-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  :deep(.ant-steps-item) {
-    padding: 6px 8px;
+  .control-note {
+    text-align: left;
   }
 }
 </style>

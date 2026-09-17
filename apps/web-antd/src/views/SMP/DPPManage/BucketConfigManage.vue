@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import { computed, onMounted, ref } from 'vue';
 
 import { Page } from '@vben/common-ui';
@@ -398,6 +399,7 @@ onMounted(() => {
 </script>
 
 <template>
+  <BusinessPage domain="资源配置" description="管理组织内的数据连接、仓库、工作站与计算资源。" existing-title>
   <Page title="存储桶配置管理" />
 
   <!-- 内容区域 -->
@@ -658,6 +660,8 @@ onMounted(() => {
     :team-options="[]"
     @save="handleSave"
   />
+
+  </BusinessPage>
 </template>
 
 <style scoped>

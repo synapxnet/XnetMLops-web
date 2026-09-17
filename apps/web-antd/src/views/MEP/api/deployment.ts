@@ -10,7 +10,7 @@ import { message } from 'ant-design-vue';
 
 import { mepRequestClient } from '#/api/request';
 
-import { toSnakeCaseKeys } from './normalizers';
+import { fromEntityResponse, toEntityPayload } from './normalizers';
 
 /**
  * 获取模型部署列表
@@ -19,7 +19,7 @@ export const fetchDeploymentList = async (): Promise<ModelDeployment[]> => {
   try {
     const response =
       await mepRequestClient.get<ModelDeployment[]>('/deployments');
-    return toSnakeCaseKeys(response);
+    return fromEntityResponse(response);
   } catch (error) {
     console.error('获取部署列表失败:', error);
     message.error('获取部署列表失败');
@@ -37,7 +37,7 @@ export const fetchDeploymentDetail = async (
     const response = await mepRequestClient.get<ModelDeployment>(
       `/deployments/${id}`,
     );
-    return toSnakeCaseKeys(response);
+    return fromEntityResponse(response);
   } catch (error) {
     console.error('获取部署详情失败:', error);
     message.error('获取部署详情失败');
@@ -46,8 +46,9 @@ export const fetchDeploymentDetail = async (
 };
 
 /**
- * 创建模型部署
+ * 保存待部署配置，不声称运行成功。Save pending configuration without claiming runtime success.
  */
+/** 对接实际后端实体字段与JSON配置。Use actual backend entity fields and serialized JSON configuration. */
 export const createDeployment = async (
   payload: Omit<
     ModelDeployment,
@@ -64,10 +65,10 @@ export const createDeployment = async (
   try {
     const response = await mepRequestClient.post<ModelDeployment>(
       '/deployments',
-      payload,
+      toEntityPayload(payload),
     );
-    message.success('创建部署任务成功');
-    return toSnakeCaseKeys(response);
+    message.success('部署配置已保存；真实执行器尚未接入');
+    return fromEntityResponse(response);
   } catch (error) {
     console.error('创建部署失败:', error);
     message.error('创建部署失败');
@@ -78,6 +79,7 @@ export const createDeployment = async (
 /**
  * 更新模型部署
  */
+/** 对接实际后端实体字段与JSON配置。Use actual backend entity fields and serialized JSON configuration. */
 export const updateDeployment = async (
   id: number,
   payload: Partial<ModelDeployment>,
@@ -85,10 +87,10 @@ export const updateDeployment = async (
   try {
     const response = await mepRequestClient.put<ModelDeployment>(
       `/deployments/${id}`,
-      payload,
+      toEntityPayload(payload),
     );
     message.success('更新部署配置成功');
-    return toSnakeCaseKeys(response);
+    return fromEntityResponse(response);
   } catch (error) {
     console.error('更新部署失败:', error);
     message.error('更新部署失败');
@@ -162,7 +164,7 @@ export const fetchDeploymentLogs = async (
   try {
     const response = await mepRequestClient.get<DeploymentLog[]>(
       `/deployments/${deploymentId}/logs`,
-      { params },
+      { params, timeout: 20_000 },
     );
     return response;
   } catch (error) {
@@ -181,7 +183,7 @@ export const fetchDeploymentMetrics = async (
   try {
     const response = await mepRequestClient.get<ServiceMetrics[]>(
       `/deployments/${deploymentId}/metrics`,
-      { params },
+      { params, timeout: 20_000 },
     );
     return response;
   } catch (error) {
@@ -199,8 +201,9 @@ export const fetchDeploymentMetricSummary = async (
   try {
     const response = await mepRequestClient.get<ServiceMetricSummary>(
       `/deployments/${deploymentId}/metrics/summary`,
+      { timeout: 20_000 },
     );
-    return toSnakeCaseKeys(response);
+    return fromEntityResponse(response);
   } catch (error) {
     console.error('获取实时指标失败:', error);
     throw error;

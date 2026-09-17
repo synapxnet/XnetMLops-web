@@ -1,5 +1,6 @@
 <!-- src/views/MTP/train/TrainTaskManagement.vue -->
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import type { Ref } from 'vue';
 
 import type { PipelineStage } from '../../SMP/api/traintask';
@@ -462,12 +463,16 @@ const executeRecordColumns = [
 
       return h('div', { class: 'flex items-center' }, [
         h('span', { class: 'mr-2' }, `${completed}/${total}`),
-        h('div', { class: 'flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2' }, [
-          h('div', {
-            class: 'bg-green-500 h-2 rounded-full',
-            style: { width: `${percent}%` },
-          }),
-        ]),
+        h(
+          'div',
+          { class: 'flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2' },
+          [
+            h('div', {
+              class: 'bg-green-500 h-2 rounded-full',
+              style: { width: `${percent}%` },
+            }),
+          ],
+        ),
       ]);
     },
   },
@@ -712,7 +717,10 @@ const showScheduleBuildDetail = (record: ScheduleRecord) => {
         h('h4', { class: 'font-medium mb-2' }, '构建日志'),
         h(
           'pre',
-          { class: 'bg-gray-100 dark:bg-gray-800 p-3 rounded max-h-96 overflow-auto text-sm' },
+          {
+            class:
+              'bg-gray-100 dark:bg-gray-800 p-3 rounded max-h-96 overflow-auto text-sm',
+          },
           record.stages.flatMap((s) => s.logs || '').join('\n') ||
             '暂无日志输出',
         ),
@@ -727,7 +735,7 @@ const showScheduleBuildDetail = (record: ScheduleRecord) => {
   });
 };
 
-// 删除调度记录
+// 保留入口并明确当前缺少删除接口。Preserve the entry and explain the missing delete endpoint.
 const handleDeleteScheduleRecord = async (record: ScheduleRecord) => {
   Modal.confirm({
     title: '确认删除',
@@ -737,7 +745,7 @@ const handleDeleteScheduleRecord = async (record: ScheduleRecord) => {
     okType: 'danger',
     async onOk() {
       try {
-        message.success('调度记录删除功能待实现');
+        message.warning('当前服务尚未提供单条调度记录删除接口，记录未删除。');
       } catch (error: any) {
         message.error(`删除失败: ${error.message || '未知错误'}`);
       }
@@ -1164,7 +1172,10 @@ const handleViewScheduleStatus = async (record: DataItem) => {
             h('h4', { class: 'font-medium mb-2' }, '调度配置详情:'),
             h(
               'pre',
-              { class: 'bg-gray-100 dark:bg-gray-800 p-3 rounded max-h-60 overflow-auto' },
+              {
+                class:
+                  'bg-gray-100 dark:bg-gray-800 p-3 rounded max-h-60 overflow-auto',
+              },
               JSON.stringify(result.scheduleConfig, null, 2),
             ),
           ]),
@@ -1284,6 +1295,7 @@ const getStatusColor = (status: string): string => {
   return colorMap[status] || 'default';
 };
 
+/** 读取训练任务，失败保留错误而不是零任务统计。 Read training tasks without presenting failures as zero task counts. */
 const fetchData = async () => {
   try {
     loading.value = true;
@@ -1322,15 +1334,15 @@ const fetchData = async () => {
             item.executeRecords = records.map((record) => {
               const startTime = record.startTime
                 ? new Date(record.startTime)
-                : (record.startAt
+                : record.startAt
                   ? new Date(record.startAt)
-                  : new Date());
+                  : new Date();
 
               const endTime = record.endTime
                 ? new Date(record.endTime)
-                : (record.endAt
+                : record.endAt
                   ? new Date(record.endAt)
-                  : undefined);
+                  : undefined;
 
               return {
                 id: record.jobUid,
@@ -1365,8 +1377,12 @@ const fetchData = async () => {
       );
 
       initDependencies();
+      readError.value = '';
+    } else {
+      throw new Error('训练任务响应格式无效');
     }
   } catch {
+    readError.value = '训练任务列表读取失败，请检查服务与组织权限后重试。';
     message.error('获取任务列表失败');
   } finally {
     loading.value = false;
@@ -1708,709 +1724,733 @@ onUnmounted(() => {
 });
 
 const loading = ref(false);
+const readError = ref('');
 const data = ref<DataItem[]>([]);
 </script>
 
 <template>
-  <Card class="p-4 shadow-sm">
-    <div class="mb-6 flex items-center justify-between">
-      <h1 class="text-xl font-bold">训练任务管理</h1>
-      <div class="flex gap-2">
-        <Button type="primary" @click="handleRefresh" icon="reload">
-          刷新
-        </Button>
-        <Button type="primary" @click="handleAdd" icon="plus">新增任务</Button>
+  <BusinessPage
+    domain="模型研发"
+    description="筛选和管理当前组织的训练任务。"
+    title="训练任务"
+    variant="list"
+    :error="readError"
+    :loading="loading"
+    @retry="fetchData"
+  >
+    <template #actions
+      ><Button :loading="loading" @click="handleRefresh">刷新</Button
+      ><Button type="primary" @click="handleAdd">新建训练任务</Button></template
+    >
+    <Card class="training-list-workbench">
+      <div class="search-container training-filters">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-5">
+          <div>
+            <label class="mb-2 block font-medium">任务名称</label>
+            <Input
+              v-model:value="searchName"
+              placeholder="搜索任务名称"
+              allow-clear
+            />
+          </div>
+
+          <div>
+            <label class="mb-2 block font-medium">任务类型</label>
+            <Select
+              v-model:value="searchType"
+              placeholder="选择任务类型"
+              allow-clear
+            >
+              <SelectOption
+                v-for="platform in platformOptions"
+                :key="platform"
+                :value="platform"
+              >
+                {{ platform }}
+              </SelectOption>
+            </Select>
+          </div>
+
+          <div>
+            <label class="mb-2 block font-medium">任务状态</label>
+            <Select
+              v-model:value="searchStatus"
+              placeholder="选择任务状态"
+              allow-clear
+            >
+              <SelectOption
+                v-for="status in statusOptions"
+                :key="status.value"
+                :value="status.value"
+              >
+                {{ status.label }}
+              </SelectOption>
+            </Select>
+          </div>
+
+          <div>
+            <label class="mb-2 block font-medium">调度状态</label>
+            <Select
+              v-model:value="searchScheduleStatus"
+              placeholder="选择调度状态"
+              allow-clear
+            >
+              <SelectOption
+                v-for="status in scheduleStatusOptions"
+                :key="status.value"
+                :value="status.value"
+              >
+                {{ status.label }}
+              </SelectOption>
+            </Select>
+          </div>
+
+          <div class="flex items-end">
+            <Button @click="fetchData" class="w-full">查询</Button>
+          </div>
+        </div>
       </div>
-    </div>
 
-    <div class="search-container mb-6 rounded-lg bg-white p-4 shadow">
-      <div class="grid grid-cols-1 gap-4 md:grid-cols-5">
+      <div class="mb-4 flex items-center justify-between">
         <div>
-          <label class="mb-2 block font-medium">任务名称</label>
-          <Input
-            v-model:value="searchName"
-            placeholder="搜索任务名称"
-            allow-clear
-          />
-        </div>
-
-        <div>
-          <label class="mb-2 block font-medium">任务类型</label>
-          <Select
-            v-model:value="searchType"
-            placeholder="选择任务类型"
-            allow-clear
+          <Button
+            type="primary"
+            danger
+            :disabled="!hasSelected"
+            :loading="state.loading"
+            @click="handleBatchDelete"
           >
-            <SelectOption
-              v-for="platform in platformOptions"
-              :key="platform"
-              :value="platform"
-            >
-              {{ platform }}
-            </SelectOption>
-          </Select>
+            批量删除
+          </Button>
+          <span class="ml-3 text-gray-500" v-if="hasSelected">
+            已选择 {{ state.selectedRowKeys.length }} 个任务
+          </span>
         </div>
-
-        <div>
-          <label class="mb-2 block font-medium">任务状态</label>
-          <Select
-            v-model:value="searchStatus"
-            placeholder="选择任务状态"
-            allow-clear
-          >
-            <SelectOption
-              v-for="status in statusOptions"
-              :key="status.value"
-              :value="status.value"
-            >
-              {{ status.label }}
-            </SelectOption>
-          </Select>
-        </div>
-
-        <div>
-          <label class="mb-2 block font-medium">调度状态</label>
-          <Select
-            v-model:value="searchScheduleStatus"
-            placeholder="选择调度状态"
-            allow-clear
-          >
-            <SelectOption
-              v-for="status in scheduleStatusOptions"
-              :key="status.value"
-              :value="status.value"
-            >
-              {{ status.label }}
-            </SelectOption>
-          </Select>
-        </div>
-
-        <div class="flex items-end">
-          <Button type="primary" @click="fetchData" class="w-full">搜索</Button>
+        <div class="text-sm text-gray-500">
+          共 {{ pagination.total }} 个任务
         </div>
       </div>
-    </div>
 
-    <div class="mb-4 flex items-center justify-between">
-      <div>
-        <Button
-          type="primary"
-          danger
-          :disabled="!hasSelected"
-          :loading="state.loading"
-          @click="handleBatchDelete"
+      <Card class="training-table overflow-hidden p-0">
+        <Table
+          :columns="columns"
+          :row-selection="{
+            selectedRowKeys: state.selectedRowKeys,
+            onChange: onSelectChange,
+          }"
+          row-key="key"
+          :data-source="filteredData"
+          :pagination="pagination"
+          :loading="loading"
+          bordered
         >
-          批量删除
-        </Button>
-        <span class="ml-3 text-gray-500" v-if="hasSelected">
-          已选择 {{ state.selectedRowKeys.length }} 个任务
-        </span>
-      </div>
-      <div class="text-sm text-gray-500">共 {{ pagination.total }} 个任务</div>
-    </div>
-
-    <Card class="overflow-hidden p-0">
-      <Table
-        :columns="columns"
-        :row-selection="{
-          selectedRowKeys: state.selectedRowKeys,
-          onChange: onSelectChange,
-        }"
-        row-key="key"
-        :data-source="filteredData"
-        :pagination="pagination"
-        :loading="loading"
-        bordered
-      >
-        <template #bodyCell="{ column, record }">
-          <template v-if="column.key === 'name'">
-            <a
-              @click="handleNameClick(record)"
-              class="text-blue-500 hover:underline"
-            >
-              {{ record.name }}
-            </a>
-          </template>
-          <template v-if="column.key === 'operation'">
-            <div class="flex gap-2">
-              <Tooltip title="执行任务">
-                <Button
-                  type="primary"
-                  size="small"
-                  @click="handleExecute(record)"
-                  :disabled="record.status === 'running'"
-                >
-                  执行
-                </Button>
-              </Tooltip>
-
-              <Tooltip title="编辑任务">
-                <Button
-                  type="primary"
-                  size="small"
-                  ghost
-                  @click="handleNameClick(record)"
-                >
-                  编辑
-                </Button>
-              </Tooltip>
-
-              <Dropdown :overlay="createMoreMenu(record)">
-                <Button type="link" size="small">更多</Button>
-              </Dropdown>
-            </div>
-          </template>
-        </template>
-
-        <template #expandedRowRender="{ record }">
-          <div class="bg-gray-50 dark:bg-gray-900 p-4">
-            <Tabs
-              :active-key="record.tabActiveKey"
-              @update:active-key="(key) => (record.tabActiveKey = key)"
-            >
-              <TabPane key="1" tab="任务详情">
-                <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-                  <!-- 基础信息 -->
-                  <Card title="任务基础信息" class="h-full">
-                    <Descriptions layout="vertical" bordered>
-                      <Descriptions.Item label="任务名称">
-                        {{ record.detail?.taskStep1.taskName || '未命名' }}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="任务类型">
-                        {{ record.detail?.taskStep1.taskType || '未知类型' }}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="加密方式">
-                        {{ record.detail?.taskStep1.encryption || '无' }}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="任务区域">
-                        {{ record.detail?.taskStep1.taskZone || '默认区域' }}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Pod类型">
-                        {{ record.detail?.taskStep1.podType || '标准' }}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="资源类型">
-                        {{ record.detail?.taskStep1.resources || '默认资源' }}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="训练类型">
-                        {{ record.detail?.taskStep1.trainType || '训练' }}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="镜像">
-                        {{ record.detail?.taskStep1.image || '无' }}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="描述" :span="2">
-                        {{ record.detail?.taskStep1.describe || '无描述' }}
-                      </Descriptions.Item>
-                    </Descriptions>
-                  </Card>
-
-                  <!-- 算法与数据 -->
-                  <Card title="算法与数据" class="h-full">
-                    <Descriptions layout="vertical" bordered>
-                      <Descriptions.Item label="算法名称">
-                        {{
-                          record.detail?.taskStep2.algorithmName || '未知算法'
-                        }}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="算法版本">
-                        {{
-                          record.detail?.taskStep2.algorithmVersion ||
-                          '未知版本'
-                        }}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="任务入口">
-                        {{ record.detail?.taskStep2.taskroute || '无' }}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="数据集" :span="2">
-                        <div v-if="record.detail?.taskStep2.datasets?.length">
-                          <div
-                            v-for="(dataset, index) in record.detail?.taskStep2
-                              .datasets"
-                            :key="index"
-                            class="mb-1"
-                          >
-                            <Tag color="blue">
-                              {{ dataset.name }} = {{ dataset.selectedName }}
-                            </Tag>
-                          </div>
-                        </div>
-                        <div v-else class="text-gray-400">未配置数据集</div>
-                      </Descriptions.Item>
-                    </Descriptions>
-                  </Card>
-
-                  <!-- 训练配置 -->
-                  <Card title="训练配置" class="h-full">
-                    <Descriptions layout="vertical" bordered>
-                      <Descriptions.Item label="自定义变量" :span="2">
-                        <div
-                          v-if="
-                            record.detail?.taskStep3.customVariables?.length
-                          "
-                        >
-                          <div
-                            v-for="(variable, index) in record.detail?.taskStep3
-                              .customVariables"
-                            :key="index"
-                            class="mb-1"
-                          >
-                            <Tag color="purple">
-                              {{ variable.name }} = {{ variable.value }}
-                            </Tag>
-                          </div>
-                        </div>
-                        <div v-else class="text-gray-400">未配置自定义变量</div>
-                      </Descriptions.Item>
-                      <Descriptions.Item label="训练配置格式">
-                        {{
-                          record.detail?.taskStep3.trainConfig.format || '无'
-                        }}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="训练配置内容" :span="2">
-                        <pre
-                          class="max-h-40 overflow-auto rounded bg-gray-100 dark:bg-gray-800 p-3"
-                          >{{
-                            record.detail?.taskStep3.trainConfig.content ||
-                            '无配置内容'
-                          }}</pre
-                        >
-                      </Descriptions.Item>
-                    </Descriptions>
-                  </Card>
-
-                  <!-- 输出与调度（只显示调度信息） -->
-                  <Card title="输出与调度" class="h-full">
-                    <Descriptions layout="vertical" bordered>
-                      <!-- 调度配置信息 -->
-                      <Descriptions.Item label="调度状态">
-                        <Tag
-                          :color="
-                            record.scheduleStatus === 'scheduled'
-                              ? 'green'
-                              : record.scheduleStatus === 'error'
-                                ? 'red'
-                                : 'gray'
-                          "
-                        >
-                          {{
-                            record.scheduleStatus === 'scheduled'
-                              ? '调度中'
-                              : record.scheduleStatus === 'error'
-                                ? '调度错误'
-                                : '未调度'
-                          }}
-                        </Tag>
-                      </Descriptions.Item>
-
-                      <Descriptions.Item label="调度类型">
-                        {{
-                          record.detail?.taskStep4.scheduleConfig
-                            .intervalType || '未配置'
-                        }}
-                      </Descriptions.Item>
-
-                      <Descriptions.Item label="Cron表达式">
-                        {{
-                          record.detail?.taskStep4.scheduleConfig
-                            .cronExpression || '未配置'
-                        }}
-                      </Descriptions.Item>
-
-                      <Descriptions.Item label="调度作业">
-                        <div v-if="record.scheduleJobName">
-                          <Tag color="blue" class="mb-1">
-                            {{ record.scheduleJobName }}
-                          </Tag>
-                          <div class="mt-2 flex gap-2">
-                            <Button
-                              type="link"
-                              size="small"
-                              @click="handleViewScheduleStatus(record)"
-                            >
-                              查看调度状态
-                            </Button>
-                            <Button
-                              v-if="record.scheduleStatus === 'scheduled'"
-                              type="link"
-                              size="small"
-                              danger
-                              @click="handleStopSchedule(record)"
-                            >
-                              结束调度
-                            </Button>
-                          </div>
-                        </div>
-                        <div v-else class="text-gray-400">未创建调度作业</div>
-                      </Descriptions.Item>
-
-                      <Descriptions.Item label="下一个构建编号">
-                        <div
-                          v-if="
-                            record.scheduleStatus === 'scheduled' &&
-                            record.nextBuildNumber
-                          "
-                        >
-                          <Tag color="green">
-                            #{{ record.nextBuildNumber }}
-                          </Tag>
-                        </div>
-                        <div v-else class="text-gray-400">未调度</div>
-                      </Descriptions.Item>
-                    </Descriptions>
-                  </Card>
-                </div>
-              </TabPane>
-
-              <TabPane key="2" tab="执行记录">
-                <div class="mb-4 flex items-center justify-between">
-                  <div>
-                    <Button
-                      type="primary"
-                      danger
-                      :disabled="record.executeRecords.length === 0"
-                      @click="handleDeleteAllExecutions(record)"
-                      class="mr-2"
-                    >
-                      删除全部记录
-                    </Button>
-                    <span class="text-sm text-gray-500">
-                      共 {{ record.executeRecords.length }} 个执行记录
-                    </span>
-                  </div>
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'name'">
+              <a
+                @click="handleNameClick(record)"
+                class="text-blue-500 hover:underline"
+              >
+                {{ record.name }}
+              </a>
+            </template>
+            <template v-if="column.key === 'operation'">
+              <div class="flex gap-2">
+                <Tooltip title="执行任务">
                   <Button
                     type="primary"
+                    size="small"
                     @click="handleExecute(record)"
                     :disabled="record.status === 'running'"
                   >
-                    新建执行
+                    执行
                   </Button>
-                </div>
+                </Tooltip>
 
-                <Table
-                  :columns="executeRecordColumns"
-                  :data-source="record.executeRecords"
-                  :pagination="false"
-                  row-key="jobUid"
-                >
-                  <template #emptyText>
-                    <Empty description="暂无执行记录">
-                      <Button type="primary" @click="handleExecute(record)">
-                        执行任务
-                      </Button>
-                    </Empty>
-                  </template>
-
-                  <template #expandedRowRender="{ record: execRecord }">
-                    <div class="pipeline-stages">
-                      <div
-                        v-for="(stage, index) in execRecord.stages"
-                        :key="index"
-                        class="stage-item"
-                      >
-                        <div class="stage-header">
-                          <Tag
-                            :color="statusMap[stage.status]?.color || 'default'"
-                          >
-                            {{ index + 1 }}. {{ stage.stageName }}
-                          </Tag>
-                          <span class="stage-status">{{
-                            statusMap[stage.status]?.text || stage.status
-                          }}</span>
-                          <span class="stage-duration">{{
-                            formatDuration(stage.durationMillis)
-                          }}</span>
-                        </div>
-                        <div class="stage-time">
-                          {{ stage.startTime.toLocaleTimeString() }}
-                        </div>
-                      </div>
-                    </div>
-                  </template>
-                </Table>
-              </TabPane>
-
-              <!-- 修改后的调度记录TabPane -->
-              <TabPane key="3" tab="调度记录">
-                <div class="mb-4 flex items-center justify-between">
-                  <div>
-                    <Button
-                      type="primary"
-                      @click="fetchScheduleRecordsForTask(record)"
-                      class="mr-2"
-                    >
-                      刷新记录
-                    </Button>
-                    <span class="text-sm text-gray-500">
-                      共 {{ record.scheduleRecords.length }} 个调度记录
-                    </span>
-                  </div>
+                <Tooltip title="编辑任务">
                   <Button
                     type="primary"
-                    @click="handleStartSchedule(record)"
-                    v-if="record.scheduleStatus !== 'scheduled'"
+                    size="small"
+                    ghost
+                    @click="handleNameClick(record)"
                   >
-                    开始调度
+                    编辑
                   </Button>
-                </div>
+                </Tooltip>
 
-                <!-- 显示调度作业信息 -->
-                <div v-if="record.scheduleJobName" class="mb-4">
-                  <div class="grid grid-cols-2 gap-4">
-                    <div>
-                      <div class="text-sm text-gray-500">调度作业</div>
-                      <div class="text-lg font-medium">
-                        {{ record.scheduleJobName }}
-                      </div>
-                    </div>
-                    <div>
-                      <div class="text-sm text-gray-500">下一个构建编号</div>
-                      <div class="text-lg font-medium">
-                        <Tag color="blue" v-if="record.nextBuildNumber">
-                          #{{ record.nextBuildNumber }}
-                        </Tag>
-                        <span v-else class="text-gray-400">暂无</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <Dropdown :overlay="createMoreMenu(record)">
+                  <Button type="link" size="small">更多</Button>
+                </Dropdown>
+              </div>
+            </template>
+          </template>
 
-                <!-- 调度记录展示 -->
-                <div
-                  v-if="
-                    record.scheduleJobName && record.scheduleRecords.length > 0
-                  "
-                >
-                  <Collapse
-                    v-model:active-key="record.scheduleCollapseActiveKey"
-                    :bordered="false"
-                  >
-                    <Collapse.Panel
-                      key="schedule-builds"
-                      :header="`调度构建记录 (${record.scheduleRecords.length} 个)`"
-                    >
-                      <div class="build-record-grid">
-                        <div
-                          v-for="scheduleRecord in record.scheduleRecords"
-                          :key="scheduleRecord.buildNumber"
-                          class="build-record-item"
-                          :class="{
-                            success: scheduleRecord.overallStatus === 'SUCCESS',
-                            failed: scheduleRecord.overallStatus === 'FAILED',
-                            running:
-                              scheduleRecord.overallStatus === 'IN_PROGRESS',
-                            queued: scheduleRecord.overallStatus === 'QUEUED',
-                          }"
-                          @click="showScheduleBuildDetail(scheduleRecord)"
-                        >
-                          <div class="build-number">
-                            #{{ scheduleRecord.buildNumber }}
-                          </div>
-                          <div class="build-status">
-                            <Tag
-                              :color="
-                                getStatusColor(scheduleRecord.overallStatus)
-                              "
-                              size="small"
+          <template #expandedRowRender="{ record }">
+            <div class="bg-gray-50 p-4 dark:bg-gray-900">
+              <Tabs
+                :active-key="record.tabActiveKey"
+                @update:active-key="(key) => (record.tabActiveKey = key)"
+              >
+                <TabPane key="1" tab="任务详情">
+                  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <!-- 基础信息 -->
+                    <Card title="任务基础信息" class="h-full">
+                      <Descriptions layout="vertical" bordered>
+                        <Descriptions.Item label="任务名称">
+                          {{ record.detail?.taskStep1.taskName || '未命名' }}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="任务类型">
+                          {{ record.detail?.taskStep1.taskType || '未知类型' }}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="加密方式">
+                          {{ record.detail?.taskStep1.encryption || '无' }}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="任务区域">
+                          {{ record.detail?.taskStep1.taskZone || '默认区域' }}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Pod类型">
+                          {{ record.detail?.taskStep1.podType || '标准' }}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="资源类型">
+                          {{ record.detail?.taskStep1.resources || '默认资源' }}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="训练类型">
+                          {{ record.detail?.taskStep1.trainType || '训练' }}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="镜像">
+                          {{ record.detail?.taskStep1.image || '无' }}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="描述" :span="2">
+                          {{ record.detail?.taskStep1.describe || '无描述' }}
+                        </Descriptions.Item>
+                      </Descriptions>
+                    </Card>
+
+                    <!-- 算法与数据 -->
+                    <Card title="算法与数据" class="h-full">
+                      <Descriptions layout="vertical" bordered>
+                        <Descriptions.Item label="算法名称">
+                          {{
+                            record.detail?.taskStep2.algorithmName || '未知算法'
+                          }}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="算法版本">
+                          {{
+                            record.detail?.taskStep2.algorithmVersion ||
+                            '未知版本'
+                          }}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="任务入口">
+                          {{ record.detail?.taskStep2.taskroute || '无' }}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="数据集" :span="2">
+                          <div v-if="record.detail?.taskStep2.datasets?.length">
+                            <div
+                              v-for="(dataset, index) in record.detail
+                                ?.taskStep2.datasets"
+                              :key="index"
+                              class="mb-1"
                             >
-                              {{ scheduleRecord.overallStatus }}
+                              <Tag color="blue">
+                                {{ dataset.name }} = {{ dataset.selectedName }}
+                              </Tag>
+                            </div>
+                          </div>
+                          <div v-else class="text-gray-400">未配置数据集</div>
+                        </Descriptions.Item>
+                      </Descriptions>
+                    </Card>
+
+                    <!-- 训练配置 -->
+                    <Card title="训练配置" class="h-full">
+                      <Descriptions layout="vertical" bordered>
+                        <Descriptions.Item label="自定义变量" :span="2">
+                          <div
+                            v-if="
+                              record.detail?.taskStep3.customVariables?.length
+                            "
+                          >
+                            <div
+                              v-for="(variable, index) in record.detail
+                                ?.taskStep3.customVariables"
+                              :key="index"
+                              class="mb-1"
+                            >
+                              <Tag color="purple">
+                                {{ variable.name }} = {{ variable.value }}
+                              </Tag>
+                            </div>
+                          </div>
+                          <div v-else class="text-gray-400">
+                            未配置自定义变量
+                          </div>
+                        </Descriptions.Item>
+                        <Descriptions.Item label="训练配置格式">
+                          {{
+                            record.detail?.taskStep3.trainConfig.format || '无'
+                          }}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="训练配置内容" :span="2">
+                          <pre
+                            class="max-h-40 overflow-auto rounded bg-gray-100 p-3 dark:bg-gray-800"
+                            >{{
+                              record.detail?.taskStep3.trainConfig.content ||
+                              '无配置内容'
+                            }}</pre
+                          >
+                        </Descriptions.Item>
+                      </Descriptions>
+                    </Card>
+
+                    <!-- 输出与调度（只显示调度信息） -->
+                    <Card title="输出与调度" class="h-full">
+                      <Descriptions layout="vertical" bordered>
+                        <!-- 调度配置信息 -->
+                        <Descriptions.Item label="调度状态">
+                          <Tag
+                            :color="
+                              record.scheduleStatus === 'scheduled'
+                                ? 'green'
+                                : record.scheduleStatus === 'error'
+                                  ? 'red'
+                                  : 'gray'
+                            "
+                          >
+                            {{
+                              record.scheduleStatus === 'scheduled'
+                                ? '调度中'
+                                : record.scheduleStatus === 'error'
+                                  ? '调度错误'
+                                  : '未调度'
+                            }}
+                          </Tag>
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="调度类型">
+                          {{
+                            record.detail?.taskStep4.scheduleConfig
+                              .intervalType || '未配置'
+                          }}
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Cron表达式">
+                          {{
+                            record.detail?.taskStep4.scheduleConfig
+                              .cronExpression || '未配置'
+                          }}
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="调度作业">
+                          <div v-if="record.scheduleJobName">
+                            <Tag color="blue" class="mb-1">
+                              {{ record.scheduleJobName }}
+                            </Tag>
+                            <div class="mt-2 flex gap-2">
+                              <Button
+                                type="link"
+                                size="small"
+                                @click="handleViewScheduleStatus(record)"
+                              >
+                                查看调度状态
+                              </Button>
+                              <Button
+                                v-if="record.scheduleStatus === 'scheduled'"
+                                type="link"
+                                size="small"
+                                danger
+                                @click="handleStopSchedule(record)"
+                              >
+                                结束调度
+                              </Button>
+                            </div>
+                          </div>
+                          <div v-else class="text-gray-400">未创建调度作业</div>
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="下一个构建编号">
+                          <div
+                            v-if="
+                              record.scheduleStatus === 'scheduled' &&
+                              record.nextBuildNumber
+                            "
+                          >
+                            <Tag color="green">
+                              #{{ record.nextBuildNumber }}
                             </Tag>
                           </div>
-                          <div class="build-time text-xs text-gray-500">
-                            {{ scheduleRecord.startTime.toLocaleDateString() }}
+                          <div v-else class="text-gray-400">未调度</div>
+                        </Descriptions.Item>
+                      </Descriptions>
+                    </Card>
+                  </div>
+                </TabPane>
+
+                <TabPane key="2" tab="执行记录">
+                  <div class="mb-4 flex items-center justify-between">
+                    <div>
+                      <Button
+                        type="primary"
+                        danger
+                        :disabled="record.executeRecords.length === 0"
+                        @click="handleDeleteAllExecutions(record)"
+                        class="mr-2"
+                      >
+                        删除全部记录
+                      </Button>
+                      <span class="text-sm text-gray-500">
+                        共 {{ record.executeRecords.length }} 个执行记录
+                      </span>
+                    </div>
+                    <Button
+                      type="primary"
+                      @click="handleExecute(record)"
+                      :disabled="record.status === 'running'"
+                    >
+                      新建执行
+                    </Button>
+                  </div>
+
+                  <Table
+                    :columns="executeRecordColumns"
+                    :data-source="record.executeRecords"
+                    :pagination="false"
+                    row-key="jobUid"
+                  >
+                    <template #emptyText>
+                      <Empty description="暂无执行记录">
+                        <Button type="primary" @click="handleExecute(record)">
+                          执行任务
+                        </Button>
+                      </Empty>
+                    </template>
+
+                    <template #expandedRowRender="{ record: execRecord }">
+                      <div class="pipeline-stages">
+                        <div
+                          v-for="(stage, index) in execRecord.stages"
+                          :key="index"
+                          class="stage-item"
+                        >
+                          <div class="stage-header">
+                            <Tag
+                              :color="
+                                statusMap[stage.status]?.color || 'default'
+                              "
+                            >
+                              {{ index + 1 }}. {{ stage.stageName }}
+                            </Tag>
+                            <span class="stage-status">{{
+                              statusMap[stage.status]?.text || stage.status
+                            }}</span>
+                            <span class="stage-duration">{{
+                              formatDuration(stage.durationMillis)
+                            }}</span>
+                          </div>
+                          <div class="stage-time">
+                            {{ stage.startTime.toLocaleTimeString() }}
                           </div>
                         </div>
                       </div>
-                    </Collapse.Panel>
-                  </Collapse>
-                </div>
-                <div
-                  v-else-if="
-                    record.scheduleJobName &&
-                    record.scheduleRecords.length === 0
-                  "
-                >
-                  <div class="py-8 text-center text-gray-400">
-                    暂无调度构建记录
-                  </div>
-                </div>
-                <div v-else>
-                  <Empty description="暂无调度记录" class="py-8">
-                    <Button type="primary" @click="handleStartSchedule(record)">
+                    </template>
+                  </Table>
+                </TabPane>
+
+                <!-- 修改后的调度记录TabPane -->
+                <TabPane key="3" tab="调度记录">
+                  <div class="mb-4 flex items-center justify-between">
+                    <div>
+                      <Button
+                        type="primary"
+                        @click="fetchScheduleRecordsForTask(record)"
+                        class="mr-2"
+                      >
+                        刷新记录
+                      </Button>
+                      <span class="text-sm text-gray-500">
+                        共 {{ record.scheduleRecords.length }} 个调度记录
+                      </span>
+                    </div>
+                    <Button
+                      type="primary"
+                      @click="handleStartSchedule(record)"
+                      v-if="record.scheduleStatus !== 'scheduled'"
+                    >
                       开始调度
                     </Button>
-                  </Empty>
-                </div>
-              </TabPane>
-
-              <!-- 调整原有的TabPane key -->
-              <TabPane key="4" tab="上游依赖">
-                <Card class="p-4">
-                  <div class="mb-4">
-                    <Button type="primary" @click="addDependency(record.uid)">
-                      + 新增依赖
-                    </Button>
                   </div>
 
-                  <div
-                    v-for="(dependency, index) in upstreamState.dependencies[
-                      record.uid
-                    ]"
-                    :key="dependency.id"
-                    class="dependency-item mb-4 rounded border bg-white p-4"
-                  >
-                    <div v-if="dependency.isEditing" class="edit-mode">
-                      <div
-                        class="dependency-selectors mb-3 flex flex-wrap gap-3"
-                      >
-                        <Select
-                          v-model:value="dependency.type"
-                          placeholder="请选择任务类型"
-                          style="width: 200px"
-                          @change="dependency.task = ''"
-                        >
-                          <SelectOption
-                            v-for="type in upstreamState.taskTypes"
-                            :key="type"
-                            :value="type"
-                          >
-                            {{ type }}
-                          </SelectOption>
-                        </Select>
-
-                        <Select
-                          v-model:value="dependency.task"
-                          placeholder="请选择任务名称"
-                          style="width: 300px"
-                          :disabled="!dependency.type"
-                          show-search
-                          :filter-option="
-                            (input, option) =>
-                              option.children
-                                .toLowerCase()
-                                .indexOf(input.toLowerCase()) >= 0
-                          "
-                        >
-                          <SelectOption
-                            v-for="task in getTaskOptionsForRecord(
-                              dependency.type,
-                            )"
-                            :key="task"
-                            :value="task"
-                          >
-                            {{ task }}
-                          </SelectOption>
-                        </Select>
-
-                        <Button
-                          type="link"
-                          danger
-                          @click="deleteDependency(record.uid, index)"
-                          class="ml-2"
-                        >
-                          删除
-                        </Button>
-                      </div>
-
-                      <div class="action-buttons flex justify-end">
-                        <Button
-                          type="primary"
-                          :disabled="!dependency.task"
-                          @click="confirmDependency(record.uid, index)"
-                        >
-                          确认
-                        </Button>
-                        <Button
-                          style="margin-left: 8px"
-                          @click="cancelDependency(record.uid, index)"
-                        >
-                          取消
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div
-                      v-else
-                      class="confirmed-mode flex items-center justify-between"
-                    >
-                      <div class="selected-info">
-                        <div class="selected-text font-medium">
-                          依赖项 {{ index + 1 }}: {{ dependency.type }} -
-                          {{ dependency.task }}
+                  <!-- 显示调度作业信息 -->
+                  <div v-if="record.scheduleJobName" class="mb-4">
+                    <div class="grid grid-cols-2 gap-4">
+                      <div>
+                        <div class="text-sm text-gray-500">调度作业</div>
+                        <div class="text-lg font-medium">
+                          {{ record.scheduleJobName }}
                         </div>
                       </div>
                       <div>
-                        <Button
-                          type="link"
-                          danger
-                          @click="deleteDependency(record.uid, index)"
-                        >
-                          删除
-                        </Button>
-                        <Button
-                          type="link"
-                          @click="dependency.isEditing = true"
-                          class="ml-2"
-                        >
-                          编辑
-                        </Button>
+                        <div class="text-sm text-gray-500">下一个构建编号</div>
+                        <div class="text-lg font-medium">
+                          <Tag color="blue" v-if="record.nextBuildNumber">
+                            #{{ record.nextBuildNumber }}
+                          </Tag>
+                          <span v-else class="text-gray-400">暂无</span>
+                        </div>
                       </div>
                     </div>
                   </div>
 
+                  <!-- 调度记录展示 -->
                   <div
-                    v-if="!upstreamState.dependencies[record.uid]?.length"
-                    class="no-dependencies py-8 text-center text-gray-400"
+                    v-if="
+                      record.scheduleJobName &&
+                      record.scheduleRecords.length > 0
+                    "
                   >
-                    <Empty description="暂无上游依赖配置" />
+                    <Collapse
+                      v-model:active-key="record.scheduleCollapseActiveKey"
+                      :bordered="false"
+                    >
+                      <Collapse.Panel
+                        key="schedule-builds"
+                        :header="`调度构建记录 (${record.scheduleRecords.length} 个)`"
+                      >
+                        <div class="build-record-grid">
+                          <div
+                            v-for="scheduleRecord in record.scheduleRecords"
+                            :key="scheduleRecord.buildNumber"
+                            class="build-record-item"
+                            :class="{
+                              success:
+                                scheduleRecord.overallStatus === 'SUCCESS',
+                              failed: scheduleRecord.overallStatus === 'FAILED',
+                              running:
+                                scheduleRecord.overallStatus === 'IN_PROGRESS',
+                              queued: scheduleRecord.overallStatus === 'QUEUED',
+                            }"
+                            @click="showScheduleBuildDetail(scheduleRecord)"
+                          >
+                            <div class="build-number">
+                              #{{ scheduleRecord.buildNumber }}
+                            </div>
+                            <div class="build-status">
+                              <Tag
+                                :color="
+                                  getStatusColor(scheduleRecord.overallStatus)
+                                "
+                                size="small"
+                              >
+                                {{ scheduleRecord.overallStatus }}
+                              </Tag>
+                            </div>
+                            <div class="build-time text-xs text-gray-500">
+                              {{
+                                scheduleRecord.startTime.toLocaleDateString()
+                              }}
+                            </div>
+                          </div>
+                        </div>
+                      </Collapse.Panel>
+                    </Collapse>
                   </div>
-                </Card>
-              </TabPane>
-
-              <TabPane key="5" tab="下游任务">
-                <Card class="p-4">
                   <div
-                    v-if="downstreamTasks[record.uid]?.length"
-                    class="task-list"
+                    v-else-if="
+                      record.scheduleJobName &&
+                      record.scheduleRecords.length === 0
+                    "
                   >
-                    <div class="task-header flex bg-gray-100 dark:bg-gray-800 p-3 font-medium">
-                      <div class="header-item" style="width: 40%">任务名称</div>
-                      <div class="header-item" style="width: 40%">任务类型</div>
-                      <div class="header-item" style="width: 20%">操作</div>
+                    <div class="py-8 text-center text-gray-400">
+                      暂无调度构建记录
+                    </div>
+                  </div>
+                  <div v-else>
+                    <Empty description="暂无调度记录" class="py-8">
+                      <Button
+                        type="primary"
+                        @click="handleStartSchedule(record)"
+                      >
+                        开始调度
+                      </Button>
+                    </Empty>
+                  </div>
+                </TabPane>
+
+                <!-- 调整原有的TabPane key -->
+                <TabPane key="4" tab="上游依赖">
+                  <Card class="p-4">
+                    <div class="mb-4">
+                      <Button type="primary" @click="addDependency(record.uid)">
+                        + 新增依赖
+                      </Button>
                     </div>
 
                     <div
-                      v-for="(task, index) in downstreamTasks[record.uid]"
-                      :key="index"
-                      class="task-item flex items-center border-b p-3"
+                      v-for="(dependency, index) in upstreamState.dependencies[
+                        record.uid
+                      ]"
+                      :key="dependency.id"
+                      class="dependency-item mb-4 rounded border bg-white p-4"
                     >
-                      <div style="width: 40%" class="font-medium">
-                        {{ task.name }}
+                      <div v-if="dependency.isEditing" class="edit-mode">
+                        <div
+                          class="dependency-selectors mb-3 flex flex-wrap gap-3"
+                        >
+                          <Select
+                            v-model:value="dependency.type"
+                            placeholder="请选择任务类型"
+                            style="width: 200px"
+                            @change="dependency.task = ''"
+                          >
+                            <SelectOption
+                              v-for="type in upstreamState.taskTypes"
+                              :key="type"
+                              :value="type"
+                            >
+                              {{ type }}
+                            </SelectOption>
+                          </Select>
+
+                          <Select
+                            v-model:value="dependency.task"
+                            placeholder="请选择任务名称"
+                            style="width: 300px"
+                            :disabled="!dependency.type"
+                            show-search
+                            :filter-option="
+                              (input, option) =>
+                                option.children
+                                  .toLowerCase()
+                                  .indexOf(input.toLowerCase()) >= 0
+                            "
+                          >
+                            <SelectOption
+                              v-for="task in getTaskOptionsForRecord(
+                                dependency.type,
+                              )"
+                              :key="task"
+                              :value="task"
+                            >
+                              {{ task }}
+                            </SelectOption>
+                          </Select>
+
+                          <Button
+                            type="link"
+                            danger
+                            @click="deleteDependency(record.uid, index)"
+                            class="ml-2"
+                          >
+                            删除
+                          </Button>
+                        </div>
+
+                        <div class="action-buttons flex justify-end">
+                          <Button
+                            type="primary"
+                            :disabled="!dependency.task"
+                            @click="confirmDependency(record.uid, index)"
+                          >
+                            确认
+                          </Button>
+                          <Button
+                            style="margin-left: 8px"
+                            @click="cancelDependency(record.uid, index)"
+                          >
+                            取消
+                          </Button>
+                        </div>
                       </div>
-                      <div style="width: 40%">
-                        <Tag color="blue">{{ task.type }}</Tag>
-                      </div>
-                      <div style="width: 20%">
-                        <Button type="link" size="small">查看</Button>
+
+                      <div
+                        v-else
+                        class="confirmed-mode flex items-center justify-between"
+                      >
+                        <div class="selected-info">
+                          <div class="selected-text font-medium">
+                            依赖项 {{ index + 1 }}: {{ dependency.type }} -
+                            {{ dependency.task }}
+                          </div>
+                        </div>
+                        <div>
+                          <Button
+                            type="link"
+                            danger
+                            @click="deleteDependency(record.uid, index)"
+                          >
+                            删除
+                          </Button>
+                          <Button
+                            type="link"
+                            @click="dependency.isEditing = true"
+                            class="ml-2"
+                          >
+                            编辑
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div v-else class="no-tasks py-8">
-                    <Empty description="当前任务没有被任何下游任务依赖" />
-                  </div>
-                </Card>
-              </TabPane>
-            </Tabs>
-          </div>
-        </template>
+                    <div
+                      v-if="!upstreamState.dependencies[record.uid]?.length"
+                      class="no-dependencies py-8 text-center text-gray-400"
+                    >
+                      <Empty description="暂无上游依赖配置" />
+                    </div>
+                  </Card>
+                </TabPane>
 
-        <template #empty>
-          <Empty description="暂无训练任务">
-            <Button type="primary" @click="handleAdd">创建新任务</Button>
-          </Empty>
-        </template>
-      </Table>
+                <TabPane key="5" tab="下游任务">
+                  <Card class="p-4">
+                    <div
+                      v-if="downstreamTasks[record.uid]?.length"
+                      class="task-list"
+                    >
+                      <div
+                        class="task-header flex bg-gray-100 p-3 font-medium dark:bg-gray-800"
+                      >
+                        <div class="header-item" style="width: 40%">
+                          任务名称
+                        </div>
+                        <div class="header-item" style="width: 40%">
+                          任务类型
+                        </div>
+                        <div class="header-item" style="width: 20%">操作</div>
+                      </div>
+
+                      <div
+                        v-for="(task, index) in downstreamTasks[record.uid]"
+                        :key="index"
+                        class="task-item flex items-center border-b p-3"
+                      >
+                        <div style="width: 40%" class="font-medium">
+                          {{ task.name }}
+                        </div>
+                        <div style="width: 40%">
+                          <Tag color="blue">{{ task.type }}</Tag>
+                        </div>
+                        <div style="width: 20%">
+                          <Button type="link" size="small">查看</Button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div v-else class="no-tasks py-8">
+                      <Empty description="当前任务没有被任何下游任务依赖" />
+                    </div>
+                  </Card>
+                </TabPane>
+              </Tabs>
+            </div>
+          </template>
+
+          <template #empty>
+            <Empty description="暂无训练任务">
+              <Button type="primary" @click="handleAdd">创建新任务</Button>
+            </Empty>
+          </template>
+        </Table>
+      </Card>
     </Card>
-  </Card>
+  </BusinessPage>
 </template>
 
 <style scoped>
@@ -2583,5 +2623,26 @@ const data = ref<DataItem[]>([]);
 
 .schedule-build-detail .ant-tag {
   margin-right: 4px;
+}
+</style>
+
+<style scoped>
+.training-filters {
+  padding: 0 0 18px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--xnet-line);
+}
+.training-filters label {
+  color: var(--xnet-muted);
+  font-size: 12px;
+}
+.training-filters :deep(.ant-select) {
+  width: 100%;
+}
+.training-table :deep(> .ant-card-body) {
+  padding: 0 !important;
+}
+.training-list-workbench :deep(> .ant-card-body) {
+  padding: 18px !important;
 }
 </style>

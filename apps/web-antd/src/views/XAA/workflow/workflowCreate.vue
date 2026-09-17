@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import { reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
@@ -76,6 +77,7 @@ const handleCancel = () => {
 </script>
 
 <template>
+  <BusinessPage domain="智能协作" description="用助手、技能与工作流串联日常任务，查看每一步执行记录。">
   <Card title="创建工作流" class="p-4 shadow">
     <Form
       ref="formRef"
@@ -125,4 +127,6 @@ const handleCancel = () => {
       </FormItem>
     </Form>
   </Card>
+
+  </BusinessPage>
 </template>

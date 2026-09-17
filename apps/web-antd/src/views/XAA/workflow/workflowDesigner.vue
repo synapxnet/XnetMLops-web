@@ -1,7 +1,9 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import { onMounted, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { message, Spin } from 'ant-design-vue';
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router';
+import { Alert, Button, Modal, message, Spin } from 'ant-design-vue';
+import { decodeGraph, encodeGraph } from './graph-contract';
 
 import { WorkflowDesigner } from './designer';
 import type { WorkflowNode, WorkflowEdge } from './designer/types';
@@ -21,6 +23,7 @@ const route = useRoute();
 const workflow = ref<Workflow | null>(null);
 const workflowId = ref<number>(0);
 const loading = ref(true);
+const loadError = ref('');
 
 // 初始节点和边
 const initialNodes = ref<WorkflowNode[]>([]);
@@ -29,7 +32,7 @@ const initialEdges = ref<WorkflowEdge[]>([]);
 // 设计器引用
 const designerRef = ref<InstanceType<typeof WorkflowDesigner> | null>(null);
 
-// 加载工作流数据
+// 读取真实工作流，失败时不开放伪造的空画布。Load the real workflow and keep the editor closed on failure.
 const loadWorkflow = async () => {
   const id = route.query.id;
   if (!id) {
@@ -40,6 +43,7 @@ const loadWorkflow = async () => {
 
   workflowId.value = Number(id);
   loading.value = true;
+  loadError.value = '';
 
   try {
     // 获取工作流基本信息
@@ -51,32 +55,12 @@ const loadWorkflow = async () => {
       fetchWorkflowEdges(workflowId.value),
     ]);
 
-    // 转换后端数据为设计器格式
-    initialNodes.value = nodesData.map((node: any) => ({
-      id: node.uid || `node-${node.id}`,
-      type: 'custom',
-      position: {
-        x: node.positionX || 100,
-        y: node.positionY || 100,
-      },
-      data: {
-        type: node.nodeType,
-        title: node.title,
-        description: node.description || '',
-        config: node.configJson ? JSON.parse(node.configJson) : {},
-      },
-    }));
-
-    initialEdges.value = edgesData.map((edge: any) => ({
-      id: edge.uid || `edge-${edge.id}`,
-      source: edge.sourceNodeId?.toString() || edge.sourceNodeUid,
-      target: edge.targetNodeId?.toString() || edge.targetNodeUid,
-      sourceHandle: edge.sourceHandle,
-      targetHandle: edge.targetHandle,
-      type: 'smoothstep',
-    }));
+    const graph = decodeGraph(nodesData, edgesData);
+    initialNodes.value = graph.nodes;
+    initialEdges.value = graph.edges;
 
   } catch (error) {
+    loadError.value = error instanceof Error ? error.message : '工作流暂时无法加载';
     console.error('加载工作流失败:', error);
     message.error('加载工作流失败');
   } finally {
@@ -84,47 +68,21 @@ const loadWorkflow = async () => {
   }
 };
 
-// 保存工作流
+// 保存工作流后才确认编辑器已持久化。Confirm persistence only after the workflow API succeeds.
 const handleSave = async (data: { nodes: WorkflowNode[]; edges: WorkflowEdge[] }) => {
   try {
-    // 转换设计器数据为后端格式
-    const workflowNodes = data.nodes.map((node, index) => ({
-      uid: node.id,
-      workflowId: workflowId.value,
-      nodeType: node.data.type,
-      title: node.data.title,
-      description: node.data.description || '',
-      configJson: JSON.stringify(node.data.config || {}),
-      positionX: node.position.x,
-      positionY: node.position.y,
-      width: node.width || 200,
-      height: node.height || 80,
-      sortOrder: index,
-    }));
+    await saveWorkflowGraph(workflowId.value, encodeGraph(workflowId.value, data));
 
-    const workflowEdges = data.edges.map((edge) => ({
-      uid: edge.id,
-      workflowId: workflowId.value,
-      sourceNodeUid: edge.source,
-      targetNodeUid: edge.target,
-      sourceHandle: edge.sourceHandle || '',
-      targetHandle: edge.targetHandle || '',
-      edgeType: 'default',
-    }));
-
-    await saveWorkflowGraph(workflowId.value, {
-      nodes: workflowNodes,
-      edges: workflowEdges,
-    });
-
+    designerRef.value?.finishSave(true);
     message.success('工作流保存成功');
   } catch (error) {
     console.error('保存工作流失败:', error);
     message.error('保存工作流失败');
+    designerRef.value?.finishSave(false);
   }
 };
 
-// 运行工作流
+// 运行请求完成后解除编辑器忙碌状态。Release editor busy state after the execution request finishes.
 const handleRun = async (id: number) => {
   try {
     const execution = await executeWorkflow(id, {
@@ -139,19 +97,31 @@ const handleRun = async (id: number) => {
   } catch (error) {
     console.error('执行工作流失败:', error);
     message.error('执行工作流失败');
+  } finally {
+    designerRef.value?.finishRun();
   }
 };
 
 onMounted(() => {
   loadWorkflow();
 });
+
+/** 离开前保留未保存草稿的决定权。Keep unsaved draft decisions with the user before leaving. */
+onBeforeRouteLeave(() => {
+  if (!designerRef.value?.hasUnsavedChanges()) return true;
+  return new Promise<boolean>((resolve) => {
+    Modal.confirm({ title: '离开工作流设计器', content: '还有未保存的修改，离开会保留当前缓存页，但关闭页签或刷新后无法恢复。', okText: '离开', cancelText: '继续编辑', onOk: () => resolve(true), onCancel: () => resolve(false) });
+  });
+});
 </script>
 
 <template>
+  <BusinessPage domain="智能协作" description="用助手、技能与工作流串联日常任务，查看每一步执行记录。">
   <div class="workflow-designer-page">
     <Spin :spinning="loading" tip="加载中...">
+      <Alert v-if="loadError" type="error" show-icon message="工作流未加载" :description="loadError"><template #action><Button @click="loadWorkflow">重试</Button></template></Alert>
       <WorkflowDesigner
-        v-if="!loading"
+        v-if="!loading && !loadError"
         ref="designerRef"
         :workflow-id="workflowId"
         :workflow-name="workflow?.name || '未命名工作流'"
@@ -162,6 +132,8 @@ onMounted(() => {
       />
     </Spin>
   </div>
+
+  </BusinessPage>
 </template>
 
 <style scoped>

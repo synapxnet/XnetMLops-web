@@ -1,8 +1,10 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import {
+  Alert,
   Button,
   Card,
   Descriptions,
@@ -29,6 +31,7 @@ const route = useRoute();
 const execution = ref<WorkflowExecution | null>(null);
 const nodeExecutions = ref<NodeExecution[]>([]);
 const loading = ref(false);
+const loadError = ref('');
 const executionId = ref<number>(0);
 
 // 表格列定义
@@ -41,7 +44,7 @@ const columns = [
   { title: '错误信息', dataIndex: 'errorMessage', key: 'errorMessage', ellipsis: true },
 ];
 
-// 加载数据
+// 请求失败清除旧详情并显示重试。Clear stale execution details and show retry after read failure.
 const loadData = async () => {
   const id = route.query.id;
   if (!id) {
@@ -52,11 +55,15 @@ const loadData = async () => {
 
   executionId.value = Number(id);
   loading.value = true;
+  loadError.value = '';
 
   try {
     execution.value = await fetchExecutionById(executionId.value);
     nodeExecutions.value = await fetchNodeExecutions(executionId.value);
   } catch (error) {
+    execution.value = null;
+    nodeExecutions.value = [];
+    loadError.value = error instanceof Error ? error.message : '执行详情暂不可用';
     console.error('加载执行详情失败:', error);
     message.error('加载执行详情失败');
   } finally {
@@ -153,7 +160,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="execution-detail">
+  <BusinessPage domain="智能协作" description="用助手、技能与工作流串联日常任务，查看每一步执行记录。">
+  <Alert v-if="loadError" type="error" show-icon message="执行详情未加载" :description="loadError"><template #action><Button @click="loadData">重试</Button></template></Alert>
+  <div v-if="!loadError" class="execution-detail">
     <!-- 执行概览 -->
     <Card class="mb-4">
       <template #title>
@@ -275,6 +284,8 @@ onMounted(() => {
       </Table>
     </Card>
   </div>
+
+  </BusinessPage>
 </template>
 
 <style scoped>

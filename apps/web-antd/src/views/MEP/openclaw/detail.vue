@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import { onMounted, onUnmounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
@@ -14,6 +15,7 @@ import {
   SyncOutlined,
 } from '@ant-design/icons-vue';
 import {
+  Alert,
   Button,
   Card,
   Col,
@@ -36,6 +38,7 @@ const router = useRouter();
 const route = useRoute();
 
 const loading = ref(false);
+const loadError = ref('');
 const instance = ref<any>(null);
 const logs = ref('');
 const logsLoading = ref(false);
@@ -44,7 +47,7 @@ const operating = ref(false);
 // 自动刷新
 let refreshTimer: number | null = null;
 
-// 加载实例数据
+// 读取失败时清空实例，不显示虚假的停止状态。Clear the instance on read failure without inventing a stopped state.
 const loadInstance = async () => {
   const id = route.query.id as string;
   if (!id) {
@@ -54,10 +57,14 @@ const loadInstance = async () => {
   }
 
   loading.value = true;
+  loadError.value = '';
   try {
     const res = await mepRequestClient.get<any>(`/openclaw/instances/${id}`);
     instance.value = res?.data ?? res;
   } catch (error) {
+    instance.value = null;
+    logs.value = '';
+    loadError.value = error instanceof Error ? error.message : 'OpenClaw实例暂不可用';
     console.error('加载实例数据失败:', error);
     message.error('加载实例数据失败');
   } finally {
@@ -87,6 +94,7 @@ const loadLogs = async () => {
 
 // 启动实例
 const handleStart = () => {
+  if (!instance.value || operating.value) return;
   Modal.confirm({
     title: '确认启动',
     content: '确定要启动该OpenClaw实例吗？源码模式首次启动可能需要几分钟。',
@@ -110,6 +118,7 @@ const handleStart = () => {
 
 // 停止实例
 const handleStop = () => {
+  if (!instance.value || operating.value) return;
   Modal.confirm({
     title: '确认停止',
     content: '确定要停止该OpenClaw实例吗？',
@@ -133,6 +142,7 @@ const handleStop = () => {
 
 // 重启实例
 const handleRestart = () => {
+  if (!instance.value || operating.value) return;
   Modal.confirm({
     title: '确认重启',
     content: '确定要重启该OpenClaw实例吗？将重新配置并启动Gateway（不会重新安装环境）。',
@@ -156,6 +166,7 @@ const handleRestart = () => {
 
 // 编辑
 const handleEdit = () => {
+  if (!instance.value) return;
   router.push({
     path: '/MEP/openclaw/create',
     query: { id: instance.value.id },
@@ -209,7 +220,10 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="p-4">
+  <BusinessPage domain="服务交付" description="集中管理模型服务、节点与访问密钥，按实际运行结果确认状态。" :existing-title="Boolean(instance)">
+  <Alert v-if="loadError" type="error" show-icon message="OpenClaw 实例未加载" :description="loadError"><template #action><Button @click="loadInstance">重试</Button></template></Alert>
+  <div v-if="loading && !instance" class="py-8">正在加载实例…</div>
+  <div v-if="instance" class="p-4">
     <!-- 页面标题 -->
     <Card class="mb-4 shadow">
       <div class="flex items-center justify-between">
@@ -381,6 +395,8 @@ onUnmounted(() => {
       </Row>
     </Spin>
   </div>
+
+  </BusinessPage>
 </template>
 
 <style scoped>

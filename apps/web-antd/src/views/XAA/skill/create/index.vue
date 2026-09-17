@@ -1,4 +1,5 @@
 <template>
+  <BusinessPage domain="智能协作" description="用助手、技能与工作流串联日常任务，查看每一步执行记录。">
   <div class="create-skill">
     <Card class="create-skill__card">
       <template #title>
@@ -147,9 +148,12 @@
       </Form>
     </Card>
   </div>
+
+  </BusinessPage>
 </template>
 
 <script setup lang="ts">
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import {

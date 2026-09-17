@@ -1,8 +1,8 @@
 <script lang="ts" setup>
-// 编辑页面直接复用创建页面组件
+import AssistantForm from './create.vue';
+// 以真实Vue组件复用编辑表单，避免把Promise渲染为内容。 Reuse the actual Vue form component instead of rendering an import Promise.
 </script>
 
 <template>
-  <!-- 编辑助手页面，复用create.vue的逻辑 -->
-  <component :is="() => import('./create.vue')" />
+  <AssistantForm />
 </template>

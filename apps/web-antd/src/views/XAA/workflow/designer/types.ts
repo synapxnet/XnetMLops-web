@@ -204,6 +204,9 @@ export interface WorkflowEdge {
   type?: string;
   animated?: boolean;
   style?: Record<string, any>;
+  edgeType?: string;
+  conditionJson?: string;
+  sortOrder?: number;
 }
 
 // 控制模式

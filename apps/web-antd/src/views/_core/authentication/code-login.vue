@@ -11,8 +11,6 @@ defineOptions({ name: 'CodeLogin' });
 
 const CODE_LENGTH = 6;
 const authStore = useAuthStore();
-const DEMO_PHONE = '17870171303';
-const DEMO_VERIFICATION_CODE = '000000';
 /**
  * 表单配置
  * Form configuration
@@ -24,7 +22,6 @@ const formSchema = computed((): VbenFormSchema[] => {
       componentProps: {
         placeholder: $t('authentication.mobile'),
       },
-      defaultValue: DEMO_PHONE,
       fieldName: 'phoneNumber',
       label: $t('authentication.mobile'),
       rules: z
@@ -44,7 +41,6 @@ const formSchema = computed((): VbenFormSchema[] => {
         placeholder: $t('authentication.code'),
         showSendButton: false,
       },
-      defaultValue: DEMO_VERIFICATION_CODE,
       fieldName: 'code',
       label: $t('authentication.code'),
       rules: z.string().length(CODE_LENGTH, {

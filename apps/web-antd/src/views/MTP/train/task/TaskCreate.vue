@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
+import { Alert } from 'ant-design-vue';
 import type { ComponentPublicInstance, Ref } from 'vue';
 
 import type { TaskFormState } from '../taskcommon/task';
@@ -6,9 +8,7 @@ import type { TaskFormState } from '../taskcommon/task';
 import { computed, inject, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
-import { Page } from '@vben/common-ui';
-
-import { Button, Card, message, Steps } from 'ant-design-vue';
+import { Button, message, Steps } from 'ant-design-vue';
 
 // 导入训练任务API
 import {
@@ -35,6 +35,8 @@ const isEditMode = ref(false);
 const isCopyMode = ref(false);
 const taskId = ref<null | string>(null);
 const copyFromId = ref<null | string>(null);
+const sourceLoading = ref(false);
+const sourceError = ref('');
 const currentStep = ref(0);
 const steps = ref([
   { title: '基础信息' },
@@ -57,6 +59,7 @@ const stepRefs = [
 const activeStepComponent = computed(() => stepComponents[currentStep.value]);
 // 步骤切换方法
 const handleStepChange = async (newStep: number) => {
+  if (sourceLoading.value || sourceError.value) return;
   if (newStep < 0 || newStep > 3) return;
 
   // 向后跳转时验证当前步骤
@@ -155,8 +158,10 @@ onMounted(() => {
   }
 });
 
-// 加载任务数据
+// 加载编辑来源，失败时阻止空记录编辑。Load the source task and prevent empty editing after failure.
 const loadTaskData = async (id: string) => {
+  sourceLoading.value = true;
+  sourceError.value = '';
   try {
     const taskData = await fetchTrainTaskDetail(id, tenantUid.value);
 
@@ -208,12 +213,16 @@ const loadTaskData = async (id: string) => {
       },
     };
   } catch {
-    message.error('加载任务数据失败');
+    sourceError.value = '原任务暂时无法加载，请重试后再编辑。';
+  } finally {
+    sourceLoading.value = false;
   }
 };
 
-// 加载任务数据用于复制（不设置uid，修改名称）
+// 加载复制来源，失败时不创建缺少配置的任务。Load the copy source without creating a task from missing configuration.
 const loadTaskDataForCopy = async (id: string) => {
+  sourceLoading.value = true;
+  sourceError.value = '';
   try {
     const taskData = await fetchTrainTaskDetail(id, tenantUid.value);
 
@@ -269,7 +278,9 @@ const loadTaskDataForCopy = async (id: string) => {
 
     message.info('已加载任务数据，请修改任务名称后保存');
   } catch {
-    message.error('加载任务数据失败');
+    sourceError.value = '原任务暂时无法加载，请重试后再复制。';
+  } finally {
+    sourceLoading.value = false;
   }
 };
 
@@ -321,62 +332,224 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-  <!-- 动态标题 -->
-  <Page :title="pageTitle" />
-  <Card class="p-4 shadow">
-    <div v-if="isEditMode" class="edit-mode-indicator">编辑模式</div>
-    <!-- 步骤指示器 -->
-    <Steps
-      :current="currentStep"
-      :items="steps"
-      label-placement="vertical"
-      class="mb-8"
-      @change="handleStepChange"
-    />
-
-    <!-- 步骤内容容器 -->
-    <!-- 动态步骤内容 -->
-    <div class="step-content-container">
-      <KeepAlive>
-        <component
-          :is="activeStepComponent"
-          :ref="stepRefs[currentStep]"
-          @update:model-value="(val) => (formState = val)"
-          v-model="formState"
-          @next="() => handleStepChange(currentStep + 1)"
-          @prev="() => handleStepChange(currentStep - 1)"
-          @submit="handleSubmit"
-          :is-edit-mode="isEditMode"
+  <BusinessPage
+    domain="模型研发"
+    description="配置训练任务、算法数据、参数与调度。"
+    :title="pageTitle"
+    variant="form"
+  >
+    <template #actions><AButton @click="close">返回训练任务</AButton></template>
+    <Alert
+      v-if="sourceError"
+      type="error"
+      show-icon
+      message="原任务未加载"
+      :description="sourceError"
+      ><template #action
+        ><AButton
+          @click="
+            () =>
+              isEditMode && taskId
+                ? loadTaskData(taskId)
+                : copyFromId
+                  ? loadTaskDataForCopy(copyFromId)
+                  : undefined
+          "
+          >重试</AButton
+        ></template
+      ></Alert
+    >
+    <div v-if="sourceLoading" class="py-8">正在加载原任务…</div>
+    <section v-if="!sourceError && !sourceLoading" class="training-editor">
+      <div class="training-stepbar">
+        <!-- 步骤指示器 -->
+        <Steps
+          :current="currentStep"
+          :items="steps"
+          size="small"
+          @change="handleStepChange"
         />
-      </KeepAlive>
-    </div>
-    <!-- 操作按钮 -->
-    <div class="action-buttons">
-      <div class="btn-group">
-        <AButton
-          type="primary"
-          v-if="currentStep > 0"
-          @click="() => handleStepChange(currentStep - 1)"
-        >
-          上一步
-        </AButton>
-        <AButton
-          type="primary"
-          v-if="currentStep < 3"
-          @click="() => handleStepChange(currentStep + 1)"
-        >
-          下一步
-        </AButton>
-        <AButton type="primary" @click="close" v-if="currentStep === 0">
-          取消
-        </AButton>
-        <AButton type="primary" v-if="currentStep === 3" @click="handleSubmit">
-          {{ isEditMode ? '更新' : isCopyMode ? '保存副本' : '提交' }}
-        </AButton>
       </div>
-    </div>
-  </Card>
+      <div class="training-step-heading">
+        <h2>{{ steps[currentStep]?.title }}</h2>
+        <span
+          >第 {{ currentStep + 1 }} / 4 步<span v-if="isEditMode">
+            · 编辑任务</span
+          ><span v-else-if="isCopyMode"> · 复制任务</span></span
+        >
+      </div>
+
+      <!-- 步骤内容容器 -->
+      <!-- 动态步骤内容 -->
+      <div class="step-content-container">
+        <KeepAlive>
+          <component
+            :is="activeStepComponent"
+            :ref="stepRefs[currentStep]"
+            @update:model-value="(val) => (formState = val)"
+            v-model="formState"
+            @next="() => handleStepChange(currentStep + 1)"
+            @prev="() => handleStepChange(currentStep - 1)"
+            @submit="handleSubmit"
+            :is-edit-mode="isEditMode"
+          />
+        </KeepAlive>
+      </div>
+      <!-- 操作按钮 -->
+      <div class="action-buttons training-actions">
+        <span>完成当前配置后继续下一步</span>
+        <div class="btn-group">
+          <AButton
+            v-if="currentStep > 0"
+            @click="() => handleStepChange(currentStep - 1)"
+          >
+            上一步
+          </AButton>
+          <AButton
+            type="primary"
+            v-if="currentStep < 3"
+            @click="() => handleStepChange(currentStep + 1)"
+          >
+            下一步
+          </AButton>
+          <AButton @click="close" v-if="currentStep === 0"> 取消 </AButton>
+          <AButton
+            type="primary"
+            v-if="currentStep === 3"
+            @click="handleSubmit"
+          >
+            {{ isEditMode ? '更新' : isCopyMode ? '保存副本' : '提交' }}
+          </AButton>
+        </div>
+      </div>
+    </section>
+  </BusinessPage>
 </template>
 <style lang="scss" scoped>
 @use '../taskcommon/form-styles.scss' as *;
+.training-editor {
+  border: 1px solid var(--xnet-line);
+  border-radius: var(--xnet-radius);
+  background: var(--xnet-surface);
+  overflow: hidden;
+}
+.training-stepbar {
+  padding: 20px 26px;
+  border-bottom: 1px solid var(--xnet-line);
+  background: color-mix(in srgb, var(--xnet-base) 55%, var(--xnet-surface));
+}
+.training-step-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 22px 26px 0;
+}
+.training-step-heading h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+.training-step-heading > span {
+  font-size: 12px;
+  color: var(--xnet-muted);
+}
+.step-content-container {
+  padding: 22px 26px 26px;
+}
+.training-actions {
+  margin: 0;
+  padding: 16px 26px;
+  border-top: 1px solid var(--xnet-line);
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  background: color-mix(in srgb, var(--xnet-base) 45%, var(--xnet-surface));
+}
+.training-actions > span {
+  font-size: 12px;
+  color: var(--xnet-muted);
+}
+.training-actions .btn-group {
+  width: auto;
+  padding: 0;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.training-actions .btn-group button {
+  height: 34px;
+  min-width: 86px;
+}
+@media (max-width: 768px) {
+  .training-stepbar {
+    padding: 16px;
+  }
+  .training-step-heading {
+    padding: 18px 16px 0;
+  }
+  .step-content-container {
+    padding: 18px 16px;
+  }
+  .training-actions {
+    padding: 14px 16px;
+    flex-wrap: wrap;
+  }
+  .training-actions .btn-group {
+    margin-left: auto;
+  }
+}
+/* 窄屏步骤采用两行排列，保留组件的当前、禁用与点击行为。Arrange mobile steps in two rows while retaining current, disabled and click behavior. */
+@media (max-width: 576px) {
+  .training-stepbar {
+    padding: 12px;
+  }
+  .training-stepbar :deep(.ant-steps) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .training-stepbar :deep(.ant-steps > .ant-steps-item) {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+  }
+  .training-stepbar
+    :deep(.ant-steps .ant-steps-item > .ant-steps-item-container) {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    padding: 4px 6px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+  }
+  .training-stepbar
+    :deep(.ant-steps .ant-steps-item-active > .ant-steps-item-container) {
+    border-color: hsl(var(--primary) / 28%);
+    background: hsl(var(--primary) / 8%);
+  }
+  .training-stepbar :deep(.ant-steps .ant-steps-item .ant-steps-item-icon) {
+    flex: 0 0 20px;
+    float: none;
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    font-size: 12px;
+    line-height: 18px;
+  }
+  .training-stepbar :deep(.ant-steps .ant-steps-item .ant-steps-item-content) {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+  }
+  .training-stepbar :deep(.ant-steps .ant-steps-item .ant-steps-item-title) {
+    padding: 0;
+    font-size: 12px;
+    line-height: 20px;
+  }
+  .training-stepbar :deep(.ant-steps-item-tail),
+  .training-stepbar :deep(.ant-steps-item-title::after) {
+    display: none !important;
+  }
+}
 </style>

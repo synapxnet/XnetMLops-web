@@ -10,7 +10,7 @@ interface Props {
   workerNodes: ClusterNode[];
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), { masterNodes: () => [], workerNodes: () => [] });
 const emit = defineEmits<{
   'node-click': [node: ClusterNode];
 }>();
@@ -65,12 +65,18 @@ function handleNodeClick(node: ClusterNode) {
 }
 
 function getMasterPosition(masterId?: number) {
-  if (!masterId && topologyLayout.value.masters.length > 0) {
+  if (!masterId && topologyLayout.value.masters.length === 1) {
     return topologyLayout.value.masters[0];
   }
   const master = topologyLayout.value.masters.find(m => m.id === masterId);
-  return master || topologyLayout.value.masters[0];
+  return master;
 }
+
+/** 只绘制已解析的真实关联，孤立Worker保留节点而不伪造连线。Draw resolved relationships while keeping orphan workers visible without invented edges. */
+const connections = computed(() => topologyLayout.value.workers.flatMap((worker) => {
+  const from = getMasterPosition(worker.masterId);
+  return from ? [{ worker, from }] : [];
+}));
 </script>
 
 <template>
@@ -127,11 +133,11 @@ function getMasterPosition(masterId?: number) {
       <!-- 连接线 -->
       <g class="connections" filter="url(#line-glow)">
         <ConnectionLine
-          v-for="worker in topologyLayout.workers"
-          :key="`line-${worker.id}`"
-          :from="getMasterPosition(worker.masterId)"
-          :to="worker"
-          :status="worker.status"
+          v-for="connection in connections"
+          :key="`line-${connection.worker.id}`"
+          :from="connection.from"
+          :to="connection.worker"
+          :status="connection.worker.status"
         />
       </g>
 

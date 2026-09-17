@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
+import { publicRequestMessage } from '#/api/public-error';
 import type {
   DockerFile,
   DockerFilePushStatus,
@@ -50,6 +52,7 @@ const tenantUid = ref('default-tenant'); // 示例值，实际应从认证信息
 const dockerFiles = ref<DockerFile[]>([]);
 const harborRepositories = ref<HarborRepository[]>([]);
 const loading = ref(true);
+const readError = ref('');
 const tableKey = ref(0); // 用于强制重新渲染表格
 
 // 当前编辑的Docker文件
@@ -70,10 +73,11 @@ const isEditing = ref(false);
 const newTag = ref('');
 const searchQuery = ref('');
 
-// 加载数据
+// 读取失败时保留可重试状态，避免显示空镜像目录。 Preserve retryable read failures instead of displaying an empty image catalog.
 const loadData = async () => {
   try {
     loading.value = true;
+    readError.value = '';
     const [filesRes, harborRes] = await Promise.all([
       getDockerFiles(),
       getHarborRepositories(),
@@ -89,8 +93,8 @@ const loadData = async () => {
           push_history: item.pushHistory || null,
           created_by: item.created_by || '',
           updated_by: item.updated_by || '',
-          created_at: item.created_at || new Date().toISOString(),
-          updated_at: item.updated_at || new Date().toISOString(),
+          created_at: item.created_at || '',
+          updated_at: item.updated_at || '',
         }))
       : [];
 
@@ -100,6 +104,9 @@ const loadData = async () => {
 
     tableKey.value++; // 每次加载数据后更新key，强制重新渲染表格
   } catch (error) {
+    dockerFiles.value = [];
+    harborRepositories.value = [];
+    readError.value = publicRequestMessage(error, '镜像配置读取失败');
     message.error('数据加载失败');
     console.error('数据加载错误:', error);
   } finally {
@@ -571,172 +578,183 @@ onMounted(() => {
 </script>
 
 <template>
-  <Page title="Docker文件管理">
-    <div class="container mx-auto px-4 py-6">
-      <!-- 标题和操作区 -->
-      <div class="mb-6 flex items-center justify-between">
-        <div class="flex gap-3">
-          <Button
-            type="primary"
-            @click="createNewFile"
-            class="flex items-center"
-          >
-            <PlusOutlined />
-            创建新文件
-          </Button>
-        </div>
-      </div>
-
-      <!-- 搜索和列表区 -->
-      <Card class="rounded-lg shadow">
-        <template #title>
-          <div
-            class="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center"
-          >
-            <h2 class="text-lg font-semibold">Docker文件列表</h2>
-            <Input
-              v-model:value="searchQuery"
-              placeholder="搜索文件名、内容或标签..."
-              class="w-full md:w-80"
-              allow-clear
+  <BusinessPage
+    domain="资源配置"
+    description="管理组织内的数据连接、仓库、工作站与计算资源。"
+    existing-title
+    :error="readError"
+    :loading="loading"
+    @retry="loadData"
+  >
+    <Page title="Docker文件管理">
+      <div class="container mx-auto px-4 py-6">
+        <!-- 标题和操作区 -->
+        <div class="mb-6 flex items-center justify-between">
+          <div class="flex gap-3">
+            <Button
+              type="primary"
+              @click="createNewFile"
+              class="flex items-center"
             >
-              <template #prefix>
-                <SearchOutlined class="text-gray-400" />
-              </template>
-            </Input>
+              <PlusOutlined />
+              创建新文件
+            </Button>
           </div>
-        </template>
+        </div>
 
-        <Table
-          :key="tableKey"
-          :data-source="filteredFiles"
-          :columns="columns"
-          :pagination="{ pageSize: 8 }"
-          :row-key="(record) => record.id || record.uid"
-          :loading="loading"
-        >
-          <template #bodyCell="{ column, record }">
-            <template v-if="column.key === 'content'">
-              <div
-                class="docker-preview max-h-20 overflow-y-auto rounded bg-gray-100 p-2 font-mono text-sm"
+        <!-- 搜索和列表区 -->
+        <Card class="rounded-lg shadow">
+          <template #title>
+            <div
+              class="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center"
+            >
+              <h2 class="text-lg font-semibold">Docker文件列表</h2>
+              <Input
+                v-model:value="searchQuery"
+                placeholder="搜索文件名、内容或标签..."
+                class="w-full md:w-80"
+                allow-clear
               >
-                <pre>{{ record.content || '无内容' }}</pre>
-              </div>
-            </template>
-          </template>
-
-          <template #emptyText>
-            <div v-if="loading" class="py-12 text-center">
-              <SyncOutlined spin class="mb-3 text-2xl text-blue-500" />
-              <p class="text-gray-600">正在加载Docker文件...</p>
-            </div>
-            <div v-else class="py-12 text-center">
-              <div v-if="searchQuery" class="text-gray-500">
-                没有找到匹配 "{{ searchQuery }}" 的文件
-              </div>
-              <div v-else>
-                <p class="mb-4 text-gray-500">暂无Docker文件</p>
-                <Button type="primary" @click="createNewFile">
-                  创建第一个Docker文件
-                </Button>
-              </div>
+                <template #prefix>
+                  <SearchOutlined class="text-gray-400" />
+                </template>
+              </Input>
             </div>
           </template>
-        </Table>
-      </Card>
-    </div>
 
-    <!-- Docker文件编辑模态框 -->
-    <Modal
-      :title="isEditing ? '编辑Docker文件' : '创建新Docker文件'"
-      v-model:visible="modalVisible"
-      width="800px"
-      :ok-text="isEditing ? '更新' : '创建'"
-      cancel-text="取消"
-      @ok="saveFile"
-    >
-      <div class="docker-editor-panel p-4">
-        <div class="form-item mb-4">
-          <label class="mb-2 block font-medium text-gray-700">
-            文件名 <span class="text-red-500">*</span>
-          </label>
-          <Input
-            v-model:value="currentFile.name"
-            placeholder="输入文件名"
-            class="w-full"
-          />
-        </div>
-
-        <div class="form-item mb-4">
-          <label class="mb-2 block font-medium text-gray-700">
-            Dockerfile内容 <span class="text-red-500">*</span>
-          </label>
-          <Input.TextArea
-            v-model:value="currentFile.content"
-            placeholder="输入Dockerfile内容..."
-            :rows="12"
-            class="w-full font-mono text-sm"
-          />
-        </div>
-
-        <div class="form-item mb-4">
-          <label class="mb-2 block font-medium text-gray-700"> 标签 </label>
-          <div class="mb-3 flex gap-2">
-            <Input
-              v-model:value="newTag"
-              placeholder="输入标签后按添加"
-              class="flex-1"
-              @press-enter="addTag"
-            />
-            <Button type="primary" @click="addTag">添加</Button>
-          </div>
-
-          <div class="flex flex-wrap gap-2">
-            <Tag
-              v-for="(tag, index) in currentFile.tags"
-              :key="index"
-              closable
-              color="blue"
-              @close="removeTag(index)"
-            >
-              {{ tag }}
-            </Tag>
-          </div>
-        </div>
-
-        <div class="form-item">
-          <label class="mb-2 block font-medium text-gray-700">
-            Harbor仓库 <span class="text-red-500">*</span>
-            <span class="ml-1 text-xs text-gray-500">(选择此文件关联的仓库)</span>
-          </label>
-          <Select
-            v-model:value="currentFile.harbor_uid"
-            placeholder="请选择Harbor仓库"
-            class="w-full"
-            show-search
-            option-filter-prop="label"
-            :options="
-              harborRepositories.map((r) => ({
-                value: r.uid,
-                label: r.name,
-                title: r.url,
-              }))
-            "
+          <Table
+            :key="tableKey"
+            :data-source="filteredFiles"
+            :columns="columns"
+            :pagination="{ pageSize: 8 }"
+            :row-key="(record) => record.id || record.uid"
+            :loading="loading"
           >
-            <template #option="{ value, label, title }">
-              <div class="flex flex-col">
-                <span class="font-medium">{{ label }}</span>
-                <span class="text-xs text-gray-500">{{ title }}</span>
+            <template #bodyCell="{ column, record }">
+              <template v-if="column.key === 'content'">
+                <div
+                  class="docker-preview max-h-20 overflow-y-auto rounded bg-gray-100 p-2 font-mono text-sm"
+                >
+                  <pre>{{ record.content || '无内容' }}</pre>
+                </div>
+              </template>
+            </template>
+
+            <template #emptyText>
+              <div v-if="loading" class="py-12 text-center">
+                <SyncOutlined spin class="mb-3 text-2xl text-blue-500" />
+                <p class="text-gray-600">正在加载Docker文件...</p>
+              </div>
+              <div v-else class="py-12 text-center">
+                <div v-if="searchQuery" class="text-gray-500">
+                  没有找到匹配 "{{ searchQuery }}" 的文件
+                </div>
+                <div v-else>
+                  <p class="mb-4 text-gray-500">暂无Docker文件</p>
+                  <Button type="primary" @click="createNewFile">
+                    创建第一个Docker文件
+                  </Button>
+                </div>
               </div>
             </template>
-          </Select>
-          <p v-if="!currentFile.harbor_uid" class="mt-1 text-xs text-red-500">
-            请为Docker文件选择一个关联的Harbor仓库
-          </p>
-        </div>
+          </Table>
+        </Card>
       </div>
-    </Modal>
-  </Page>
+
+      <!-- Docker文件编辑模态框 -->
+      <Modal
+        :title="isEditing ? '编辑Docker文件' : '创建新Docker文件'"
+        v-model:visible="modalVisible"
+        width="800px"
+        :ok-text="isEditing ? '更新' : '创建'"
+        cancel-text="取消"
+        @ok="saveFile"
+      >
+        <div class="docker-editor-panel p-4">
+          <div class="form-item mb-4">
+            <label class="mb-2 block font-medium text-gray-700">
+              文件名 <span class="text-red-500">*</span>
+            </label>
+            <Input
+              v-model:value="currentFile.name"
+              placeholder="输入文件名"
+              class="w-full"
+            />
+          </div>
+
+          <div class="form-item mb-4">
+            <label class="mb-2 block font-medium text-gray-700">
+              Dockerfile内容 <span class="text-red-500">*</span>
+            </label>
+            <Input.TextArea
+              v-model:value="currentFile.content"
+              placeholder="输入Dockerfile内容..."
+              :rows="12"
+              class="w-full font-mono text-sm"
+            />
+          </div>
+
+          <div class="form-item mb-4">
+            <label class="mb-2 block font-medium text-gray-700"> 标签 </label>
+            <div class="mb-3 flex gap-2">
+              <Input
+                v-model:value="newTag"
+                placeholder="输入标签后按添加"
+                class="flex-1"
+                @press-enter="addTag"
+              />
+              <Button type="primary" @click="addTag">添加</Button>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+              <Tag
+                v-for="(tag, index) in currentFile.tags"
+                :key="index"
+                closable
+                color="blue"
+                @close="removeTag(index)"
+              >
+                {{ tag }}
+              </Tag>
+            </div>
+          </div>
+
+          <div class="form-item">
+            <label class="mb-2 block font-medium text-gray-700">
+              Harbor仓库 <span class="text-red-500">*</span>
+              <span class="ml-1 text-xs text-gray-500"
+                >(选择此文件关联的仓库)</span
+              >
+            </label>
+            <Select
+              v-model:value="currentFile.harbor_uid"
+              placeholder="请选择Harbor仓库"
+              class="w-full"
+              show-search
+              option-filter-prop="label"
+              :options="
+                harborRepositories.map((r) => ({
+                  value: r.uid,
+                  label: r.name,
+                  title: r.url,
+                }))
+              "
+            >
+              <template #option="{ value, label, title }">
+                <div class="flex flex-col">
+                  <span class="font-medium">{{ label }}</span>
+                  <span class="text-xs text-gray-500">{{ title }}</span>
+                </div>
+              </template>
+            </Select>
+            <p v-if="!currentFile.harbor_uid" class="mt-1 text-xs text-red-500">
+              请为Docker文件选择一个关联的Harbor仓库
+            </p>
+          </div>
+        </div>
+      </Modal>
+    </Page>
+  </BusinessPage>
 </template>
 
 <style scoped>

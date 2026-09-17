@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
@@ -29,6 +30,7 @@ const router = useRouter();
 // 工作流列表数据
 const workflowList = ref<Workflow[]>([]);
 const loading = ref(false);
+const readError = ref('');
 
 // 搜索条件
 const searchName = ref('');
@@ -55,12 +57,15 @@ const statusOptions = [
 ];
 
 // 加载工作流列表
+/** 读取工作流列表并保留可重试错误。 Read workflows and retain a retryable failure state. */
 const loadWorkflows = async () => {
   loading.value = true;
   try {
     const status = searchStatus.value || undefined;
     workflowList.value = await fetchWorkflowList(status);
+    readError.value = '';
   } catch (error) {
+    readError.value = '工作流列表读取失败，请检查服务与权限后重试。';
     console.error('加载工作流列表失败:', error);
     message.error('加载工作流列表失败');
   } finally {
@@ -189,6 +194,7 @@ onMounted(() => {
 </script>
 
 <template>
+  <BusinessPage domain="智能协作" description="用助手、技能与工作流串联日常任务，查看每一步执行记录。" :error="readError" :loading="loading" @retry="loadWorkflows">
   <Card class="p-4 shadow">
     <!-- 顶部操作区域 -->
     <div class="mb-4 flex w-full justify-between">
@@ -286,6 +292,8 @@ onMounted(() => {
       </template>
     </Table>
   </Card>
+
+  </BusinessPage>
 </template>
 
 <style scoped>

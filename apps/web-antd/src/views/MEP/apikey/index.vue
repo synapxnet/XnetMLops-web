@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import type { ApiKeyItem, LLMServiceType } from '../api/types';
 
 import { computed, h, onMounted, reactive, ref } from 'vue';
@@ -57,6 +58,7 @@ const providerOptions: { label: string; value: LLMServiceType }[] = [
 // API Key列表
 const apiKeyList = ref<ApiKeyItem[]>([]);
 const loading = ref(false);
+const readError = ref('');
 
 // 搜索条件
 const searchParams = reactive({
@@ -163,13 +165,15 @@ const columns = [
   },
 ];
 
-// 获取数据
+/** 读取访问密钥列表，失败时保留可重试错误。 Read API keys and retain a retryable failure state. */
 const fetchData = async () => {
   try {
     loading.value = true;
     const data = await fetchApiKeyList();
     apiKeyList.value = data.map((item) => ({ ...item, key: item.id }));
+    readError.value = '';
   } catch (error) {
+    readError.value = '访问密钥列表读取失败，请检查服务与权限后重试。';
     console.error('获取API Key列表失败:', error);
   } finally {
     loading.value = false;
@@ -347,6 +351,7 @@ onMounted(() => {
 </script>
 
 <template>
+  <BusinessPage domain="服务交付" description="集中管理模型服务、节点与访问密钥，按实际运行结果确认状态。" :error="readError" :loading="loading" @retry="fetchData">
   <div>
     <Card class="p-4 shadow">
     <!-- 搜索区域 -->
@@ -561,6 +566,8 @@ onMounted(() => {
     </template>
   </Modal>
   </div>
+
+  </BusinessPage>
 </template>
 
 <style scoped>

@@ -1,0 +1,496 @@
+/* Copyright (C) 2026 Synapxnet. All rights reserved.
+ * Synapxnet Proprietary and Confidential. Unauthorized copying, distribution or use is forbidden.
+ * 全平台工作区、表格、表单和皮肤样式。Platform workspace, table, form and skin styles.
+ * Author: maoyo | Department: 研发部 | Date: 2026-09-13 | Version: 1.0.0 | Security Level: INTERNAL
+ * __version__: 1.0.0 | __author__: maoyo | __copyright__: Copyright 2026 Synapxnet
+ * __maintainer__: maoyo | __email__: synapxnet@gmail.com
+ */
+:root {
+  --xnet-radius: 12px;
+  --xnet-background-image: none;
+  --xnet-space: 20px;
+  --xnet-surface: #fff;
+  --xnet-muted: #576c80;
+  --xnet-line: #d8e2ec;
+  --xnet-ink: #142d43;
+  --xnet-base: #edf2f7;
+}
+.dark {
+  --xnet-surface: #172332;
+  --xnet-muted: #a9bdce;
+  --xnet-line: #304354;
+  --xnet-ink: #e7f2fa;
+  --xnet-base: #101b29;
+}
+html[data-xnet-density='compact'] {
+  --xnet-space: 14px;
+}
+.xnet-business-page {
+  min-width: 0;
+  max-width: 1680px;
+  margin: 0 auto;
+  padding: var(--xnet-space);
+  color: var(--xnet-ink);
+  background:
+    linear-gradient(
+      130deg,
+      color-mix(
+        in srgb,
+        var(--xnet-base) var(--xnet-background-cover, 88%),
+        transparent
+      ),
+      color-mix(
+        in srgb,
+        var(--xnet-base) var(--xnet-background-cover, 88%),
+        transparent
+      )
+    ),
+    var(--xnet-background-image) center/cover fixed;
+  min-height: 100%;
+}
+.xnet-context-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  min-height: 48px;
+  margin-bottom: 18px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid var(--xnet-line);
+}
+.xnet-page-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.xnet-context-header h1 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.4;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--xnet-ink);
+}
+.xnet-domain {
+  color: var(--xnet-muted);
+  border-left: 1px solid var(--xnet-line);
+  padding-left: 12px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.xnet-page-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.xnet-page-actions .ant-select {
+  min-width: 104px;
+}
+.xnet-layout-form .xnet-page-content {
+  max-width: 1180px;
+  margin-inline: auto;
+}
+.xnet-layout-canvas {
+  max-width: none;
+}
+.xnet-layout-canvas .xnet-page-content {
+  border: 1px solid var(--xnet-line);
+  border-radius: var(--xnet-radius);
+  overflow: hidden;
+  background: var(--xnet-surface);
+}
+.xnet-layout-canvas .workflow-designer-page {
+  height: calc(100dvh - 190px);
+  min-height: 500px;
+}
+.xnet-page-content,
+.xnet-page-content > *,
+.xnet-page-content .ant-card,
+.xnet-page-content .ant-card-body,
+.xnet-page-content .ant-tabs,
+.xnet-page-content .ant-tabs-content-holder,
+.xnet-page-content .ant-row,
+.xnet-page-content .ant-col {
+  min-width: 0;
+  max-width: 100%;
+}
+.xnet-page-content
+  > :is(
+    .p-4,
+    .p-5,
+    .p-6,
+    .p-8,
+    .dataset-page,
+    .evidence-workspace,
+    .knowledge-base-page,
+    .deployment-page,
+    .nodes-page,
+    .assistant-page,
+    .workflow-page
+  ) {
+  padding: 0 !important;
+}
+.xnet-page-content
+  :is(
+    .ant-card,
+    .el-card,
+    .table-container,
+    .table-section,
+    .content-card,
+    .filter-card,
+    .search-card
+  ) {
+  border: 1px solid var(--xnet-line) !important;
+  border-radius: var(--xnet-radius) !important;
+  background: var(--xnet-surface) !important;
+  box-shadow: none !important;
+  color: var(--xnet-ink);
+}
+.xnet-page-content .ant-card .ant-card {
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+.xnet-page-content .ant-card-head {
+  padding: 0 20px;
+  min-height: 48px;
+  border-bottom-color: var(--xnet-line);
+}
+.xnet-page-content .ant-card-body {
+  padding: var(--xnet-space);
+}
+.xnet-page-content :is(.shadow, .shadow-md, .shadow-lg) {
+  box-shadow: none !important;
+}
+.xnet-page-content
+  :is(.ant-table-wrapper, .ant-table-content, .el-table__body-wrapper) {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.xnet-page-content .ant-table {
+  color: var(--xnet-ink);
+  background: var(--xnet-surface);
+  border-radius: var(--xnet-radius);
+}
+.xnet-page-content .ant-table-thead > tr > th {
+  color: var(--xnet-muted);
+  background: color-mix(in srgb, hsl(var(--primary)) 4%, var(--xnet-surface));
+  font-size: 13px;
+  font-weight: 600;
+  border-bottom-color: var(--xnet-line);
+}
+.xnet-page-content .ant-table-tbody > tr > td {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  border-bottom-color: var(--xnet-line);
+}
+html[data-xnet-density='compact']
+  .xnet-page-content
+  .ant-table-tbody
+  > tr
+  > td {
+  padding-top: 9px;
+  padding-bottom: 9px;
+}
+.xnet-page-content
+  :is(
+    .ant-input,
+    .ant-input-affix-wrapper,
+    .ant-select-selector,
+    .ant-input-number,
+    .ant-picker,
+    .el-input__wrapper,
+    .ant-btn
+  ) {
+  border-radius: min(var(--xnet-radius), 10px) !important;
+}
+.xnet-page-content :is(.ant-form-item-label > label, .el-form-item__label) {
+  color: var(--xnet-muted);
+  font-weight: 500;
+}
+.xnet-page-content .ant-form-vertical .ant-form-item {
+  margin-bottom: 18px;
+}
+.xnet-page-content :is(.ant-tabs-top > .ant-tabs-nav)::before {
+  border-bottom-color: var(--xnet-line);
+}
+.xnet-page-content
+  :is(
+    .page-header,
+    .header,
+    .toolbar,
+    .filter-bar,
+    .search-bar,
+    .action-bar,
+    .header-actions,
+    .filter-section
+  ) {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.xnet-page-content :is(h1, h2, h3, h4) {
+  color: var(--xnet-ink);
+}
+.xnet-page-content :is(pre, code) {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.xnet-page-content .ant-descriptions-item-content {
+  overflow-wrap: anywhere;
+}
+.xnet-page-content :is(.ant-input-search, .ant-select, .ant-input-number) {
+  max-width: 100%;
+}
+/* 可编辑字段提示使用可读次级文字，禁用字段继续保留组件状态。Use readable secondary text for editable field hints while preserving disabled states. */
+:is(.xnet-business-page, .ant-modal, .ant-drawer)
+  :is(input, textarea):not(:disabled)::placeholder {
+  color: var(--xnet-muted);
+  opacity: 1;
+}
+:is(.xnet-business-page, .ant-modal, .ant-drawer)
+  .ant-select:not(.ant-select-disabled)
+  .ant-select-selection-placeholder {
+  color: var(--xnet-muted);
+  opacity: 1;
+}
+.ant-modal .ant-modal-content,
+.ant-drawer .ant-drawer-content {
+  border-radius: var(--xnet-radius);
+  background: var(--xnet-surface);
+  color: var(--xnet-ink);
+}
+.ant-modal .ant-modal-body {
+  max-height: calc(100dvh - 190px);
+  overflow: auto;
+}
+.ant-modal .ant-modal-header {
+  background: var(--xnet-surface);
+}
+.ant-modal :is(.ant-table-content, .ant-table-wrapper) {
+  overflow-x: auto;
+}
+.xnet-business-page :focus-visible,
+.xnet-skin-drawer :focus-visible {
+  outline: 3px solid color-mix(in srgb, hsl(var(--primary)) 65%, transparent);
+  outline-offset: 3px;
+}
+.xnet-muted {
+  color: var(--xnet-muted);
+  font-size: 13px;
+  line-height: 1.8;
+}
+.xnet-skin-fields {
+  display: grid;
+  gap: 23px;
+  margin-top: 22px;
+}
+.xnet-skin-fields > label {
+  display: grid;
+  gap: 8px;
+  color: var(--xnet-ink);
+  font-size: 13px;
+}
+.xnet-skin-fields input[type='color'] {
+  width: 100%;
+  height: 40px;
+  cursor: pointer;
+  border: 1px solid var(--xnet-line);
+  border-radius: 8px;
+  background: var(--xnet-surface);
+  padding: 4px;
+}
+.xnet-file-label input {
+  width: 100%;
+  font-size: 12px;
+  padding: 10px;
+  background: var(--xnet-base);
+  border-radius: 8px;
+}
+.xnet-skin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+}
+.xnet-skin-error {
+  padding: 12px;
+  color: #c03843;
+  background: #fff1f1;
+  border-radius: 8px;
+}
+.dark .xnet-page-content :is(.bg-white, .bg-gray-50, .bg-slate-50) {
+  background: var(--xnet-surface) !important;
+}
+.dark
+  .xnet-page-content
+  :is(
+    .el-card,
+    .el-dialog,
+    .el-table,
+    .el-input__wrapper,
+    .el-select__wrapper
+  ) {
+  --el-bg-color: var(--xnet-surface);
+  --el-fill-color-blank: var(--xnet-surface);
+  --el-fill-color-light: var(--xnet-base);
+  --el-text-color-primary: var(--xnet-ink);
+  --el-text-color-regular: var(--xnet-muted);
+  --el-border-color: var(--xnet-line);
+  --el-border-color-light: var(--xnet-line);
+}
+@media (max-width: 900px) {
+  .xnet-context-header {
+    align-items: flex-start;
+  }
+  .xnet-page-content .ant-form-item-label {
+    white-space: normal;
+  }
+  .xnet-page-content :is(.grid-cols-3, .grid-cols-4) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 768px) {
+  .xnet-business-page {
+    padding: 16px;
+  }
+  .xnet-context-header {
+    flex-direction: column;
+    gap: 12px;
+    padding-bottom: 18px;
+  }
+  .xnet-scope {
+    font-size: 11px;
+    padding: 5px 9px;
+  }
+  .xnet-page-content :is(.grid-cols-2, .grid-cols-3, .grid-cols-4) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .xnet-page-content :is(.col-span-2, .col-span-3, .col-span-4) {
+    grid-column: auto;
+  }
+  .xnet-page-content .ant-form-item {
+    flex-wrap: wrap;
+  }
+  .xnet-page-content .ant-form-item-label {
+    flex-basis: 100%;
+    text-align: left;
+  }
+  .xnet-page-content :is(.ant-space, .ant-space-compact) {
+    flex-wrap: wrap;
+  }
+  .ant-modal {
+    max-width: calc(100vw - 24px);
+    margin: 12px auto;
+  }
+  .ant-drawer-content-wrapper {
+    max-width: 100vw;
+  }
+  .xnet-page-content .ant-descriptions-view {
+    overflow-x: auto;
+  }
+  .xnet-page-content .ant-tabs-nav {
+    max-width: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .xnet-business-page *,
+  .xnet-skin-drawer * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* 窄屏采用表内横向滚动，避免固定列与表头叠字。Use table-local scrolling on narrow screens without overlapping sticky cells. */
+@media (max-width: 768px) {
+  .ant-table .ant-table-cell-fix-left,
+  .ant-table .ant-table-cell-fix-right {
+    position: static !important;
+    inset-inline-start: auto !important;
+    inset-inline-end: auto !important;
+    left: auto !important;
+    right: auto !important;
+  }
+  .ant-table .ant-table-cell-fix-left-last::after,
+  .ant-table .ant-table-cell-fix-right-first::after {
+    display: none !important;
+  }
+  .ant-table-wrapper .ant-table-sticky-holder {
+    position: static !important;
+  }
+  .ant-table-thead > tr > th {
+    background: var(--xnet-surface) !important;
+  }
+}
+
+.xnet-page-content > .relative > .bg-card.border-border {
+  background: transparent;
+  border: 0;
+  padding: 0 0 16px;
+}
+.xnet-page-content > .relative > .h-full.p-4 {
+  padding: 0;
+}
+
+/* 业务界面采用紧凑标题与连续操作区域。Use compact business headings and continuous action surfaces. */
+.xnet-page-content {
+  font-size: 13px;
+}
+.xnet-page-content h1 {
+  font-size: 20px;
+  line-height: 1.4;
+  font-weight: 650;
+}
+.xnet-page-content :is(.ant-card-head-title, .section-title) {
+  font-size: 15px;
+  font-weight: 600;
+}
+.xnet-page-content
+  .ant-card-body
+  > :is(.toolbar, .filter-bar, .search-bar, .action-bar, .header-actions) {
+  gap: 8px;
+}
+.xnet-page-content .ant-table-placeholder .ant-table-cell {
+  padding-block: 32px;
+}
+.xnet-page-content .ant-table-empty .ant-empty-normal {
+  margin-block: 8px;
+}
+.xnet-page-content .ant-table-tbody > tr:hover > td {
+  background: color-mix(
+    in srgb,
+    hsl(var(--primary)) 4%,
+    var(--xnet-surface)
+  ) !important;
+}
+.xnet-page-content .ant-table-pagination {
+  font-size: 13px;
+}
+.xnet-page-content > .relative > .bg-card.border-border h1 {
+  margin-bottom: 0;
+}
+.xnet-page-content
+  > .relative:has(> .bg-card.border-border)
+  > .h-full.p-4:empty {
+  display: none;
+}
+@media (max-width: 768px) {
+  .xnet-business-page {
+    padding: 14px;
+  }
+  .xnet-context-header {
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    gap: 12px;
+  }
+  .xnet-context-header h1 {
+    font-size: 19px;
+  }
+  .xnet-page-actions {
+    width: 100%;
+  }
+  .xnet-page-identity {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+}

@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import { reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
@@ -106,6 +107,7 @@ const handleCancel = () => {
 </script>
 
 <template>
+  <BusinessPage domain="服务交付" description="集中管理模型服务、节点与访问密钥，按实际运行结果确认状态。">
   <Card title="新增部署节点" class="m-4 shadow">
     <template #extra>
       <CloudServerOutlined class="text-2xl text-blue-500" />
@@ -244,6 +246,8 @@ const handleCancel = () => {
       </FormItem>
     </Form>
   </Card>
+
+  </BusinessPage>
 </template>
 
 <style scoped>

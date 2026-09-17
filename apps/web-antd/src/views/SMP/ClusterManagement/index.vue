@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import { ref, onMounted, computed, watch } from 'vue';
-import { Button, Space, Spin, message, Tooltip } from 'ant-design-vue';
+import { Alert, Button, Space, Spin, message, Tooltip } from 'ant-design-vue';
 import {
   ReloadOutlined,
   PlusOutlined,
@@ -33,6 +34,8 @@ const activeClusterType = ref<ClusterType>('hadoop');
 // 加载状态
 const loading = ref(false);
 const syncing = ref(false);
+const loadError = ref('');
+let loadGeneration = 0;
 
 // 拓扑数据
 const topologyData = ref<IClusterTopology | null>(null);
@@ -41,16 +44,22 @@ const topologyData = ref<IClusterTopology | null>(null);
 const detailDrawerVisible = ref(false);
 const selectedNode = ref<ClusterNode | null>(null);
 
-// 加载集群拓扑
+// 仅接受当前集群的最新响应，错误不能伪装成零节点。Accept only the latest cluster response without presenting errors as zero nodes.
 async function loadTopology() {
+  const generation = ++loadGeneration;
   loading.value = true;
+  loadError.value = '';
+  topologyData.value = null;
   try {
-    topologyData.value = await getClusterTopology(activeClusterType.value);
+    const data = await getClusterTopology(activeClusterType.value);
+    if (generation === loadGeneration) topologyData.value = data;
   } catch (error) {
+    if (generation !== loadGeneration) return;
+    loadError.value = error instanceof Error ? error.message : '集群拓扑暂不可用';
     console.error('加载拓扑失败:', error);
     message.error('加载集群拓扑失败');
   } finally {
-    loading.value = false;
+    if (generation === loadGeneration) loading.value = false;
   }
 }
 
@@ -155,6 +164,8 @@ onMounted(() => {
 </script>
 
 <template>
+  <BusinessPage domain="资源配置" description="管理组织内的数据连接、仓库、工作站与计算资源。" existing-title>
+  <Alert v-if="loadError" type="error" show-icon message="集群拓扑未加载" :description="loadError"><template #action><Button @click="loadTopology">重试</Button></template></Alert>
   <div class="cluster-page">
     <!-- 页面头部 -->
     <div class="page-header">
@@ -186,17 +197,17 @@ onMounted(() => {
           <CloudServerOutlined />
         </div>
         <div class="stat-info">
-          <span class="stat-value">{{ stats.totalNodes }}</span>
+          <span class="stat-value">{{ topologyData ? stats.totalNodes : '—' }}</span>
           <span class="stat-label">总节点数</span>
         </div>
         <div class="stat-detail">
           <span class="detail-item master">
             <span class="dot"></span>
-            Master: {{ masterCount }}
+            Master: {{ topologyData ? masterCount : '—' }}
           </span>
           <span class="detail-item worker">
             <span class="dot"></span>
-            Worker: {{ workerCount }}
+            Worker: {{ topologyData ? workerCount : '—' }}
           </span>
         </div>
       </div>
@@ -206,7 +217,7 @@ onMounted(() => {
           <PlayCircleOutlined />
         </div>
         <div class="stat-info">
-          <span class="stat-value">{{ stats.runningNodes }}</span>
+          <span class="stat-value">{{ topologyData ? stats.runningNodes : '—' }}</span>
           <span class="stat-label">运行中</span>
         </div>
         <div class="stat-progress">
@@ -219,7 +230,7 @@ onMounted(() => {
           <PauseCircleOutlined />
         </div>
         <div class="stat-info">
-          <span class="stat-value">{{ stats.stoppedNodes }}</span>
+          <span class="stat-value">{{ topologyData ? stats.stoppedNodes : '—' }}</span>
           <span class="stat-label">已停止</span>
         </div>
         <div class="stat-progress">
@@ -232,7 +243,7 @@ onMounted(() => {
           <CloseCircleOutlined />
         </div>
         <div class="stat-info">
-          <span class="stat-value">{{ stats.failedNodes }}</span>
+          <span class="stat-value">{{ topologyData ? stats.failedNodes : '—' }}</span>
           <span class="stat-label">异常</span>
         </div>
         <div class="stat-progress">
@@ -285,7 +296,7 @@ onMounted(() => {
           :worker-nodes="topologyData.workers"
           @node-click="handleNodeClick"
         />
-        <div v-else class="empty-topology">
+        <div v-else-if="!loadError && !loading" class="empty-topology">
           <div class="empty-icon">
             <CloudServerOutlined />
           </div>
@@ -307,6 +318,8 @@ onMounted(() => {
       @refresh="loadTopology"
     />
   </div>
+
+  </BusinessPage>
 </template>
 
 <style scoped>

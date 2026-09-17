@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import type {
   WorkbenchProjectItem,
   WorkbenchQuickNavItem,
@@ -67,6 +68,7 @@ function navTo(nav: WorkbenchProjectItem | WorkbenchQuickNavItem) {
 </script>
 
 <template>
+  <BusinessPage domain="资源配置" description="管理组织内的数据连接、仓库、工作站与计算资源。">
   <div class="p-5">
     <Card>
       <div class="mr-4 w-full">
@@ -74,4 +76,6 @@ function navTo(nav: WorkbenchProjectItem | WorkbenchQuickNavItem) {
       </div>
     </Card>
   </div>
+
+  </BusinessPage>
 </template>

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
+import { Alert as SourceAlert } from 'ant-design-vue';
 import { ref, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import {
@@ -41,6 +43,7 @@ const router = useRouter();
 const route = useRoute();
 
 const loading = ref(false);
+const sourceError = ref('');
 const testing = ref(false);
 const deploying = ref(false);
 const isEdit = ref(false);
@@ -197,9 +200,10 @@ async function loadMasters() {
   }
 }
 
-// 加载编辑数据
+// 加载已有节点失败时保留错误，禁止提交空配置。Keep read errors visible and prevent submitting empty node configuration.
 async function loadEditData(id: number) {
   loading.value = true;
+  sourceError.value = '';
   try {
     const data = await getClusterById(id);
     if (data) {
@@ -217,7 +221,7 @@ async function loadEditData(id: number) {
       deployConfig.value.masterId = data.masterId;
     }
   } catch (error) {
-    message.error('加载数据失败');
+    sourceError.value = error instanceof Error ? error.message : 'Hadoop Node暂不可用';
   } finally {
     loading.value = false;
   }
@@ -247,11 +251,12 @@ async function handleTestConnection() {
   }
 }
 
-// 保存配置
-async function handleSave() {
+// 保存成功才允许后续部署。Allow subsequent deployment only after successful persistence.
+async function handleSave(): Promise<boolean> {
+  if (sourceError.value || loading.value) return false;
   if (!formData.value.masterId) {
     message.error('请选择关联的 Master 节点');
-    return;
+    return false;
   }
 
   loading.value = true;
@@ -276,16 +281,18 @@ async function handleSave() {
       editId.value = created.id || null;
       isEdit.value = true;
     }
+    return true;
   } catch (error) {
     message.error('保存失败');
+    return false;
   } finally {
     loading.value = false;
   }
 }
 
-// 保存并部署
+// 保存失败时必须阻止使用旧配置部署。Stop deployment from stale configuration when saving fails.
 async function handleSaveAndDeploy() {
-  await handleSave();
+  if (!(await handleSave())) return;
   if (editId.value) {
     deploying.value = true;
     try {
@@ -402,9 +409,11 @@ onMounted(() => {
 </script>
 
 <template>
+  <BusinessPage domain="资源配置" description="管理组织内的数据连接、仓库、工作站与计算资源。">
+  <SourceAlert v-if="sourceError" type="error" show-icon message="Hadoop Node 未加载" :description="sourceError"><template #action><Button @click="loadEditData(Number(route.query.id))">重试</Button></template></SourceAlert>
   <div class="deploy-node-container">
     <Spin :spinning="loading">
-      <Card title="部署 Hadoop Node" class="main-card">
+      <Card v-if="!sourceError" title="部署 Hadoop Node" class="main-card">
         <Form layout="vertical">
           <!-- 基本信息 -->
           <div class="section-title">基本信息</div>
@@ -626,6 +635,8 @@ onMounted(() => {
       </Card>
     </Spin>
   </div>
+
+  </BusinessPage>
 </template>
 
 <style scoped>

@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import type { Ref } from 'vue';
 
 import { computed, inject, onMounted, ref } from 'vue';
@@ -54,6 +55,7 @@ const selectedOrganization = inject<Ref<SelectedOrganization>>(
 );
 
 const loading = ref(false);
+const readError = ref('');
 const importing = ref(false);
 const productLoading = ref(false);
 const importVisible = ref(false);
@@ -102,12 +104,14 @@ const dataOpsDatasetCount = computed(
   () => datasets.value.filter((dataset) => dataset.sourcePlatform === 'XnetDataOps').length,
 );
 
-/** 从 MLOps 后端加载全部真实数据集元数据。 */
+/** 从后端读取数据集元数据，失败不能显示为零条数据。 Read dataset metadata without presenting failures as zero records. */
 async function loadDatasets() {
   loading.value = true;
   try {
     datasets.value = await fetchDatasetList();
+    readError.value = '';
   } catch (error: any) {
+    readError.value = '数据集读取失败，请检查服务与权限后重试。';
     message.error(`加载数据集失败: ${error?.message || '未知错误'}`);
   } finally {
     loading.value = false;
@@ -230,6 +234,7 @@ onMounted(loadDatasets);
 </script>
 
 <template>
+  <BusinessPage domain="数据准备" description="从数据集、特征到知识库，组织好训练与检索所需的数据。" existing-title :error="readError" :loading="loading" @retry="loadDatasets">
   <div class="dataset-page">
     <header class="page-header">
       <div>
@@ -400,6 +405,8 @@ onMounted(loadDatasets);
       </Table>
     </Modal>
   </div>
+
+  </BusinessPage>
 </template>
 
 <style scoped>

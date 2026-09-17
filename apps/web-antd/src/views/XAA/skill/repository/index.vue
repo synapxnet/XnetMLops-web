@@ -1,4 +1,5 @@
 <template>
+  <BusinessPage domain="智能协作" description="用助手、技能与工作流串联日常任务，查看每一步执行记录。" existing-title :error="readError" :loading="loading" @retry="loadSkills">
   <div class="skill-repository">
     <!-- 页面头部 -->
     <Card class="skill-repository__header">
@@ -88,9 +89,12 @@
       @uninstall="handleUninstall"
     />
   </div>
+
+  </BusinessPage>
 </template>
 
 <script setup lang="ts">
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import {
@@ -127,6 +131,7 @@ const router = useRouter();
 
 // 状态
 const loading = ref(false);
+const readError = ref('');
 const skills = ref<Skill[]>([]);
 const categories = ref<SkillCategory[]>([]);
 const installedSkillIds = ref<Set<number>>(new Set());
@@ -168,7 +173,7 @@ async function loadCategories() {
   }
 }
 
-/** 加载已发布技能与 OpenXnet 企业候选；无输入，合并去重后更新仓库列表。 */
+/** 合并已发布技能与企业候选，读取失败保留重试状态。 Merge published skills and enterprise candidates with retryable errors. */
 async function loadSkills() {
   loading.value = true;
   try {
@@ -181,7 +186,9 @@ async function loadSkills() {
     const merged = new Map<number, Skill>();
     [...openXnetCandidates, ...publishedSkills].forEach((skill) => merged.set(skill.id, skill));
     skills.value = [...merged.values()];
+    readError.value = '';
   } catch (error) {
+    readError.value = '技能仓库读取失败，请检查服务与权限后重试。';
     message.error('加载技能列表失败');
     console.error('Failed to load skills:', error);
   } finally {

@@ -1,8 +1,10 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import {
+  Alert,
   Button,
   Card,
   message,
@@ -26,6 +28,7 @@ const route = useRoute();
 const workflow = ref<Workflow | null>(null);
 const executions = ref<WorkflowExecution[]>([]);
 const loading = ref(false);
+const loadError = ref('');
 const workflowId = ref<number>(0);
 
 // 表格列定义
@@ -40,7 +43,7 @@ const columns = [
   { title: '操作', key: 'action', width: 150 },
 ];
 
-// 加载数据
+// 请求失败显示读取错误，不把失败当作无执行记录。Show read errors instead of treating failures as an empty execution history.
 const loadData = async () => {
   const id = route.query.workflowId;
   if (!id) {
@@ -51,11 +54,15 @@ const loadData = async () => {
 
   workflowId.value = Number(id);
   loading.value = true;
+  loadError.value = '';
 
   try {
     workflow.value = await fetchWorkflowById(workflowId.value);
     executions.value = await fetchWorkflowExecutions(workflowId.value);
   } catch (error) {
+    workflow.value = null;
+    executions.value = [];
+    loadError.value = error instanceof Error ? error.message : '执行记录暂不可用';
     console.error('加载执行记录失败:', error);
     message.error('加载执行记录失败');
   } finally {
@@ -162,7 +169,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <Card class="p-4 shadow">
+  <BusinessPage domain="智能协作" description="用助手、技能与工作流串联日常任务，查看每一步执行记录。">
+  <Alert v-if="loadError" type="error" show-icon message="执行记录未加载" :description="loadError"><template #action><Button @click="loadData">重试</Button></template></Alert>
+  <Card v-if="!loadError" class="p-4 shadow">
     <template #title>
       <div class="flex items-center">
         <Button @click="handleBack" style="margin-right: 16px;">返回</Button>
@@ -223,6 +232,8 @@ onMounted(() => {
       </template>
     </Table>
   </Card>
+
+  </BusinessPage>
 </template>
 
 <style scoped>

@@ -1,4 +1,5 @@
 <template>
+  <BusinessPage domain="智能协作" description="用助手、技能与工作流串联日常任务，查看每一步执行记录。" existing-title :error="readError" :loading="loading" @retry="loadSkills">
   <div class="installed-skills">
     <Card class="installed-skills__header">
       <div class="installed-skills__title-row">
@@ -89,9 +90,12 @@
       @uninstall="handleUninstall"
     />
   </div>
+
+  </BusinessPage>
 </template>
 
 <script setup lang="ts">
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import {
@@ -128,6 +132,7 @@ const router = useRouter();
 
 // 状态
 const loading = ref(false);
+const readError = ref('');
 const skills = ref<Skill[]>([]);
 const detailVisible = ref(false);
 const selectedSkill = ref<Skill | null>(null);
@@ -191,11 +196,14 @@ function getTypeLabel(type: SkillType): string {
   return getTypeLabelFn(type);
 }
 
+/** 读取已安装技能并保留可重试错误。 Read installed skills and retain a retryable failure state. */
 async function loadSkills() {
   loading.value = true;
   try {
     skills.value = await fetchInstalledSkills();
+    readError.value = '';
   } catch (error) {
+    readError.value = '已安装技能读取失败，请检查服务与权限后重试。';
     message.error('加载已安装技能失败');
     console.error('Failed to load installed skills:', error);
   } finally {

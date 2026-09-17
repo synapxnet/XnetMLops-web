@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import type { DataSource } from '../api/datasource';
 
 import { onMounted, reactive, ref } from 'vue';
@@ -206,6 +207,7 @@ onMounted(() => {
 </script>
 
 <template>
+  <BusinessPage domain="资源配置" description="管理组织内的数据连接、仓库、工作站与计算资源。" existing-title>
   <Page title="数据源配置管理" />
 
   <Card class="mt-6 p-4 shadow">
@@ -380,6 +382,8 @@ onMounted(() => {
       </Form>
     </Modal>
   </Card>
+
+  </BusinessPage>
 </template>
 
 <style scoped>

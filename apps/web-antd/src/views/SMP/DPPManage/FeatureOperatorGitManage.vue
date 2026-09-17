@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import type { FeatureOperator } from '../api/featureOperatorConfig';
 
 import { computed, h, onMounted, ref, watch } from 'vue';
@@ -525,6 +526,7 @@ watch(searchKey, () => {
 </script>
 
 <template>
+  <BusinessPage domain="资源配置" description="管理组织内的数据连接、仓库、工作站与计算资源。" existing-title>
   <Page title="特征算子Git仓库管理" />
 
   <div class="mt-6 rounded-lg bg-white p-4 shadow">
@@ -732,6 +734,8 @@ watch(searchKey, () => {
       </div>
     </div>
   </Modal>
+
+  </BusinessPage>
 </template>
 
 <style scoped>

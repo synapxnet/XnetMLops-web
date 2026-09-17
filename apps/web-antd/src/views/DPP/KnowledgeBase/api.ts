@@ -12,6 +12,7 @@ import type {
   CreateKBRequest,
   RetrievalRequest,
   RetrievalResponse,
+  KBStatus,
 } from './types';
 
 // 使用与其他 DPP API 相同的路径格式
@@ -59,22 +60,31 @@ export async function fetchKnowledgeBase(id: number): Promise<KnowledgeBase> {
 }
 
 /**
- * 创建知识库
+ * 将前端字段映射为已存在的后端实体字段。Map UI fields to the existing backend entity contract.
+ */
+export function knowledgeBasePayload(data: Partial<CreateKBRequest> & { status?: KBStatus }) {
+  return Object.fromEntries(Object.entries(data).map(([key, value]) => [
+    key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`), value,
+  ]));
+}
+
+/**
+ * 创建知识库并按真实实体契约传参。Create a knowledge base using its actual entity field contract.
  */
 export async function createKnowledgeBase(
   data: CreateKBRequest,
 ): Promise<KnowledgeBase> {
-  return await dppRequestClient.post(`${BASE_URL}/knowledge-bases`, data);
+  return toCamelCaseKeys(await dppRequestClient.post(`${BASE_URL}/knowledge-bases`, knowledgeBasePayload(data)));
 }
 
 /**
- * 更新知识库
+ * 更新知识库并保留服务端字段命名。Update knowledge bases with server-compatible field names.
  */
 export async function updateKnowledgeBase(
   id: number,
-  data: Partial<CreateKBRequest>,
+  data: Partial<CreateKBRequest> & { status?: KBStatus },
 ): Promise<KnowledgeBase> {
-  return await dppRequestClient.put(`${BASE_URL}/knowledge-bases/${id}`, data);
+  return toCamelCaseKeys(await dppRequestClient.put(`${BASE_URL}/knowledge-bases/${id}`, knowledgeBasePayload(data)));
 }
 
 /**

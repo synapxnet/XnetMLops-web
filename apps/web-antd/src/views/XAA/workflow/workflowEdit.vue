@@ -1,8 +1,10 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import { onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import {
+  Alert,
   Button,
   Card,
   Form,
@@ -29,6 +31,8 @@ const formState = reactive({
 
 // 加载状态
 const loading = ref(false);
+const loadError = ref('');
+const workflowLoaded = ref(false);
 const submitting = ref(false);
 const formRef = ref();
 const workflowId = ref<number>(0);
@@ -47,7 +51,7 @@ const typeOptions = [
   { value: 'pipeline', label: 'Pipeline流水线' },
 ];
 
-// 加载工作流数据
+// 读取失败时显示重试并阻止保存空工作流。Show retry and prevent saving an empty workflow after read failure.
 const loadWorkflow = async () => {
   const id = route.query.id;
   if (!id) {
@@ -58,13 +62,17 @@ const loadWorkflow = async () => {
 
   workflowId.value = Number(id);
   loading.value = true;
+  loadError.value = '';
+  workflowLoaded.value = false;
 
   try {
     const workflow = await fetchWorkflowById(workflowId.value);
     formState.name = workflow.name;
     formState.description = workflow.description || '';
     formState.type = workflow.type || 'workflow';
+    workflowLoaded.value = true;
   } catch (error) {
+    loadError.value = error instanceof Error ? error.message : '工作流暂不可用';
     console.error('加载工作流失败:', error);
     message.error('加载工作流失败');
   } finally {
@@ -74,6 +82,7 @@ const loadWorkflow = async () => {
 
 // 提交表单
 const handleSubmit = async () => {
+  if (!workflowLoaded.value || loading.value || submitting.value) return;
   try {
     await formRef.value.validate();
 
@@ -101,6 +110,7 @@ const handleCancel = () => {
 
 // 跳转到设计器
 const handleDesign = () => {
+  if (!workflowLoaded.value) return;
   router.push({
     path: '/XAA/workflow/designer',
     query: { id: workflowId.value },
@@ -113,7 +123,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <Card title="编辑工作流" class="p-4 shadow">
+  <BusinessPage domain="智能协作" description="用助手、技能与工作流串联日常任务，查看每一步执行记录。">
+  <Alert v-if="loadError" type="error" show-icon message="工作流未加载" :description="loadError"><template #action><Button @click="loadWorkflow">重试</Button></template></Alert>
+  <Card v-if="!loadError" title="编辑工作流" class="p-4 shadow">
     <Spin :spinning="loading">
       <Form
         ref="formRef"
@@ -167,4 +179,6 @@ onMounted(() => {
       </Form>
     </Spin>
   </Card>
+
+  </BusinessPage>
 </template>

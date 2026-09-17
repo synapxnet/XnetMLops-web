@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 const capabilities = [
   ['全流程 MLOps', '连接数据处理、模型训练、模型部署、资源管理与智能体编排。'],
   ['企业多租户', '以租户、部门、团队和权限边界支撑多角色研发协作。'],
@@ -17,6 +18,7 @@ defineOptions({ name: 'SynapXnetAbout' });
 </script>
 
 <template>
+  <BusinessPage domain="产品信息" description="了解 SynapXnet 模型研发与服务管理平台。" existing-title>
   <div class="bg-background min-h-full">
     <header class="bg-card border-b px-6 py-8 lg:px-10">
       <div class="mx-auto max-w-6xl">
@@ -26,7 +28,7 @@ defineOptions({ name: 'SynapXnetAbout' });
           >
           <span
             class="border-border bg-background rounded border px-2 py-0.5 text-xs font-semibold"
-            >v1.0.0</span
+            >v1.3.0</span
           >
         </div>
         <h1 class="text-foreground text-3xl font-semibold">XnetMLops</h1>
@@ -89,4 +91,6 @@ defineOptions({ name: 'SynapXnetAbout' });
       </section>
     </main>
   </div>
+
+  </BusinessPage>
 </template>

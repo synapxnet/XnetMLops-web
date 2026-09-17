@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import type { DeployNode } from '../api/types';
 
 import { computed, h, onMounted, reactive, ref } from 'vue';
@@ -18,6 +19,7 @@ import {
   ToolOutlined,
 } from '@ant-design/icons-vue';
 import {
+  Alert,
   Badge,
   Button,
   Card,
@@ -57,10 +59,18 @@ import {
 } from '../api/node';
 
 const router = useRouter();
+const resourceErrors = ref<Record<number, string>>({});
+
+/** 防御性解析服务端标签，避免坏JSON使整页崩溃。Parse server labels defensively so malformed JSON cannot crash the page. */
+function parseNodeLabels(value: unknown): string[] {
+  try { const parsed = typeof value === 'string' ? JSON.parse(value) : value; return Array.isArray(parsed) ? parsed.filter((label): label is string => typeof label === 'string') : []; }
+  catch { return []; }
+}
 
 // 节点列表
 const nodeList = ref<DeployNode[]>([]);
 const loading = ref(false);
+const readError = ref('');
 const expandedRowKeys = ref<number[]>([]);
 
 // 搜索条件
@@ -158,7 +168,7 @@ const columns = [
     customRender: ({ record }: { record: DeployNode }) => {
       return h(Badge, {
         status: record.nginxStatus === 'running' ? 'success' : 'default',
-        text: record.nginxStatus === 'running' ? '运行中' : '已停止',
+        text: record.nginxStatus === 'running' ? '运行中' : record.nginxStatus === 'stopped' ? '已停止' : '未知',
       });
     },
   },
@@ -167,7 +177,7 @@ const columns = [
     key: 'labels',
     width: 150,
     customRender: ({ record }: { record: DeployNode }) => {
-      const labels = typeof record.labels === 'string' ? JSON.parse(record.labels || '[]') : (record.labels || []);
+      const labels = parseNodeLabels(record.labels);
       if (!labels || labels.length === 0) {
         return h('span', { class: 'text-gray-400' }, '无');
       }
@@ -194,13 +204,15 @@ const columns = [
   },
 ];
 
-// 获取数据
+/** 读取部署节点列表，失败时保留可重试错误。 Read deployment nodes and retain a retryable failure state. */
 const fetchData = async () => {
   try {
     loading.value = true;
     const data = await fetchNodeList();
     nodeList.value = data.map((item) => ({ ...item, key: item.id }));
+    readError.value = '';
   } catch (error) {
+    readError.value = '部署节点列表读取失败，请检查服务与权限后重试。';
     console.error('获取节点列表失败:', error);
   } finally {
     loading.value = false;
@@ -248,7 +260,7 @@ const handleAdd = () => {
 const handleEdit = (record: DeployNode) => {
   isEditing.value = true;
   testResult.value = null;
-  const labels = typeof record.labels === 'string' ? JSON.parse(record.labels) : (record.labels || []);
+  const labels = parseNodeLabels(record.labels);
   Object.assign(formState, {
     id: record.id,
     name: record.name,
@@ -365,13 +377,16 @@ const handleSetMaintenance = async (id: number, maintenance: boolean) => {
   }
 };
 
-// 加载节点资源
+// 失败时显示可重试的未知状态，避免无限加载。Show retryable unknown state instead of infinite loading on failure.
 const loadNodeResources = async (id: number) => {
+  resourceErrors.value[id] = '';
+  delete nodeResources.value[id];
   try {
     const data = await fetchNodeResources(id);
     nodeResources.value[id] = data;
   } catch (error) {
     console.error('加载节点资源失败:', error);
+    resourceErrors.value[id] = '资源采样暂不可用。尚未接入真实观测时不会生成使用率。';
   }
 };
 
@@ -391,6 +406,7 @@ onMounted(() => {
 </script>
 
 <template>
+  <BusinessPage domain="服务交付" description="集中管理模型服务、节点与访问密钥，按实际运行结果确认状态。" :error="readError" :loading="loading" @retry="fetchData">
   <div>
     <Card class="p-4 shadow">
     <!-- 搜索区域 -->
@@ -504,7 +520,7 @@ onMounted(() => {
               <DescriptionsItem label="Nginx状态">
                 <Badge
                   :status="record.nginxStatus === 'running' ? 'success' : 'default'"
-                  :text="record.nginxStatus === 'running' ? '运行中' : '已停止'"
+                  :text="record.nginxStatus === 'running' ? '运行中' : record.nginxStatus === 'stopped' ? '已停止' : '未知'"
                 />
               </DescriptionsItem>
               <DescriptionsItem label="创建者">{{ record.createdBy }}</DescriptionsItem>
@@ -556,6 +572,7 @@ onMounted(() => {
                 </Card>
               </Col>
             </Row>
+            <Alert v-else-if="resourceErrors[record.id]" type="warning" show-icon :message="resourceErrors[record.id]"><template #action><Button @click="loadNodeResources(record.id)">重试</Button></template></Alert>
             <div v-else class="py-8 text-center text-gray-400">
               <SyncOutlined spin class="mr-2" />
               加载中...
@@ -564,7 +581,7 @@ onMounted(() => {
 
           <TabPane key="labels" tab="标签">
             <div v-if="record.labels" class="flex flex-wrap gap-2">
-              <Tag v-for="label in (typeof record.labels === 'string' ? JSON.parse(record.labels || '[]') : record.labels)" :key="label" color="blue">{{ label }}</Tag>
+              <Tag v-for="label in parseNodeLabels(record.labels)" :key="label" color="blue">{{ label }}</Tag>
             </div>
             <div v-else class="text-gray-400">暂无标签</div>
           </TabPane>
@@ -655,6 +672,8 @@ onMounted(() => {
     </Form>
   </Modal>
   </div>
+
+  </BusinessPage>
 </template>
 
 <style scoped>

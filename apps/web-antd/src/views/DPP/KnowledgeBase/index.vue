@@ -1,4 +1,5 @@
 <template>
+  <BusinessPage domain="数据准备" description="从数据集、特征到知识库，组织好训练与检索所需的数据。" existing-title :error="readError" :loading="loading" @retry="loadData">
   <div class="knowledge-base">
     <Card class="knowledge-base__header">
       <div class="knowledge-base__title-row">
@@ -130,7 +131,7 @@
     <!-- 创建知识库弹窗 -->
     <Modal
       v-model:open="createModalVisible"
-      title="创建知识库"
+      :title="editingId === null ? '创建知识库' : '知识库设置'"
       :width="600"
       @ok="handleCreateSubmit"
       :confirm-loading="createLoading"
@@ -148,7 +149,7 @@
         <Row :gutter="16">
           <Col :span="12">
             <FormItem label="嵌入模型" name="embeddingModelId">
-              <Select v-model:value="createForm.embeddingModelId" placeholder="选择嵌入模型">
+              <Select v-model:value="createForm.embeddingModelId" :disabled="editingId !== null" placeholder="选择嵌入模型">
                 <SelectOption v-for="model in embeddingModels" :key="model.id" :value="model.id">
                   {{ model.name }} ({{ model.dimension }}维)
                 </SelectOption>
@@ -157,7 +158,7 @@
           </Col>
           <Col :span="12">
             <FormItem label="向量数据库" name="vectorDbType">
-              <Select v-model:value="createForm.vectorDbType">
+              <Select v-model:value="createForm.vectorDbType" :disabled="editingId !== null">
                 <SelectOption value="milvus">Milvus</SelectOption>
                 <SelectOption value="pgvector">PgVector</SelectOption>
                 <SelectOption value="chroma">Chroma</SelectOption>
@@ -220,13 +221,32 @@
       </Form>
     </Modal>
   </div>
+
+  <Drawer v-model:open="detailVisible" title="知识库详情" width="580">
+    <Descriptions v-if="selectedKnowledgeBase" bordered :column="1">
+      <DescriptionsItem label="名称">{{ selectedKnowledgeBase.name }}</DescriptionsItem>
+      <DescriptionsItem label="说明">{{ selectedKnowledgeBase.description || '暂无说明' }}</DescriptionsItem>
+      <DescriptionsItem label="嵌入模型">{{ selectedKnowledgeBase.embeddingModel || '尚未配置' }}</DescriptionsItem>
+      <DescriptionsItem label="向量存储">{{ selectedKnowledgeBase.vectorDbType }}</DescriptionsItem>
+      <DescriptionsItem label="分块">{{ selectedKnowledgeBase.chunkStrategy }} · {{ selectedKnowledgeBase.chunkSize }}</DescriptionsItem>
+      <DescriptionsItem label="检索">{{ getMethodText(selectedKnowledgeBase.retrievalMethod) }}</DescriptionsItem>
+      <DescriptionsItem label="文档 / 分块">{{ selectedKnowledgeBase.docCount }} / {{ selectedKnowledgeBase.chunkCount }}</DescriptionsItem>
+      <DescriptionsItem label="状态">{{ getStatusText(selectedKnowledgeBase.status) }}</DescriptionsItem>
+    </Descriptions>
+    <Button v-if="selectedKnowledgeBase" class="mt-4" type="primary" @click="handleDocuments(selectedKnowledgeBase)">管理文档</Button>
+  </Drawer>
+  </BusinessPage>
 </template>
 
 <script setup lang="ts">
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import {
   Card,
+  Drawer,
+  Descriptions,
+  DescriptionsItem,
   Button,
   Input,
   Select,
@@ -268,6 +288,7 @@ import type { KnowledgeBase, EmbeddingModel, CreateKBRequest } from './types';
 import {
   fetchKnowledgeBases,
   createKnowledgeBase,
+  updateKnowledgeBase,
   deleteKnowledgeBase,
   rebuildKnowledgeBase,
   fetchEmbeddingModels,
@@ -277,6 +298,7 @@ const router = useRouter();
 
 // 状态
 const loading = ref(false);
+const readError = ref('');
 const knowledgeBases = ref<KnowledgeBase[]>([]);
 const embeddingModels = ref<EmbeddingModel[]>([]);
 const searchKeyword = ref('');
@@ -285,6 +307,9 @@ const statusFilter = ref<string | undefined>(undefined);
 // 创建弹窗
 const createModalVisible = ref(false);
 const createLoading = ref(false);
+const editingId = ref<number | null>(null);
+const selectedKnowledgeBase = ref<KnowledgeBase | null>(null);
+const detailVisible = ref(false);
 const createFormRef = ref();
 const createForm = reactive<CreateKBRequest>({
   name: '',
@@ -323,12 +348,14 @@ const filteredKBs = computed(() => {
   return result;
 });
 
-// 方法
+/** 读取知识库列表并保留可重试错误。 Read knowledge bases and retain a retryable failure state. */
 async function loadData() {
   loading.value = true;
   try {
     knowledgeBases.value = await fetchKnowledgeBases(statusFilter.value);
+    readError.value = '';
   } catch (error) {
+    readError.value = '知识库列表读取失败，请检查服务与权限后重试。';
     message.error('加载知识库列表失败');
   } finally {
     loading.value = false;
@@ -391,7 +418,9 @@ function formatDate(dateStr: string): string {
   return date.toLocaleDateString('zh-CN');
 }
 
+/** 新建时清空编辑对象，避免覆盖旧知识库。Clear the editing target before creating a new knowledge base. */
 function handleCreate() {
+  editingId.value = null;
   Object.assign(createForm, {
     name: '',
     description: '',
@@ -407,12 +436,19 @@ function handleCreate() {
   createModalVisible.value = true;
 }
 
+/** 保存已有创建/更新接口，失败时保留表单。Use existing create/update APIs and retain the form on failure. */
 async function handleCreateSubmit() {
+  if (createLoading.value) return;
   try {
     await createFormRef.value.validate();
+    if (!Number.isFinite(createForm.chunkSize) || !Number.isFinite(createForm.chunkOverlap) || createForm.chunkOverlap < 0 || createForm.chunkOverlap >= createForm.chunkSize) {
+      message.warning('分块重叠大小必须小于分块大小');
+      return;
+    }
     createLoading.value = true;
-    await createKnowledgeBase(createForm);
-    message.success('知识库创建成功');
+    if (editingId.value === null) await createKnowledgeBase(createForm);
+    else await updateKnowledgeBase(editingId.value, createForm);
+    message.success(editingId.value === null ? '知识库创建成功' : '知识库设置已保存');
     createModalVisible.value = false;
     loadData();
   } catch (error: any) {
@@ -424,8 +460,10 @@ async function handleCreateSubmit() {
   }
 }
 
+/** 在当前页面打开真实详情，避免跳到未注册路由。Open real details without navigating to an unregistered route. */
 function handleView(kb: KnowledgeBase) {
-  router.push({ path: '/DPP/KnowledgeBase/detail', query: { id: kb.id } });
+  selectedKnowledgeBase.value = kb;
+  detailVisible.value = true;
 }
 
 function handleDocuments(kb: KnowledgeBase) {
@@ -436,10 +474,14 @@ function handleRetrievalTest(kb: KnowledgeBase) {
   router.push({ path: '/DPP/KnowledgeBase/retrieval-test', query: { id: kb.id, name: kb.name } });
 }
 
+/** 复用完整配置表单并只发送可编辑配置。Reuse the complete form for editable knowledge-base settings. */
 function handleSettings(kb: KnowledgeBase) {
-  router.push({ path: '/DPP/KnowledgeBase/settings', query: { id: kb.id } });
+  editingId.value = kb.id;
+  Object.assign(createForm, { name: kb.name, description: kb.description || '', embeddingModelId: kb.embeddingModelId, vectorDbType: kb.vectorDbType, chunkStrategy: kb.chunkStrategy, chunkSize: kb.chunkSize, chunkOverlap: kb.chunkOverlap, retrievalMethod: kb.retrievalMethod, topK: kb.topK, scoreThreshold: kb.scoreThreshold, rerankEnabled: kb.rerankEnabled });
+  createModalVisible.value = true;
 }
 
+/** 将归档交由已有更新接口，并等待真实结果。Persist archive state through the existing update API. */
 async function handleMenuClick(key: string, kb: KnowledgeBase) {
   if (key === 'rebuild') {
     try {
@@ -450,7 +492,10 @@ async function handleMenuClick(key: string, kb: KnowledgeBase) {
       message.error('重建索引失败');
     }
   } else if (key === 'archive') {
-    message.info('归档功能开发中');
+    Modal.confirm({ title: '归档知识库', content: `归档“${kb.name}”后可以在已归档筛选中查看。`,
+      /** 只有服务器确认后才显示归档完成。Report archive completion only after server confirmation. */
+      async onOk() { await updateKnowledgeBase(kb.id, { status: 'archived' }); message.success('知识库已归档'); await loadData(); },
+    });
   } else if (key === 'delete') {
     Modal.confirm({
       title: '确认删除',

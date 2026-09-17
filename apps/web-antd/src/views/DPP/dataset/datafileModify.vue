@@ -1,10 +1,12 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
 
 import {
+  Alert,
   Button,
   Card,
   Collapse,
@@ -47,6 +49,9 @@ const formState = ref<Record<string, any>>({
 
 // 当前编辑的数据集ID
 const datasetId = ref<null | number>(null);
+const loading = ref(false);
+const loadError = ref('');
+const datasetLoaded = ref(false);
 
 // 配置数据
 const configData = ref({
@@ -199,16 +204,18 @@ const schema = computed(() => [
   },
 ]);
 
-// 加载数据集信息 - 从后端API获取
+// 详情读取失败时原地显示重试，禁止返回无关表单。Show retry in place on failure rather than returning to an unrelated form.
 const loadDataset = async () => {
   const id = route.query.id ? Number.parseInt(route.query.id as string) : null;
   if (!id) {
-    message.error('数据集ID无效');
-    router.go(-1);
+    loadError.value = '数据集ID无效';
     return;
   }
 
   datasetId.value = id;
+  loading.value = true;
+  datasetLoaded.value = false;
+  loadError.value = '';
 
   try {
     // 调用API获取数据集详情
@@ -225,10 +232,13 @@ const loadDataset = async () => {
       bucket: dataset.bucket_name,
       describe: dataset.description || '',
     };
+    datasetLoaded.value = true;
   } catch (error) {
     console.error('加载数据集详情失败', error);
     message.error('加载数据集详情失败');
-    router.go(-1);
+    loadError.value = error instanceof Error ? error.message : '数据集暂时无法加载';
+  } finally {
+    loading.value = false;
   }
 };
 
@@ -254,7 +264,7 @@ const handleCancel = () => {
 
 // 表单提交 - 调用API更新数据集
 const onSubmit = async (values: Record<string, any>) => {
-  if (!datasetId.value) return;
+  if (!datasetId.value || !datasetLoaded.value || loading.value) return;
 
   try {
     // 构造更新数据
@@ -291,9 +301,12 @@ const beforeUpload = (file: File) => {
 </script>
 
 <template>
+  <BusinessPage domain="数据准备" description="从数据集、特征到知识库，组织好训练与检索所需的数据。" existing-title>
   <!-- 模板部分保持不变 -->
   <Page title="修改数据集" />
-  <div class="flex flex-col">
+  <Alert v-if="loadError" type="error" show-icon message="数据集未加载" :description="loadError"><template #action><AButton @click="loadDataset">重试</AButton></template></Alert>
+  <div v-if="loading" class="py-8">正在加载数据集…</div>
+  <div v-else-if="datasetLoaded" class="flex flex-col">
     <div class="p-1 shadow">
       <ACard class="mb-4">
         <AForm
@@ -359,7 +372,7 @@ const beforeUpload = (file: File) => {
             <div class="upload-section">
               <AUpload
                 class="w-full"
-                action="/upload"
+                :disabled="true"
                 accept=".csv,.txt,.json,.zip"
                 :show-upload-list="true"
                 :before-upload="beforeUpload"
@@ -369,7 +382,7 @@ const beforeUpload = (file: File) => {
                 <div class="drag-content">
                   <div class="upload-tip">
                     <span class="tip-icon">📁</span>
-                    <p class="tip-text">点击或拖拽文件到此区域上传</p>
+                    <p class="tip-text">请在数据集文件管理中上传文件</p>
                     <p class="support-types">支持格式：CSV、TXT、JSON、ZIP</p>
                     <p class="size-limit">单个文件不超过100GB</p>
                   </div>
@@ -390,6 +403,8 @@ const beforeUpload = (file: File) => {
       </ACard>
     </div>
   </div>
+
+  </BusinessPage>
 </template>
 
 <!-- 样式部分保持不变 -->

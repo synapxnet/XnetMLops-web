@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import type { LLMServiceConfig, LLMServiceType } from '../api/types';
 
 import { onMounted, reactive, ref } from 'vue';
@@ -9,6 +10,7 @@ import {
   CheckCircleOutlined,
 } from '@ant-design/icons-vue';
 import {
+  Alert,
   Button,
   Card,
   Col,
@@ -72,21 +74,23 @@ const formState = reactive({
 
 // 状态
 const pageLoading = ref(true);
+const detailError = ref('');
 const submitLoading = ref(false);
 const testLoading = ref(false);
 const testResult = ref<{ success: boolean; message: string } | null>(null);
 
-// 加载服务详情
+// 无详情时禁止编辑和测试，保留原地重试。Prevent editing and testing missing services while offering retry in place.
 const loadServiceDetail = async () => {
   const id = Number(route.query.id);
   if (!id) {
-    message.error('服务ID无效');
-    router.back();
+    detailError.value = '服务ID无效';
+    pageLoading.value = false;
     return;
   }
 
   try {
     pageLoading.value = true;
+    detailError.value = '';
     const data = await fetchLLMServiceDetail(id);
     Object.assign(formState, {
       id: data.id,
@@ -102,6 +106,8 @@ const loadServiceDetail = async () => {
       },
     });
   } catch (error) {
+    formState.id = 0;
+    detailError.value = error instanceof Error ? error.message : '服务详情暂不可用';
     console.error('加载服务详情失败:', error);
     message.error('加载服务详情失败');
   } finally {
@@ -111,6 +117,7 @@ const loadServiceDetail = async () => {
 
 // 测试连接
 const handleTestConnection = async () => {
+  if (!formState.id || detailError.value || pageLoading.value) return;
   if (!formState.endpoint) {
     message.warning('请先输入服务端点');
     return;
@@ -168,7 +175,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <Card title="编辑大模型服务" class="m-4 shadow">
+  <BusinessPage domain="服务交付" description="集中管理模型服务、节点与访问密钥，按实际运行结果确认状态。">
+  <Alert v-if="detailError" type="error" show-icon message="大模型服务未加载" :description="detailError"><template #action><Button @click="loadServiceDetail">重试</Button></template></Alert>
+  <Card v-if="!detailError" title="编辑大模型服务" class="m-4 shadow">
     <Skeleton :loading="pageLoading" active :paragraph="{ rows: 10 }">
       <Form
         :model="formState"
@@ -350,6 +359,8 @@ onMounted(() => {
       </Form>
     </Skeleton>
   </Card>
+
+  </BusinessPage>
 </template>
 
 <style scoped>

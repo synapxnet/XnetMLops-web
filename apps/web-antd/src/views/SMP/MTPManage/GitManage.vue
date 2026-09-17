@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import type { Algorithm } from '../api/algorithmConfig';
 
 import { computed, h, onMounted, ref, watch } from 'vue';
@@ -514,6 +515,7 @@ watch(searchKey, () => {
 </script>
 
 <template>
+  <BusinessPage domain="资源配置" description="管理组织内的数据连接、仓库、工作站与计算资源。" existing-title>
   <Page title="算法管理" />
 
   <!-- 主内容区域 -->
@@ -711,6 +713,8 @@ watch(searchKey, () => {
       </div>
     </div>
   </Modal>
+
+  </BusinessPage>
 </template>
 
 <style scoped>
