@@ -8,6 +8,7 @@ Version: 1.0.0 | Security Level: INTERNAL | Maintainer: maoyo
 Email: synapxnet@gmail.com
 -->
 <script setup lang="ts">
+import FeatureDriftEntry from '#/components/feature-drift/FeatureDriftEntry.vue';
 import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import type { Ref } from 'vue';
 import type { ModelEvidenceRun, ModelEvidenceWorkspace } from './model';
@@ -209,6 +210,7 @@ onBeforeUnmount(invalidateRequests);
     description="连接算法、训练记录与模型证据，让每一次迭代都有据可循。"
     existing-title
   >
+    <FeatureDriftEntry label="跨域恢复 · 同一事件模型证据" />
     <div class="model-workspace" data-model-evidence>
       <header class="workspace-header">
         <div class="workspace-heading">

@@ -1,5 +1,6 @@
 <!-- src/views/MTP/train/TrainTaskManagement.vue -->
 <script lang="ts" setup>
+import FeatureDriftEntry from '#/components/feature-drift/FeatureDriftEntry.vue';
 import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import type { Ref } from 'vue';
 
@@ -1742,6 +1743,7 @@ const data = ref<DataItem[]>([]);
       ><Button :loading="loading" @click="handleRefresh">刷新</Button
       ><Button type="primary" @click="handleAdd">新建训练任务</Button></template
     >
+    <FeatureDriftEntry label="跨域恢复 · CPU 实训与模型产物" />
     <Card class="training-list-workbench">
       <div class="search-container training-filters">
         <div class="grid grid-cols-1 gap-4 md:grid-cols-5">

@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import FeatureDriftEntry from '#/components/feature-drift/FeatureDriftEntry.vue';
 import BusinessPage from '#/components/workspace/BusinessPage.vue';
 import DeploymentCapability from './DeploymentCapability.vue';
 import type { DeploymentStatus, ModelDeployment } from '../api/types';
@@ -299,6 +300,7 @@ onMounted(() => {
     @retry="fetchData"
   >
     <DeploymentCapability />
+    <FeatureDriftEntry label="跨域恢复 · 实际灰度与活动模型" />
     <Card class="p-4 shadow">
       <!-- 搜索区域 -->
       <div class="mb-4 flex flex-wrap items-center justify-between gap-4">
